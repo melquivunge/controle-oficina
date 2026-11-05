@@ -23,6 +23,9 @@ class FeriadoUnidadeController extends Controller
         $user = $request->user();
         abort_unless(self::podeGerir($user), 403);
         $unidades = Unidade::visiveisPara($user)->where('ativa', true)->orderBy('nome')->get();
+        if ($unidades->isEmpty()) {
+            return $this->semUnidade('Feriados das unidades');
+        }
         $unidadeId = $request->integer('unidade') ?: ($unidades->contains('id', $user->unidade_id) ? $user->unidade_id : $unidades->first()?->id);
         abort_unless($unidadeId && $user->acessaUnidade((int) $unidadeId), 403);
 

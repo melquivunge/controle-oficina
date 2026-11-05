@@ -17,6 +17,9 @@ class CaixaController extends Controller
         $user = $request->user();
         $dados = $request->validate(['unidade' => ['nullable', 'integer'], 'data' => ['nullable', 'date_format:Y-m-d']]);
         $unidades = Unidade::visiveisPara($user)->orderBy('nome')->get();
+        if ($unidades->isEmpty()) {
+            return $this->semUnidade('Caixa e fechamento');
+        }
         $unidadeId = (int) ($dados['unidade'] ?? $user->unidade_id ?? $unidades->first()?->id);
         abort_unless($unidadeId && $user->acessaUnidade($unidadeId), 403);
         $data = $dados['data'] ?? Fuso::exibir(now(), 'Y-m-d');

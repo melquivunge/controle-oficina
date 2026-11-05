@@ -14,6 +14,9 @@ class ConferenciaController extends Controller
     {
         $user = $request->user();
         $unidades = Unidade::visiveisPara($user)->where('ativa', true)->orderBy('nome')->get();
+        if ($unidades->isEmpty()) {
+            return $this->semUnidade('Conferência física');
+        }
         $unidadeId = $request->integer('unidade') ?: ($user->unidade_id ?? $unidades->first()?->id);
         abort_unless($unidadeId && $user->acessaUnidade($unidadeId), 403);
 

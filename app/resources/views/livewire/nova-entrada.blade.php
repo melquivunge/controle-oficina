@@ -1,5 +1,9 @@
 <div class="form-grid">
     <form class="form-panel" wire:submit="salvar" novalidate>
+        @if ($unidades->isEmpty())
+            <p class="notice" role="alert">Nenhuma unidade cadastrada: a entrada precisa de uma unidade.
+                @can('configurar')<a href="{{ route('unidades.index') }}">Cadastrar unidade</a>@else Peça ao proprietário para cadastrar a unidade.@endcan</p>
+        @endif
         <section class="form-section">
             <h2>Cliente e veículo (ou item)</h2>
             <p class="section-copy">Só o essencial. Se o cliente já veio antes, o cadastro aparece ao digitar telefone ou placa.</p>
