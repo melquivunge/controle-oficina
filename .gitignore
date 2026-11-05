@@ -7,6 +7,7 @@ backups/
 contexto/
 docs/*
 !docs/demo-roteiro.md
+!docs/manual/
 prototipo/
 PRODUCT.md
 referencia design dashboard/

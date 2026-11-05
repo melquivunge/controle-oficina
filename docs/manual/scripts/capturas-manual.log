@@ -1,0 +1,92 @@
+entrar url=/entrar altura=932
+entrar-390 url=/entrar altura=890
+dois-fatores url=/dois-fatores altura=932
+confirmar-senha url=/confirmar-senha altura=932
+painel-dono url=/ altura=2704
+painel-dono-notificacoes url=/ altura=2704
+painel-dono-menu-usuario url=/ altura=2704
+painel-simples url=/ altura=1173
+painel-simples desligado: SIM
+ordens-dono url=/ordens altura=2593
+os-entrada url=/ordens/TAG-00073 altura=1489
+os-aguardando-aprovacao url=/ordens/AGC-00074?aba=orcamento altura=1365
+os-autorizado url=/ordens/AGC-00076?aba=orcamento altura=1502
+os-cancelada url=/ordens/AGC-00030 altura=1162
+os-sem-veiculo url=/ordens/TAG-00075 altura=1306
+auditoria url=/auditoria altura=4094 (cortada em 3000)
+indicadores-dono url=/indicadores altura=1333
+pendencias url=/pendencias altura=7543 (cortada em 3000)
+aprovacoes url=/aprovacoes altura=932
+integracoes url=/integracoes altura=932
+empresa url=/configuracoes/empresa altura=2689
+unidades url=/configuracoes/unidades altura=932
+recebedores url=/configuracoes/recebedores altura=932
+usuarios url=/configuracoes/usuarios altura=1406
+usuario-novo url=/configuracoes/usuarios/novo altura=1310
+usuario-editar url=/configuracoes/usuarios/10 altura=1310
+whatsapp-numeros url=/configuracoes/whatsapp/numeros altura=1448
+catalogo url=/configuracoes/catalogo altura=1792
+catalogo-editar url=/configuracoes/catalogo/11 altura=1485
+feriados-dono url=/feriados altura=932
+conta url=/conta altura=1883
+painel-gerente url=/ altura=2518
+ordens url=/ordens altura=2610
+os-resumo url=/ordens/ASN-00070 altura=1306
+os-diagnostico url=/ordens/ASN-00070?aba=diagnostico altura=932
+os-orcamento url=/ordens/ASN-00070?aba=orcamento altura=932
+os-pagamentos url=/ordens/ASN-00070?aba=pagamentos altura=1375
+os-pagamento-parte url=/ordens/ASN-00070?aba=pagamentos&modo=parte altura=1908
+os-pagamento-depois url=/ordens/ASN-00070?aba=pagamentos&modo=depois altura=1592
+os-documentos url=/ordens/ASN-00070?aba=documentos altura=2112
+os-historico url=/ordens/ASN-00070?aba=historico altura=3953 (cortada em 3000)
+os-montar-orcamento url=/ordens/ASN-00021?aba=orcamento altura=1294
+os-execucao url=/ordens/ASN-00012?aba=orcamento altura=1583
+os-pix-revisao url=/ordens/ASN-00029?aba=pagamentos altura=2271
+os-combinado url=/ordens/ASN-00008?aba=pagamentos altura=2091
+os-entregue-excecao url=/ordens/ASN-00006?aba=pagamentos altura=2048
+impressao url=/ordens/ASN-00070/impressao altura=1250
+fiscal url=/ordens/ASN-00003/fiscal/6 altura=900
+orcamentos url=/orcamentos?status=todos altura=2568
+caixa url=/caixa?data=2026-10-22 altura=932
+caixa-receber url=/caixa?data=2026-10-22&aba=receber altura=961
+caixa-fechamento url=/caixa?data=2026-10-22&aba=fechamento altura=932
+caixa-fechamento-aberto url=/caixa?aba=fechamento altura=932
+indicadores url=/indicadores altura=1101
+posvenda url=/pos-venda?de=2026-10-01&ate=2026-10-31 altura=4479 (cortada em 3000)
+posvenda-ficha url=/pos-venda/ASN-00058 altura=1308
+acesso-negado url=/ordens/TAG-00073 altura=900
+  status 403
+acesso-negado-config url=/configuracoes/usuarios altura=900
+nao-encontrada url=/pagina-que-nao-existe altura=900
+  status 404
+painel-recepcao url=/ altura=2271
+nova-entrada url=/entradas/nova altura=1430
+nova-entrada-erros url=/entradas/nova altura=1505
+nova-entrada-cadastro url=/entradas/nova altura=1711
+nova-entrada-sem-veiculo url=/entradas/nova altura=1426
+recebimentos url=/caixa?data=2026-10-22 altura=932
+conferencia url=/conferencia altura=5901 (cortada em 3000)
+clientes url=/clientes altura=1784
+cliente-ficha url=/clientes/22 altura=1226
+veiculos url=/veiculos altura=1635
+whatsapp url=/whatsapp altura=932
+whatsapp-conversa url=/whatsapp/conversas/1 altura=1671
+os-orcamento-recepcao url=/ordens/ASN-00021?aba=orcamento altura=932
+os-pagamentos-recepcao url=/ordens/ASN-00070?aba=pagamentos altura=1333
+painel-recepcao-390 url=/ altura=4718 (cortada em 3000)
+menu-celular-390 url=/ altura=4718 (cortada em 3000)
+nova-entrada-390 url=/entradas/nova altura=1996
+os-resumo-390 url=/ordens/ASN-00070 altura=2079
+os-pagamentos-390 url=/ordens/ASN-00070?aba=pagamentos altura=1879
+recebimentos-390 url=/caixa?data=2026-10-22 altura=1747
+meu-painel url=/meu-painel altura=1600
+fila url=/fila altura=1436
+os-mecanico url=/ordens/ASN-00021 altura=1302
+os-mecanico-diagnostico url=/ordens/ASN-00021?aba=diagnostico altura=932
+os-mecanico-execucao url=/ordens/ASN-00012?aba=orcamento altura=932
+acesso-negado-mecanico url=/caixa altura=900
+meu-painel-390 url=/meu-painel altura=2344
+fila-390 url=/fila altura=3247 (cortada em 3000)
+os-mecanico-execucao-390 url=/ordens/ASN-00012?aba=orcamento altura=890
+painel-supervisor url=/ altura=2681
+feriados url=/feriados altura=932
