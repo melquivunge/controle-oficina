@@ -20,6 +20,9 @@ docker compose --profile test run --rm test
 ```
 Usa o banco isolado `oficina_teste` (forçado no phpunit.xml).
 
+## Branches e CI
+`main` corresponde ao ambiente `production` e `staging` ao ambiente `staging`. Cada push nessas branches, e cada PR, roda a suíte em Docker no GitHub Actions (`.github/workflows/testes.yml`). O deploy automático ainda não está configurado.
+
 ## Dados persistentes
 Volumes: `banco` (PostgreSQL), `anexos` (arquivos privados), `chave` (APP_KEY), `redis`. `docker compose down` preserva dados. **Não use `down -v`** como rotina: apaga banco, anexos e a chave. Faça backup do volume `chave` junto com o banco.
 
