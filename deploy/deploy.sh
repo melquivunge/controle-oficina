@@ -12,7 +12,9 @@ chmod +x deploy/*.sh docker/scripts/*.sh
 # Borda: sobe na primeira vez e recarrega quando a configuração mudar, sem interromper as conexões.
 EDGE="$(dirname "$PWD")/edge"
 MUDOU=0
-if ! diff -qr deploy/edge "$EDGE" >/dev/null 2>&1; then MUDOU=1; mkdir -p "$EDGE"; rm -rf "$EDGE/manual"; cp -R deploy/edge/. "$EDGE/"; fi
+if ! diff -qr -x acesso-staging.caddy deploy/edge "$EDGE" >/dev/null 2>&1; then MUDOU=1; mkdir -p "$EDGE"; rm -rf "$EDGE/manual"; cp -R deploy/edge/. "$EDGE/"; fi
+# Staging fechado até a senha ser definida (deploy/staging-senha.sh): a demo tem senha pública.
+if [ ! -e "$EDGE/acesso-staging.caddy" ]; then MUDOU=1; printf 'respond "Staging fechado: senha de acesso ainda não definida." 403\n' > "$EDGE/acesso-staging.caddy"; fi
 (
   cd "$EDGE"
   docker compose up -d --wait

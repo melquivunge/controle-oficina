@@ -6,6 +6,8 @@
 {$DOMINIO_STAGING:staging.controleoficina.com.br} {
 	encode zstd gzip
 	header X-Robots-Tag "noindex, nofollow"
+	# Senha de acesso: arquivo só no servidor (deploy.sh cria fechado; deploy/staging-senha.sh grava a senha).
+	import /etc/caddy/acesso-staging.caddy
 	reverse_proxy oficina-staging-app:8080
 }
 
