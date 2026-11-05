@@ -1,9 +1,9 @@
-{$DOMINIO_PRODUCAO:oficina.solutions-ss.com} {
+{$DOMINIO_PRODUCAO:oficina.controleoficina.com.br} {
 	encode zstd gzip
 	reverse_proxy oficina-production-app:8080
 }
 
-{$DOMINIO_STAGING:staging.solutions-ss.com} {
+{$DOMINIO_STAGING:staging.controleoficina.com.br} {
 	encode zstd gzip
 	header X-Robots-Tag "noindex, nofollow"
 	reverse_proxy oficina-staging-app:8080

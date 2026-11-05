@@ -24,7 +24,7 @@ Usa o banco isolado `oficina_teste` (forçado no phpunit.xml).
 `main` corresponde ao ambiente `production` e `staging` ao ambiente `staging`. Cada push nessas branches, e cada PR, roda a suíte em Docker no GitHub Actions (`.github/workflows/testes.yml`). Se os testes passarem, o mesmo workflow envia o código ao servidor por SSH, constrói a imagem lá e atualiza o ambiente.
 
 ## Servidor (deploy)
-- **Estrutura:** uma VPS Ubuntu com `/opt/oficina/{edge,production,staging}`. O Caddy de `deploy/edge` é o único com portas públicas (80/443), com HTTPS automático; `oficina.solutions-ss.com` vai para a produção e `staging.solutions-ss.com` para o staging.
+- **Estrutura:** uma VPS Ubuntu com `/opt/oficina/{edge,production,staging}`. O Caddy de `deploy/edge` é o único com portas públicas (80/443), com HTTPS automático; `oficina.controleoficina.com.br` vai para a produção e `staging.controleoficina.com.br` para o staging.
 - **Preparação única (root):** `deploy/preparar-servidor.sh "<chave pública do deploy>"` instala Docker, firewall, fail2ban, o usuário `deploy` e o backup diário da produção (14 dias, sem cópia externa ainda).
 - **Segredos do repositório:** `DEPLOY_HOST`, `DEPLOY_SSH_KEY` e `DEPLOY_KNOWN_HOSTS`. As senhas dos ambientes são geradas no servidor (`deploy/gerar-env.sh`) e nunca passam pelo GitHub.
 - **Atualização:** `deploy/deploy.sh <ambiente> <imagem>`. Se os serviços não ficarem saudáveis, volta para a imagem anterior; a reversão não desfaz migrações.

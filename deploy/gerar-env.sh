@@ -6,9 +6,9 @@ cd "$(dirname "$0")/.."
 [ ! -e .env ] || { echo "ERRO: .env já existe; nada foi alterado." >&2; exit 1; }
 case "$AMB" in
   # Produção: integração sem provedor homologado falha de forma visível; nunca finge que enviou ou cobrou.
-  production) DOMINIO=oficina.solutions-ss.com; APP_ENV=production; INTEGRACOES=real; SIMULAR=false ;;
+  production) DOMINIO=oficina.controleoficina.com.br; APP_ENV=production; INTEGRACOES=real; SIMULAR=false ;;
   # Staging: simuladores; nunca colocar dados reais neste ambiente.
-  staging) DOMINIO=staging.solutions-ss.com; APP_ENV=staging; INTEGRACOES=simulado; SIMULAR=true ;;
+  staging) DOMINIO=staging.controleoficina.com.br; APP_ENV=staging; INTEGRACOES=simulado; SIMULAR=true ;;
   *) echo "ERRO: ambiente inválido: $AMB" >&2; exit 1 ;;
 esac
 s() { openssl rand -hex 32; }
