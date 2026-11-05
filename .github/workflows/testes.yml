@@ -59,5 +59,6 @@ jobs:
           git archive --format=tar.gz HEAD \
             | ssh "deploy@$HOST" "rm -rf $D/fonte && mkdir -p $D/fonte && tar -xzf - -C $D/fonte"
           ssh "deploy@$HOST" "set -e; cd $D && docker build -q --target app -f fonte/docker/Dockerfile -t '$IMAGEM' fonte \
-            && cp -R fonte/compose.yaml fonte/deploy . && mkdir -p docker && cp -R fonte/docker/postgres fonte/docker/scripts docker/ \
+            && rm -rf deploy && cp -R fonte/compose.yaml fonte/deploy . && cp -R fonte/docs/manual deploy/edge/manual \
+            && mkdir -p docker && cp -R fonte/docker/postgres fonte/docker/scripts docker/ \
             && deploy/deploy.sh $AMBIENTE '$IMAGEM'"
