@@ -1,0 +1,61 @@
+/* OS impressa (A4). Arquivo próprio, embutido inline na página de impressão. Legível em preto e branco;
+   a cor principal da empresa entra só como fio de destaque (--cor). Assinatura visual: etiqueta da OS
+   com borda tracejada, como a etiqueta presa ao jogo de rodas na oficina. */
+:root{--tinta:#1f2933;--suave:#5b6670;--fio:#c9ced3;--fundo:#f3f4f5;--papel:#fff}
+*{box-sizing:border-box}
+html{background:var(--fundo)}
+body{margin:0;color:var(--tinta);font:13px/1.45 "Helvetica Neue",Arial,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.barra{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;max-width:210mm;margin:16px auto;padding:0 16px}
+.barra p{margin:0;color:var(--suave);font-size:12px}
+.barra button,.barra a{font:inherit;font-size:14px;min-height:44px;padding:10px 18px;border-radius:6px;border:1px solid var(--tinta);background:var(--tinta);color:#fff;cursor:pointer;text-decoration:none}
+.barra a{background:transparent;color:var(--tinta)}
+.barra button:focus-visible,.barra a:focus-visible{outline:3px solid var(--cor);outline-offset:2px}
+.folha{width:210mm;min-height:297mm;margin:0 auto 24px;padding:14mm 14mm 12mm;background:var(--papel);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.cabecalho{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:start;padding-bottom:10px;border-bottom:3px solid var(--cor)}
+.loja{display:flex;gap:14px;align-items:flex-start}
+.loja img{max-width:38mm;max-height:22mm;object-fit:contain}
+.loja h1{margin:0 0 2px;font-size:20px;letter-spacing:-.01em}
+.loja p{margin:0;color:var(--suave);font-size:12px}
+.etiqueta{border:1.5px dashed var(--tinta);border-radius:8px;padding:8px 14px;text-align:right;min-width:46mm}
+.etiqueta small{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--suave)}
+.etiqueta strong{display:block;font-size:22px;letter-spacing:.02em;color:var(--cor)}
+.etiqueta span{font-size:11px;color:var(--suave)}
+.aviso-fiscal{margin:8px 0 0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.blocos{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;margin:14px 0}
+.bloco h2,.secao h2{margin:0 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--suave);font-weight:600}
+.bloco p{margin:0}
+.secao{margin:14px 0}
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;text-align:left;font-weight:600;color:var(--suave);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--tinta);padding:5px 6px}
+td{padding:6px;border-bottom:1px solid var(--fio);vertical-align:top}
+.num{text-align:right;white-space:nowrap}
+.totais{margin-left:auto;width:78mm;margin-top:6px}
+.totais td{border:0;padding:3px 6px}
+.totais tr.total td{border-top:2px solid var(--tinta);font-size:15px;font-weight:700;padding-top:6px}
+.estado{display:inline-block;font-size:11px;border:1px solid var(--tinta);border-radius:4px;padding:1px 6px;margin-left:6px;text-transform:uppercase;letter-spacing:.04em}
+.obs{white-space:pre-line;margin:0}
+.vazio{color:var(--suave);margin:0}
+.assinaturas{display:grid;grid-template-columns:1fr 1fr;gap:16mm;margin-top:22mm}
+.assinaturas div{border-top:1px solid var(--tinta);padding-top:4px;text-align:center;font-size:12px}
+.assinaturas small{display:block;color:var(--suave)}
+.rodape{margin-top:10mm;font-size:11px;color:var(--suave);border-top:1px solid var(--fio);padding-top:6px}
+@media (max-width:820px){
+  .folha{width:auto;min-height:0;margin:0 16px 24px;padding:20px 16px}
+  .cabecalho,.blocos,.assinaturas{grid-template-columns:1fr}
+  .etiqueta{text-align:left}
+  .totais{width:100%}
+  table{font-size:12px}
+}
+@page{size:A4;margin:10mm}
+@media print{
+  html,body{background:#fff}
+  .barra{display:none}
+  .folha{width:auto;min-height:0;margin:0;padding:0;box-shadow:none}
+  tr,.assinaturas{break-inside:avoid}
+  a{color:inherit;text-decoration:none}
+}
+
+/* OS por WhatsApp na barra (não impressa: .barra some em @media print) */
+.barra span{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.barra form{margin:0}
+.barra button.secundario{background:transparent;color:var(--tinta)}

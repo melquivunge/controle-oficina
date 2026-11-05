@@ -1,0 +1,1 @@
+@include('errors._pagina', ['codigo' => 'Indisponível', 'titulo' => 'Sistema temporariamente indisponível', 'texto' => 'Siga o procedimento de contingência da unidade e registre o atendimento depois, identificando-o como contingência.', 'cor' => '#fff4dc', 'corTexto' => '#93590b', 'link' => false])

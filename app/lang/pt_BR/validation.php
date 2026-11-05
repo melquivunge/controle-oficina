@@ -1,0 +1,47 @@
+<?php
+
+// Mensagens usadas pela aplicação. Regras sem tradução caem no padrão do framework.
+return [
+    'accepted' => 'O campo :attribute deve ser aceito.',
+    'alpha_num' => 'O campo :attribute deve conter apenas letras e números.',
+    'array' => 'O campo :attribute é inválido.',
+    'boolean' => 'O campo :attribute deve ser sim ou não.',
+    'confirmed' => 'A confirmação de :attribute não confere.',
+    'date' => 'Informe uma data válida em :attribute.',
+    'decimal' => 'O campo :attribute deve ter até :decimal casas decimais.',
+    'email' => 'Informe um e-mail válido.',
+    'enum' => 'Selecione uma opção válida em :attribute.',
+    'exists' => 'O valor selecionado em :attribute não existe.',
+    'file' => 'O campo :attribute deve ser um arquivo.',
+    'gt' => ['numeric' => 'O campo :attribute deve ser maior que :value.'],
+    'gte' => ['numeric' => 'O campo :attribute deve ser maior ou igual a :value.'],
+    'image' => 'O campo :attribute deve ser uma imagem.',
+    'in' => 'Selecione uma opção válida em :attribute.',
+    'integer' => 'O campo :attribute deve ser um número inteiro.',
+    'max' => [
+        'numeric' => 'O campo :attribute não pode ser maior que :max.',
+        'file' => 'O arquivo :attribute não pode ter mais de :max kilobytes.',
+        'string' => 'O campo :attribute não pode ter mais de :max caracteres.',
+        'array' => 'O campo :attribute não pode ter mais de :max itens.',
+    ],
+    'mimes' => 'O arquivo :attribute deve ser do tipo: :values.',
+    'min' => [
+        'numeric' => 'O campo :attribute deve ser no mínimo :min.',
+        'string' => 'O campo :attribute deve ter pelo menos :min caracteres.',
+        'array' => 'O campo :attribute deve ter pelo menos :min itens.',
+    ],
+    'numeric' => 'O campo :attribute deve ser um número.',
+    'password' => [
+        'letters' => 'A :attribute deve conter pelo menos uma letra.',
+        'numbers' => 'A :attribute deve conter pelo menos um número.',
+        'mixed' => 'A :attribute deve conter letras maiúsculas e minúsculas.',
+        'symbols' => 'A :attribute deve conter pelo menos um símbolo.',
+        'uncompromised' => 'Esta :attribute apareceu em vazamentos. Escolha outra.',
+    ],
+    'regex' => 'O formato de :attribute é inválido.',
+    'required' => 'Preencha o campo :attribute.',
+    'required_if' => 'Preencha o campo :attribute.',
+    'string' => 'O campo :attribute deve ser um texto.',
+    'unique' => 'Este :attribute já está em uso.',
+    'attributes' => [],
+];

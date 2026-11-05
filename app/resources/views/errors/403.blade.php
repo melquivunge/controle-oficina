@@ -1,0 +1,1 @@
+@include('errors._pagina', ['codigo' => 'Erro 403', 'titulo' => 'Acesso negado', 'texto' => 'Sua conta não tem permissão para esta página ou unidade. Se precisar de acesso, fale com o gerente ou proprietário.', 'cor' => '#fdecea', 'corTexto' => '#b42318'])

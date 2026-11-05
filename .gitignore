@@ -1,0 +1,13 @@
+.env
+backups/
+.DS_Store
+
+# Fora do repositório enquanto ele for público (continuam no disco). Ao ficar privado, reavaliar.
+.devkit/
+contexto/
+docs/*
+!docs/demo-roteiro.md
+prototipo/
+PRODUCT.md
+referencia design dashboard/
+referencias novas funcionalidade/

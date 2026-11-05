@@ -1,0 +1,1 @@
+@include('errors._pagina', ['codigo' => 'Sessão expirada', 'titulo' => 'Sessão expirada', 'texto' => 'Por segurança, a página expirou. Volte, recarregue e envie novamente.', 'cor' => '#fff4dc', 'corTexto' => '#93590b'])

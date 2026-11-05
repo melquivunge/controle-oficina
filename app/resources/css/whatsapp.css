@@ -1,0 +1,144 @@
+/* Central de WhatsApp (RF23). Usa os tokens do design v2 (--ink, --muted, --line, --accent, --soft). */
+.wa-cabecalho{align-items:flex-start}
+.wa-simular{margin:0;position:relative}
+.wa-simular>summary{list-style:none}
+.wa-simular>summary::-webkit-details-marker{display:none}
+.wa-simular-form{position:absolute;right:0;top:calc(100% + 8px);z-index:5;width:min(360px,calc(100vw - 32px));display:grid;gap:12px;padding:18px;background:var(--t-superficie,#fff);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(15,27,45,.12)}
+.kpi.wa-kpi-alerta{border-color:var(--t-erro-borda,#e7c3bd);background:var(--t-erro-fundo,#fdf6f4)}
+.kpi.wa-kpi-alerta strong{color:var(--t-erro-texto,#9a3412)}
+.wa-filtros .wa-filtro-busca{flex:1 1 220px}
+
+.wa-layout{display:grid;grid-template-columns:minmax(260px,330px) minmax(0,1fr) 280px;gap:18px;align-items:start}
+.wa-layout:not(.com-conversa){grid-template-columns:minmax(260px,380px) minmax(0,1fr)}
+.wa-lista,.wa-conversa{background:var(--t-superficie,#fff);border:1px solid var(--line);border-radius:14px;min-width:0}
+.wa-lista{overflow:hidden}
+.wa-lista-total{margin:0;padding:12px 16px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line)}
+.wa-lista ul{list-style:none;margin:0;padding:0;max-height:calc(100vh - 220px);overflow-y:auto}
+.wa-lista .vazio-cartao{border:0;border-radius:0}
+.wa-lista .paginacao{padding:0 16px 12px}
+.wa-item{display:flex;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);min-height:64px;position:relative}
+.wa-item:hover{background:var(--t-superficie-2,#f7f8f8);color:inherit}
+.wa-item[aria-current=page]{background:var(--soft)}
+.wa-item[aria-current=page]:before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:var(--accent)}
+/* Assinatura da Central: espera além do limite do número fica marcada na própria lista. */
+.wa-item.atrasada{background:linear-gradient(90deg,var(--t-erro-fundo,#fdf1ec) 0,var(--t-superficie,#fff) 55%)}
+.wa-item.atrasada:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:#c2410c}
+.wa-item-corpo{display:grid;gap:5px;min-width:0;flex:1}
+.wa-item-linha{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.wa-item-linha strong{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wa-item-linha time{font-size:11px;color:var(--muted);flex:none;font-variant-numeric:tabular-nums}
+.wa-item-previa{color:var(--t-texto-2,#4a4e54);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wa-item-tags{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center}
+.wa-item-tags .tag{font-size:11px;padding:1px 7px}
+.wa-item-tel{font-size:11px}
+
+.wa-conversa{display:flex;flex-direction:column;overflow:hidden}
+.wa-conversa-vazia{border-style:dashed}
+.wa-conversa-vazia .vazio-cartao{border:0}
+.wa-conversa-topo{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.wa-conversa-id{flex:1;min-width:0}
+.wa-conversa-id h2{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wa-conversa-id small{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+.wa-voltar{display:none;align-items:center;gap:4px;min-height:44px;min-width:44px;font-size:22px;color:var(--muted)}
+.wa-voltar span{font-size:13px}
+.tag.wa-situacao-nova{background:var(--t-info-fundo,#e8f0fb);color:var(--t-info-texto,#1e4b8f)}
+.tag.wa-situacao-aguardando_cliente{background:var(--t-alerta-fundo,#fff3d6);color:var(--t-alerta-texto,#6b4e0e)}
+.tag.wa-situacao-resolvida{background:var(--soft);color:var(--t-sucesso-texto,#1d5242)}
+
+.wa-mensagens{list-style:none;margin:0;padding:18px 16px;display:flex;flex-direction:column;gap:8px;background:var(--t-fundo,#f3f5f4);max-height:calc(100vh - 330px);min-height:320px;overflow-y:auto}
+.wa-dia{align-self:center;margin:8px 0}
+.wa-dia span{display:inline-block;padding:3px 10px;border-radius:99px;background:var(--t-neutro-fundo,#e6e9e8);color:var(--t-texto-2,#4a4e54);font-size:11px}
+.wa-msg{display:flex;flex-direction:column;max-width:min(78%,560px)}
+.wa-msg.entrada{align-self:flex-start}
+.wa-msg.saida{align-self:flex-end;align-items:flex-end}
+.wa-bolha{padding:8px 10px 6px;border-radius:12px;background:var(--t-superficie,#fff);border:1px solid var(--t-borda,#e3e6e5);box-shadow:0 1px 1px rgba(15,27,45,.04);overflow-wrap:anywhere}
+.wa-msg.entrada .wa-bolha{border-top-left-radius:4px}
+.wa-msg.saida .wa-bolha{background:var(--t-wa-saida,#dcefe5);border-color:var(--t-sucesso-borda,#c7e2d4);border-top-right-radius:4px}
+.wa-msg.celular .wa-bolha{background:var(--t-neutro-fundo,#eef1ea);border-style:dashed;border-color:var(--t-borda-forte,#b9c7b0)}
+.wa-msg.falhou .wa-bolha{background:var(--t-erro-fundo,#fbf1ef);border-color:var(--t-erro-borda,#e7c3bd)}
+.wa-autor{display:block;font-size:11px;font-weight:600;color:var(--t-sucesso-texto,#315d4c);margin-bottom:3px}
+.wa-msg.celular .wa-autor{color:var(--t-texto-2,#5b6b3f)}
+.wa-texto{margin:0;font-size:14px;line-height:1.45;white-space:pre-wrap}
+.wa-meta{display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:3px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.wa-status{letter-spacing:-2px;font-size:12px}
+.wa-status.lida{color:var(--t-sucesso-texto,#1d8f6a)}
+.wa-imagem{display:block;max-width:100%;width:260px;height:auto;border-radius:8px;margin-bottom:4px;background:var(--t-neutro-fundo,#eee)}
+.wa-msg audio{max-width:260px;width:100%}
+.wa-doc{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:6px 10px;border-radius:8px;background:rgba(0,0,0,.04);font-size:13px;text-decoration:underline;text-underline-offset:3px}
+.wa-doc .ico{width:16px;height:16px}
+.wa-midia-aviso{margin:0 0 4px;font-size:12px;color:var(--muted);font-style:italic}
+.wa-falha{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px;margin-top:6px;font-size:12px;color:var(--t-erro-texto,#8a2c1d)}
+.wa-fim{height:1px}
+.wa-fim:focus{outline:none}
+
+.wa-compor{padding:12px 16px 14px;border-top:1px solid var(--line);display:grid;gap:10px}
+.wa-compor-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 12px;align-items:end}
+.wa-compor-texto{grid-column:1/-1}
+.wa-compor-texto textarea{min-height:64px}
+.wa-compor-anexo input[type=file]{padding:9px;font-size:12px}
+.wa-compor-form .button{min-height:44px}
+.wa-compor .hint{margin:0}
+.wa-janela{margin:0}
+.wa-janela .ico{width:18px;height:18px;flex:none}
+.wa-modelo{margin:0}
+.wa-modelo .inline-form{margin-top:8px}
+.wa-modelo .field{flex:1 1 220px}
+
+.wa-painel{display:grid;gap:14px;min-width:0}
+.wa-painel .cartao{padding:16px}
+.wa-painel h3{margin-bottom:10px}
+.wa-painel .hint{margin:6px 0 0}
+.wa-painel details{margin-top:10px}
+.wa-painel-destaque{margin:0;font-weight:600;font-size:14px}
+.wa-painel-destaque a{display:inline-flex;align-items:center;min-height:44px;text-decoration:underline;text-underline-offset:3px}
+.wa-os>a{display:flex;align-items:center;gap:8px;min-height:44px}
+.wa-acao{display:grid;gap:10px;margin-bottom:14px}
+.wa-acao:last-child{margin-bottom:0}
+.wa-acao .button,.wa-resultados .button{width:100%;white-space:normal}
+.wa-resultados{list-style:none;margin:10px 0;padding:0;display:grid;gap:6px}
+.wa-resultados .button{justify-content:space-between}
+.wa-os{display:grid;gap:4px;padding:10px 0;border-top:1px solid var(--line)}
+.wa-os:first-of-type{border-top:0;padding-top:0}
+.wa-os.vinculada strong{color:var(--accent)}
+.wa-painel .linklike{min-height:44px;font-size:13px}
+.wa-modo{padding:0 4px}
+
+.wa-numero header{align-items:center}
+.wa-numero-tags{display:flex;flex-wrap:wrap;gap:6px}
+.wa-numero form{display:grid;gap:16px;margin-top:12px}
+.wa-novo-numero{margin:20px 0}
+.wa-novo-numero form{display:grid;gap:16px;margin-top:14px}
+.wa-ativo{display:flex;gap:8px;align-items:center;min-height:44px;font-weight:500}
+.wa-ajuda li{margin-bottom:6px}
+
+@media (max-width:1280px){
+  .wa-layout.com-conversa{grid-template-columns:minmax(240px,300px) minmax(0,1fr)}
+  .wa-layout.com-conversa .wa-painel{grid-column:2;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));align-items:start}
+}
+@media (max-width:850px){
+  .wa-layout,.wa-layout:not(.com-conversa),.wa-layout.com-conversa{grid-template-columns:minmax(0,1fr)}
+  .wa-layout.com-conversa .wa-lista,.wa-layout:not(.com-conversa) .wa-conversa-vazia,.wa-oculto-celular{display:none}
+  .wa-layout.com-conversa .wa-painel{grid-column:1;grid-template-columns:minmax(0,1fr)}
+  .wa-voltar{display:inline-flex}
+  .wa-lista ul{max-height:none}
+  .wa-mensagens{max-height:62vh;min-height:240px}
+}
+@media (max-width:560px){
+  .wa-item{padding:12px}
+  .wa-msg{max-width:88%}
+  .wa-compor-form{grid-template-columns:minmax(0,1fr)}
+  .wa-compor-form .button{width:100%}
+  .wa-conversa-topo{padding:8px 10px}
+  .wa-conversa-topo .ficha-avatar{display:none}
+  .wa-simular,.wa-simular>summary{width:100%}
+  .wa-simular-form{position:static;width:100%;margin-top:8px;box-shadow:none}
+  .wa-filtros .field{min-width:0;flex:1 1 140px}
+  .wa-filtros .button{width:100%;min-height:44px}
+  /* iOS não amplia a tela ao focar campos com 16px */
+  .wa-compor input,.wa-compor textarea,.wa-compor select,.wa-painel input,.wa-painel textarea,.wa-painel select,.wa-filtros input,.wa-filtros select,.wa-simular-form input,.wa-simular-form select,.wa-simular-form textarea,.wa-numero input,.wa-numero select,.wa-numero textarea,.wa-novo-numero input,.wa-novo-numero select,.wa-novo-numero textarea{font-size:16px}
+}
+@media (prefers-reduced-motion:no-preference){.wa-item{transition:background-color .15s ease}}
+@media(max-width:850px){body.app .wa-layout .button,body.app .wa-cabecalho .button,body.app .wa-layout summary{min-height:44px}}
+@media(max-width:850px){body.app .wa-oculto-celular{display:none}}
+@media(max-width:560px){body.app .wa-filtros .field{flex:0 0 auto}}
+.wa-entrada{width:100%;margin-top:12px}.wa-novo-cliente{margin-top:12px}

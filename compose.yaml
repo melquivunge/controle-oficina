@@ -1,0 +1,161 @@
+# Controle de Oficina — ambiente Docker. Uso: cp .env.example .env (definir senhas) && docker compose up
+# Demo nunca é carregada aqui; ver README.md (demo:load / demo:reset).
+name: controle-oficina
+
+x-laravel: &laravel
+  image: controle-oficina-app:local
+  restart: unless-stopped
+  environment: &laravel-env
+    APP_NAME: "Controle de Oficina"
+    APP_ENV: ${APP_ENV:-local}
+    APP_DEBUG: ${APP_DEBUG:-false}
+    APP_URL: ${APP_URL:-http://localhost:8092}
+    APP_LOCALE: pt_BR
+    APP_FALLBACK_LOCALE: pt_BR
+    APP_FAKER_LOCALE: pt_BR
+    LOG_CHANNEL: stderr
+    LOG_LEVEL: ${LOG_LEVEL:-info}
+    DB_CONNECTION: pgsql
+    DB_HOST: db
+    DB_PORT: 5432
+    DB_DATABASE: oficina
+    # Runtime usa papel sem DDL e sem UPDATE/DELETE na auditoria; o init usa o dono do esquema.
+    DB_USERNAME: oficina_app
+    DB_PASSWORD: ${APP_DB_PASSWORD:?Defina APP_DB_PASSWORD no arquivo .env (copie de .env.example)}
+    DEMO_DB_DATABASE: oficina_demo
+    DEMO_DB_USERNAME: oficina_demo
+    DEMO_DB_PASSWORD: ${DEMO_DB_PASSWORD:?Defina DEMO_DB_PASSWORD no arquivo .env}
+    OFICINA_BANCO: ${OFICINA_BANCO:-principal}
+    REDIS_CLIENT: phpredis
+    REDIS_HOST: redis
+    REDIS_PASSWORD: ${REDIS_PASSWORD:?Defina REDIS_PASSWORD no arquivo .env}
+    CACHE_STORE: redis
+    QUEUE_CONNECTION: redis
+    SESSION_DRIVER: redis
+    SESSION_ENCRYPT: "true"
+    MAIL_MAILER: log
+    OFICINA_INTEGRACOES: ${OFICINA_INTEGRACOES:-simulado}
+    OFICINA_PIX_WEBHOOK_SEGREDO: ${OFICINA_PIX_WEBHOOK_SEGREDO:?Defina OFICINA_PIX_WEBHOOK_SEGREDO no arquivo .env}
+    # Somente teste de recuperação com o simulador fiscal (padrão false).
+    OFICINA_FISCAL_SIMULAR_INDISPONIVEL: ${OFICINA_FISCAL_SIMULAR_INDISPONIVEL:-false}
+    OFICINA_PERMITE_SIMULAR_PAGAMENTO: ${OFICINA_PERMITE_SIMULAR_PAGAMENTO:-false}
+    SESSION_SECURE_COOKIE: ${SESSION_SECURE_COOKIE:-false}
+    OFICINA_PROXIES_CONFIAVEIS: ${OFICINA_PROXIES_CONFIAVEIS:-}
+  volumes:
+    - chave:/var/lib/oficina/chave
+    - anexos:/app/storage/app/private
+  depends_on:
+    init:
+      condition: service_completed_successfully
+
+services:
+  db:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: oficina
+      POSTGRES_USER: oficina
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Defina DB_PASSWORD no arquivo .env}
+      DEMO_DB_PASSWORD: ${DEMO_DB_PASSWORD:?Defina DEMO_DB_PASSWORD no arquivo .env}
+    volumes:
+      - banco:/var/lib/postgresql/data
+      - ./docker/postgres:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oficina -d oficina"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7.4-bookworm
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?Defina REDIS_PASSWORD no arquivo .env}"]
+    volumes:
+      - redis:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+  # Preparação única e coordenada: chave estável + migrações. Workers não migram.
+  init:
+    <<: *laravel
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: app
+    restart: "no"
+    environment:
+      <<: *laravel-env
+      OFICINA_CRIAR_CHAVE: "1"
+      DB_USERNAME: oficina
+      DB_PASSWORD: ${DB_PASSWORD}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+    command: ["sh", "-c", "php artisan oficina:preparar-banco && php artisan migrate --database=pgsql --force --isolated && php artisan oficina:preparar-banco --permissoes && echo 'init: esquema pronto (banco principal; demo só por demo:load).' && if php artisan migrate:status --database=demo >/dev/null 2>&1; then php artisan migrate --database=demo --force --isolated && echo 'init: demo já carregada teve o esquema atualizado (sem carregar dados).'; else echo 'init: demo não carregada; nada feito.'; fi"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  app:
+    <<: *laravel
+    ports:
+      - "127.0.0.1:${APP_PORT:-8092}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/saude || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
+  worker:
+    <<: *laravel
+    command: ["php", "artisan", "queue:work", "--tries=5", "--backoff=10,60,300", "--max-time=3600"]
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'queue:work' >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  scheduler:
+    <<: *laravel
+    command: ["php", "artisan", "schedule:work"]
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'schedule:work' >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Testes: docker compose --profile test run --rm test
+  test:
+    profiles: ["test"]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: test
+    image: controle-oficina-test:local
+    environment:
+      DB_HOST: db
+      DB_USERNAME: oficina
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_DATABASE: oficina_teste
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      OFICINA_PIX_WEBHOOK_SEGREDO: segredo-somente-testes
+      APP_KEY: base64:dGVzdGVzLWNoYXZlLWZpeGEtc29tZW50ZS10ZXN0ZXM=
+    command: ["php", "artisan", "test"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  banco:
+  redis:
+  anexos:
+  chave:

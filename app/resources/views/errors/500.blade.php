@@ -1,0 +1,1 @@
+@include('errors._pagina', ['codigo' => 'Erro 500', 'titulo' => 'Algo deu errado', 'texto' => 'O sistema não conseguiu concluir a ação e nada foi confirmado por esta tela. Tente novamente em instantes; se persistir, avise o gerente.', 'cor' => '#fdecea', 'corTexto' => '#b42318'])
