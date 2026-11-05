@@ -192,11 +192,11 @@ class PainelController extends Controller
 
     private function somar(array $linhas): array
     {
-        $t = ['por_etapa' => []];
+        $t = Indicadores::zerada();
         foreach ($linhas as $l) {
             foreach ($l as $k => $v) {
                 if ($k !== 'por_etapa') {
-                    $t[$k] = ($t[$k] ?? 0) + $v;
+                    $t[$k] += $v;
                 }
             }
         }

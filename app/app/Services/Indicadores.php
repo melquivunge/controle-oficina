@@ -13,6 +13,14 @@ use Illuminate\Support\Facades\DB;
  */
 class Indicadores
 {
+    /** Linha com todos os indicadores zerados: base das somas, inclusive sem nenhuma unidade (primeiro acesso). */
+    public static function zerada(): array
+    {
+        return array_fill_keys(['entradas', 'saidas', 'orcado', 'aprovado', 'aprovacoes', 'recusas', 'recebido', 'recebido_pix', 'recebido_manual',
+            'devolvido', 'pendente', 'descontos', 'descontos_qtd', 'cancelamentos', 'liberacoes', 'liberado_sem_quitacao', 'falhas', 'divergencias_abertas'], 0)
+            + ['por_etapa' => []];
+    }
+
     /**
      * @param  ?int  $responsavel  usuário que registrou a entrada (ordens.criado_por): restringe as métricas às ordens dele
      * @return array<int, array<string, int>> chave = unidade_id
