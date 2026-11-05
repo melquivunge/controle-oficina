@@ -12,7 +12,7 @@ chmod +x deploy/*.sh docker/scripts/*.sh
 # Borda: sobe na primeira vez e recarrega quando a configuração mudar, sem interromper as conexões.
 EDGE="$(dirname "$PWD")/edge"
 MUDOU=0
-if ! diff -qr deploy/edge "$EDGE" >/dev/null 2>&1; then MUDOU=1; mkdir -p "$EDGE"; cp deploy/edge/* "$EDGE/"; fi
+if ! diff -qr deploy/edge "$EDGE" >/dev/null 2>&1; then MUDOU=1; mkdir -p "$EDGE"; rm -rf "$EDGE/manual"; cp -R deploy/edge/. "$EDGE/"; fi
 (
   cd "$EDGE"
   docker compose up -d --wait

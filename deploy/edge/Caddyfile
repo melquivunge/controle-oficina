@@ -8,3 +8,19 @@
 	header X-Robots-Tag "noindex, nofollow"
 	reverse_proxy oficina-staging-app:8080
 }
+
+# Domínio principal: manual público em /manual; a raiz leva ao sistema.
+{$DOMINIO_RAIZ:controleoficina.com.br}, www.{$DOMINIO_RAIZ:controleoficina.com.br} {
+	encode zstd gzip
+	redir /manual /manual/ 308
+	handle_path /manual/* {
+		root * /etc/caddy/manual
+		@internos path /scripts/* /MANUAL.md
+		respond @internos 404
+		templates
+		file_server
+	}
+	handle {
+		redir https://{$DOMINIO_PRODUCAO:oficina.controleoficina.com.br}{uri} 302
+	}
+}

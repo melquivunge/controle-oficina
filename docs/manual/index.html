@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Manual de uso · Controle de Oficina</title>
+<meta name="description" content="Guia completo, com fotos das telas, para dono, gerente, supervisor, recepção/caixa e mecânico.">
+<style>
+/* Versão web do MANUAL.md, renderizada pelo Caddy (templates). Cores do DESIGN.md. */
+:root{--fundo:#f3f5f9;--superficie:#fff;--borda:#e4e8ef;--texto:#24262a;--apoio:#667085;--navy:#0f1b2d;--link:#2563c4;--verde:#157a52;--foco:#3b6fd0;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--fundo:#0b1220;--superficie:#131c2c;--borda:#263349;--texto:#e5e9f0;--apoio:#9ba7b9;--navy:#101a2b;--link:#86b4ff;--verde:#74e0b0;--foco:#86b4ff;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fundo);color:var(--texto);font:16px/1.65 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.topo{background:var(--navy);color:#fff;padding:14px 16px}
+.topo div{max-width:960px;margin:auto;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.topo a{color:#fff;font-weight:600;text-decoration:none;font-size:14px;border:1px solid rgba(255,255,255,.35);border-radius:10px;padding:8px 14px}
+main{max-width:960px;margin:24px auto 64px;padding:8px 16px}
+article{background:var(--superficie);border:1px solid var(--borda);border-radius:14px;padding:clamp(18px,4vw,40px)}
+h1{font-size:30px;line-height:1.2;margin:0 0 12px}h2{font-size:24px;margin:48px 0 12px;padding-top:16px;border-top:1px solid var(--borda)}h3{font-size:19px;margin:32px 0 8px}
+h1,h2,h3{text-wrap:balance;scroll-margin-top:16px}
+a{color:var(--link)}a:focus-visible{outline:2px solid var(--foco);outline-offset:2px}
+img{max-width:100%;height:auto;display:block;margin:12px 0 20px;border:1px solid var(--borda);border-radius:10px}
+blockquote{margin:16px 0;padding:12px 16px;border-left:4px solid var(--verde);background:var(--fundo);border-radius:0 10px 10px 0}
+table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;font-size:14px}th,td{border:1px solid var(--borda);padding:8px 10px;text-align:left;vertical-align:top}th{background:var(--fundo)}
+code{font-size:.9em;background:var(--fundo);padding:1px 5px;border-radius:5px}
+hr{border:0;border-top:1px solid var(--borda);margin:32px 0}
+</style>
+</head>
+<body>
+<header class="topo"><div><strong>Controle de Oficina · Manual de uso</strong><a href="https://oficina.controleoficina.com.br">Entrar no sistema</a></div></header>
+<main><article>
+{{include "MANUAL.md" | markdown}}
+</article></main>
+<script>
+// Âncoras no mesmo formato do GitHub, para os links do sumário funcionarem igual nos dois lugares.
+document.querySelectorAll('article h1, article h2, article h3, article h4').forEach(function (h) {
+  h.id = h.textContent.trim().toLowerCase().replace(/[^\p{L}\p{N}\s-]/gu, '').replace(/\s/g, '-');
+});
+if (location.hash) { var alvo = document.getElementById(decodeURIComponent(location.hash.slice(1))); if (alvo) alvo.scrollIntoView(); }
+</script>
+</body>
+</html>
