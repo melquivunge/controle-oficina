@@ -1,5 +1,6 @@
-# Testes em Docker a cada push/PR, a partir de um clone limpo. Senhas descartáveis geradas na hora; não usa segredos do repositório.
-name: Testes
+# Testes em Docker a cada push/PR. Em main e staging, depois dos testes: imagem no GHCR e deploy no servidor.
+# Segredos do repositório: DEPLOY_HOST, DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS. Sem eles, para antes do deploy.
+name: Testes e deploy
 on:
   push:
     branches: [main, staging]
@@ -21,3 +22,46 @@ jobs:
           done
       - name: Rodar testes
         run: docker compose --profile test run --rm --build test
+  deploy:
+    needs: phpunit
+    if: github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'staging')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    environment: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+    concurrency:
+      group: deploy-servidor # uma atualização por vez no servidor
+      cancel-in-progress: false
+    env:
+      AMBIENTE: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+      IMAGEM: ghcr.io/${{ github.repository }}:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Conferir segredos
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+        run: test -n "$HOST" || { echo "::error::Segredo DEPLOY_HOST não configurado"; exit 1; }
+      - name: Publicar imagem
+        run: |
+          echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker build --target app -f docker/Dockerfile -t "$IMAGEM" .
+          docker push "$IMAGEM"
+      - name: Configurar SSH
+        env:
+          CHAVE: ${{ secrets.DEPLOY_SSH_KEY }}
+          CONHECIDOS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$CHAVE" > ~/.ssh/id_ed25519; chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$CONHECIDOS" > ~/.ssh/known_hosts
+      - name: Atualizar servidor
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          TOKEN: ${{ github.token }}
+        run: |
+          tar -czf - compose.yaml deploy docker/postgres docker/scripts \
+            | ssh "deploy@$HOST" "tar -xzf - -C /opt/oficina/$AMBIENTE"
+          echo "$TOKEN" | ssh "deploy@$HOST" "docker login ghcr.io -u '${{ github.actor }}' --password-stdin"
+          ssh "deploy@$HOST" "cd /opt/oficina/$AMBIENTE && deploy/deploy.sh $AMBIENTE '$IMAGEM'; c=\$?; docker logout ghcr.io; exit \$c"

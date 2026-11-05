@@ -1,0 +1,23 @@
+# Complemento de compose.yaml no servidor: imagem pronta do registro, sem porta publicada; o tráfego chega pela borda.
+x-imagem: &imagem
+  image: ${OFICINA_IMAGEM:?Defina OFICINA_IMAGEM}
+services:
+  init:
+    <<: *imagem
+    build: !reset null
+  app:
+    <<: *imagem
+    ports: !reset []
+    networks:
+      default:
+      borda:
+        aliases:
+          - oficina-${OFICINA_AMBIENTE:?Defina OFICINA_AMBIENTE}-app
+  worker:
+    <<: *imagem
+  scheduler:
+    <<: *imagem
+networks:
+  borda:
+    external: true
+    name: oficina-borda

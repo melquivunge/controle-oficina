@@ -1,0 +1,24 @@
+# Borda única do servidor: HTTPS automático e encaminhamento por domínio. Únicas portas públicas: 80 e 443.
+name: oficina-edge
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./:/etc/caddy:ro
+      - dados:/data
+      - config:/config
+    networks: [borda]
+networks:
+  borda:
+    name: oficina-borda
+    ipam:
+      config:
+        - subnet: 10.250.250.0/24 # mesma faixa de OFICINA_PROXIES_CONFIAVEIS em gerar-env.sh
+volumes:
+  dados:
+  config:
