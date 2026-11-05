@@ -21,7 +21,7 @@ docker compose --profile test run --rm test
 Usa o banco isolado `oficina_teste` (forçado no phpunit.xml).
 
 ## Branches e CI
-`main` corresponde ao ambiente `production` e `staging` ao ambiente `staging`. Cada push nessas branches, e cada PR, roda a suíte em Docker no GitHub Actions (`.github/workflows/testes.yml`). Se os testes passarem, o mesmo workflow publica a imagem no GHCR e atualiza o servidor.
+`main` corresponde ao ambiente `production` e `staging` ao ambiente `staging`. Cada push nessas branches, e cada PR, roda a suíte em Docker no GitHub Actions (`.github/workflows/testes.yml`). Se os testes passarem, o mesmo workflow envia o código ao servidor por SSH, constrói a imagem lá e atualiza o ambiente.
 
 ## Servidor (deploy)
 - **Estrutura:** uma VPS Ubuntu com `/opt/oficina/{edge,production,staging}`. O Caddy de `deploy/edge` é o único com portas públicas (80/443), com HTTPS automático; `oficina.solutions-ss.com` vai para a produção e `staging.solutions-ss.com` para o staging.

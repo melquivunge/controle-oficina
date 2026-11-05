@@ -28,7 +28,7 @@ if ! docker compose pull --quiet --policy missing app; then
   exit 1
 fi
 if docker compose up -d --wait --remove-orphans; then
-  docker image prune -af --filter "until=168h" >/dev/null
+  docker image prune -af --filter "until=168h" >/dev/null; docker builder prune -f --filter "until=168h" >/dev/null
   echo "$AMB: atualizado para $IMAGEM"
   exit 0
 fi
