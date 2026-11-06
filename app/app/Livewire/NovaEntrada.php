@@ -19,6 +19,7 @@ class NovaEntrada extends Component
 
     public ?int $unidade_id = null;
     public ?int $cliente_id = null;
+    public string $busca = ''; // 06/11/2026: achar cliente já cadastrado pelo nome (mesma busca da tela Clientes: cadastro da rede)
     public string $nome = '';
     public string $telefone = '';
     public string $placa = '';
@@ -111,12 +112,26 @@ class NovaEntrada extends Component
 
     public function usarCliente(int $id): void
     {
-        // Só cadastros encontrados pelo telefone ou placa digitados (sem enumeração por id).
-        $cliente = Cliente::ativos()->whereKey($id)->where(fn ($q) => $q->where('telefone', $this->telefone)
-            ->orWhereHas('veiculos', fn ($v) => $v->where('placa', $this->placa)))->firstOrFail();
+        // Só cadastros encontrados pelo telefone, placa ou nome digitados (sem enumeração por id).
+        $cliente = Cliente::ativos()->with('veiculos')->whereKey($id)->where(fn ($q) => $q->where('telefone', $this->telefone)
+            ->orWhereHas('veiculos', fn ($v) => $v->where('placa', $this->placa))
+            ->when($this->buscaValida(), fn ($q, $b) => $q->orWhere(fn ($q) => $q->buscar($b))))->firstOrFail();
         $this->cliente_id = $cliente->id;
         $this->nome = $cliente->nome;
         $this->telefone = $cliente->telefone;
+        $this->busca = '';
+        // Um só veículo e placa vazia: já preenche (dá para trocar se veio com outro carro).
+        if (! $this->sem_veiculo && $this->placa === '' && $cliente->veiculos->count() === 1) {
+            $this->placa = $cliente->veiculos->first()->placa;
+            $this->modelo = (string) $cliente->veiculos->first()->modelo;
+        }
+    }
+
+    private function buscaValida(): ?string
+    {
+        $b = trim($this->busca);
+
+        return mb_strlen($b) >= 3 ? mb_substr($b, 0, 80) : null;
     }
 
     public function salvar(Entradas $entradas)
@@ -157,6 +172,10 @@ class NovaEntrada extends Component
                 ->where(fn ($q) => $q->when(strlen($this->telefone) >= 8, fn ($q) => $q->orWhere('telefone', $this->telefone))
                     ->when(strlen($this->placa) >= 7, fn ($q) => $q->orWhereHas('veiculos', fn ($v) => $v->where('placa', $this->placa))))
                 ->limit(5)->get();
+        }
+        if (! $this->cliente_id && ($b = $this->buscaValida())) {
+            $sugestoes = $sugestoes->concat(Cliente::ativos()->with('veiculos')->buscar($b)
+                ->orderBy('nome')->limit(8)->get())->unique('id')->values();
         }
 
         return view('livewire.nova-entrada', [

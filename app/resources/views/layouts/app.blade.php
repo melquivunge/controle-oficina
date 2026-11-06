@@ -53,7 +53,7 @@
         ],
         'Gestão' => [
             ['indicadores', 'Relatórios por unidade', 'operacao', $usuario->can('ver_auditoria')],
-            ['aprovacoes.index', 'Aprovações de desconto', 'auditoria', \App\Services\AprovacoesInternas::podeAprovar($usuario)],
+            ['aprovacoes.index', 'Aprovações de desconto', 'auditoria', config('oficina.desconto_exige_aprovacao') && \App\Services\AprovacoesInternas::podeAprovar($usuario)],
             ['pendencias.index', 'Pendências e mensagens', 'sino', $usuario->can('resolver_divergencias')],
             ['auditoria.index', 'Auditoria', 'auditoria', $usuario->can('ver_auditoria')],
         ],

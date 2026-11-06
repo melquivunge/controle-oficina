@@ -37,6 +37,7 @@ class CatalogoDescontoTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config(['oficina.desconto_exige_aprovacao' => true]); // regra desligada por padrão desde 06/11/2026; aqui ela é testada ligada
         $this->unidade = Unidade::factory()->create(['codigo' => 'ASN']);
         $this->outra = Unidade::factory()->create(['codigo' => 'GYN']);
         $this->dono = $this->usuario(Papel::Proprietario);
@@ -280,5 +281,17 @@ class CatalogoDescontoTest extends TestCase
         app(Orcamentos::class)->decidirPresencial($v->fresh(), $this->gerente, 'aprovado', 'Aprovou por telefone');
         $this->entrarComo($this->mecanico)->get(route('ordens.show', $this->ordem))->assertOk()
             ->assertSee('Reforma geral aro 17')->assertDontSee('R$');
+    }
+
+    /** 06/11/2026 (padrão): desconto livre para quem orça — R$ 500 vendido a R$ 400 aprova sem pedido interno; tabela e desconto ficam registrados. */
+    public function test_padrao_desconto_livre_sem_aprovacao_interna(): void
+    {
+        config(['oficina.desconto_exige_aprovacao' => false]);
+        $v = $this->rascunho('100,00'); // ~44% abaixo da tabela (R$ 180)
+        $this->assertSame(0, AprovacaoInterna::count());
+        $this->entrarComo($this->gerente)->post(route('orcamentos.aprovar', [$this->ordem, $v]))->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('aprovado', $v->fresh()->status);
+        $this->assertNotNull($v->fresh()->itens->first()->preco_tabela_centavos);
+        $this->get('/')->assertDontSee('Aprovações de desconto');
     }
 }

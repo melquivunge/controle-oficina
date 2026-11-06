@@ -242,6 +242,21 @@ class EntradaOrdemTest extends TestCase
         Livewire::actingAs($recA)->test(NovaEntrada::class)->set('telefone', '61991234567')->call('usarCliente', $ob->cliente_id)->assertSet('nome', 'Mariana Costa');
     }
 
+    /** 06/11/2026: cliente já cadastrado encontrado pelo nome na nova entrada; um só veículo já preenche a placa. */
+    public function test_nova_entrada_busca_cliente_pelo_nome(): void
+    {
+        $a = Unidade::factory()->create();
+        $o = app(Entradas::class)->registrar(\App\Models\User::factory()->proprietario()->create(), $this->entrada($a));
+        $rec = $this->usuario(Papel::Recepcao, $a);
+        Livewire::actingAs($rec)->test(NovaEntrada::class)->set('busca', 'ma')->assertDontSee('Usar este cadastro') // menos de 3 letras
+            ->set('busca', 'xyzw')->assertSee('Nenhum cliente encontrado')
+            ->set('busca', 'cost')->assertSee('Mariana Costa')->assertSee('Usar este cadastro')
+            ->call('usarCliente', $o->cliente_id)->assertSet('cliente_id', $o->cliente_id)->assertSet('nome', 'Mariana Costa')
+            ->assertSet('telefone', '61991234567')->assertSet('placa', $o->veiculo->placa)->assertSee('Usando o cadastro existente');
+        // Id fora da busca digitada continua 404 (sem enumeração).
+        Livewire::actingAs($rec)->test(NovaEntrada::class)->set('busca', 'xyzw')->call('usarCliente', $o->cliente_id)->assertStatus(404);
+    }
+
     public function test_pagina_de_clientes_abre_sem_busca(): void
     {
         $this->entrarComo($this->usuario(Papel::Recepcao))->get('/clientes')->assertOk()->assertSee('Nenhum cliente atendido nas suas unidades ainda.');

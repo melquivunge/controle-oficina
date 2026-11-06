@@ -24,6 +24,8 @@ return [
     'prazo_entrega_max_dias_uteis' => 120,
     // Catálogo (31/10/2026): desconto máximo sem aprovação interna para itens livres e itens do catálogo sem limite próprio (%).
     'desconto_max_geral_percentual' => env('OFICINA_DESCONTO_MAX_GERAL', '10'),
+    // 06/11/2026: quem orça (dono, gerente, supervisor) dá desconto livre. true religa o limite + aprovação interna.
+    'desconto_exige_aprovacao' => (bool) env('OFICINA_DESCONTO_EXIGE_APROVACAO', false),
     // Demonstração: datas ancoradas nesta referência (resultados reproduzíveis).
     'demo' => [
         'referencia' => env('OFICINA_DEMO_REFERENCIA', '2026-10-29'),
