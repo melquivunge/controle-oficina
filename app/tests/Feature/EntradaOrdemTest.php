@@ -287,4 +287,36 @@ class EntradaOrdemTest extends TestCase
         $this->entrarComo($dono)->get('/')->assertOk()->assertSee($oa->numero)->assertSee($ob->numero);
         $this->entrarComo($this->usuario(Papel::Mecanico, $a))->get('/')->assertRedirect('/meu-painel');
     }
+
+    /** 06/11/2026: placa nova → consulta (simulador fora de produção); placa já cadastrada → veículo e dono do sistema. */
+    public function test_placa_puxa_dados_do_veiculo_e_do_cliente(): void
+    {
+        $a = Unidade::factory()->create();
+        $rec = $this->usuario(Papel::Recepcao, $a);
+        $esperado = app(\App\Integracoes\Placa\SimuladorPlaca::class)->consultar('BRA2E19');
+
+        // Placa nova: preenche pela consulta; o que for digitado é salvo no cadastro do veículo.
+        $c = Livewire::actingAs($rec)->test(NovaEntrada::class)->set('placa', 'bra-2e19')
+            ->assertSet('marca', $esperado['marca'])->assertSet('modelo', $esperado['modelo'])->assertSet('ano', (string) $esperado['ano'])
+            ->assertSet('cor', $esperado['cor'])->assertSee('preenchidos pela consulta da placa');
+        $c->set('cor', 'Azul')->set('nome', 'Paulo Reis')->set('telefone', '61977776666')->set('motivo', 'Revisão')->call('salvar')->assertHasNoErrors();
+        $v = \App\Models\Veiculo::where('placa', 'BRA2E19')->sole();
+        $this->assertSame([$esperado['marca'], $esperado['modelo'], $esperado['ano'], 'Azul'], [$v->marca, $v->modelo, $v->ano, $v->cor]);
+
+        // Placa já no sistema: puxa veículo e cliente (nada da consulta).
+        Livewire::actingAs($rec)->test(NovaEntrada::class)->set('placa', 'BRA2E19')
+            ->assertSet('cliente_id', $v->cliente_id)->assertSet('nome', 'Paulo Reis')->assertSet('telefone', '61977776666')
+            ->assertSet('cor', 'Azul')->assertSee('dados puxados do sistema');
+
+        // Telefone de outro cliente já digitado: não troca o cliente (fluxo de transferência continua valendo).
+        Livewire::actingAs($rec)->test(NovaEntrada::class)->set('telefone', '61911112222')->set('placa', 'BRA2E19')->assertSet('cliente_id', null);
+
+        // Consulta sem resultado e troca de placa limpam o que veio da placa anterior.
+        Livewire::actingAs($rec)->test(NovaEntrada::class)->set('placa', 'BRA2E19')->set('placa', 'QWE1R20')
+            ->assertSet('marca', '')->assertSet('modelo', '')->assertSet('ano', '');
+
+        // Produção sem provedor contratado: nada é consultado; a recepção digita.
+        config(['oficina.integracoes' => 'real']);
+        $this->assertNull(app(\App\Integracoes\Placa\ConsultaPlaca::class)->consultar('BRA2E19'));
+    }
 }

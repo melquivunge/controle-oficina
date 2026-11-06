@@ -25,6 +25,10 @@ class NovaEntrada extends Component
     public string $placa = '';
     public string $motivo = '';
     public string $modelo = '';
+    public string $marca = '';
+    public string $ano = '';
+    public string $cor = '';
+    public ?string $origemVeiculo = null; // 'sistema' | 'consulta' (06/11/2026: dados puxados pela placa)
     public string $quilometragem = '';
     public string $observacoes = '';
     public array $fotos = [];
@@ -61,6 +65,9 @@ class NovaEntrada extends Component
             'item_descricao' => ['exclude_unless:sem_veiculo,true', 'required', 'string', 'min:3', 'max:200'],
             'motivo' => ['required', 'string', 'min:3', 'max:2000'],
             'modelo' => ['exclude_if:sem_veiculo,true', 'nullable', 'string', 'max:80'],
+            'marca' => ['exclude_if:sem_veiculo,true', 'nullable', 'string', 'max:40'],
+            'ano' => ['exclude_if:sem_veiculo,true', 'nullable', 'integer', 'min:1950', 'max:'.(now()->year + 1)],
+            'cor' => ['exclude_if:sem_veiculo,true', 'nullable', 'string', 'max:30'],
             'quilometragem' => ['nullable', 'integer', 'min:0', 'max:2000000'],
             'observacoes' => ['nullable', 'string', 'max:2000'],
             'fotos' => ['array', 'max:5'],
@@ -105,9 +112,55 @@ class NovaEntrada extends Component
         $this->cliente_id = null;
     }
 
+    /**
+     * Placa completa: já cadastrada → puxa veículo e dono do sistema (se nenhum cliente foi escolhido/digitado);
+     * nova → consulta o provedor (simulador fora de produção). Tudo continua editável; falha da consulta não bloqueia.
+     */
     public function updatedPlaca(): void
     {
         $this->placa = Normaliza::placa($this->placa);
+        if ($this->origemVeiculo) { // placa mudou: descarta o que foi puxado da placa anterior
+            $this->marca = $this->modelo = $this->ano = $this->cor = '';
+        }
+        $this->origemVeiculo = null;
+        if (! preg_match(Normaliza::REGEX_PLACA, $this->placa)) {
+            return;
+        }
+        $veiculo = Veiculo::with('cliente')->where('placa', $this->placa)->first();
+        if ($veiculo) {
+            $this->preencherVeiculo($veiculo->only('marca', 'modelo', 'ano', 'cor'));
+            $this->origemVeiculo = 'sistema';
+            $dono = $veiculo->cliente;
+            if (! $this->cliente_id && $this->telefone === '' && $dono && $dono->mesclado_em_id === null) {
+                $this->cliente_id = $dono->id;
+                $this->nome = $dono->nome;
+                $this->telefone = $dono->telefone;
+            }
+
+            return;
+        }
+        try {
+            $dados = app(\App\Integracoes\Placa\ConsultaPlaca::class)->consultar($this->placa);
+        } catch (\Throwable $e) {
+            report($e);
+            $dados = null;
+        }
+        if ($dados) {
+            $this->preencherVeiculo($dados);
+            $this->origemVeiculo = 'consulta';
+        }
+    }
+
+    private function preencherVeiculo(array $d): void
+    {
+        foreach (['marca' => 40, 'modelo' => 80, 'cor' => 30] as $k => $max) {
+            if ($this->{$k} === '' && ! empty($d[$k])) {
+                $this->{$k} = mb_substr((string) $d[$k], 0, $max);
+            }
+        }
+        if ($this->ano === '' && ! empty($d['ano'])) {
+            $this->ano = (string) (int) $d['ano'];
+        }
     }
 
     public function usarCliente(int $id): void
@@ -123,7 +176,8 @@ class NovaEntrada extends Component
         // Um só veículo e placa vazia: já preenche (dá para trocar se veio com outro carro).
         if (! $this->sem_veiculo && $this->placa === '' && $cliente->veiculos->count() === 1) {
             $this->placa = $cliente->veiculos->first()->placa;
-            $this->modelo = (string) $cliente->veiculos->first()->modelo;
+            $this->preencherVeiculo($cliente->veiculos->first()->only('marca', 'modelo', 'ano', 'cor'));
+            $this->origemVeiculo = 'sistema';
         }
     }
 
@@ -144,6 +198,7 @@ class NovaEntrada extends Component
         }
         $dados = $this->validate();
         $dados['sem_veiculo'] = $this->sem_veiculo;
+        $dados['ano'] = $this->sem_veiculo || $this->ano === '' ? null : (int) $this->ano;
         $dados['endereco'] = $this->endereco;
 
         if ($this->contingencia) {

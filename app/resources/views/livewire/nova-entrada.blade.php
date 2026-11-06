@@ -36,7 +36,10 @@
                 @endunless
                 @include('livewire.partials.campo', ['nome' => 'nome', 'rotulo' => 'Nome do cliente', 'atributos' => ['autocomplete' => 'off']])
                 @unless ($sem_veiculo)
-                    @include('livewire.partials.campo', ['nome' => 'modelo', 'rotulo' => 'Modelo do veículo (opcional)'])
+                    @include('livewire.partials.campo', ['nome' => 'marca', 'rotulo' => 'Marca (opcional)', 'atributos' => ['autocomplete' => 'off']])
+                    @include('livewire.partials.campo', ['nome' => 'modelo', 'rotulo' => 'Modelo do veículo (opcional)', 'atributos' => ['autocomplete' => 'off']])
+                    @include('livewire.partials.campo', ['nome' => 'ano', 'rotulo' => 'Ano (opcional)', 'atributos' => ['inputmode' => 'numeric', 'maxlength' => 4, 'autocomplete' => 'off']])
+                    @include('livewire.partials.campo', ['nome' => 'cor', 'rotulo' => 'Cor (opcional)', 'atributos' => ['autocomplete' => 'off']])
                 @endunless
             </div>
             <label class="check-linha sem-veiculo-opcao"><input type="checkbox" wire:model.live="sem_veiculo"> Sem veículo (peças avulsas) — o cliente trouxe só o item, sem placa</label>
@@ -61,6 +64,11 @@
                 </details>
             @endcan
 
+            @if (! $sem_veiculo && $origemVeiculo === 'consulta')
+                <p class="hint" role="status">Marca, modelo, ano e cor preenchidos pela consulta da placa@if (app(\App\Integracoes\Placa\ConsultaPlaca::class) instanceof \App\Integracoes\Placa\SimuladorPlaca) <strong>(SIMULAÇÃO: dados fictícios, não vêm do DETRAN)</strong>@endif. Confira com o veículo.</p>
+            @elseif (! $sem_veiculo && $origemVeiculo === 'sistema')
+                <p class="hint" role="status">Veículo já cadastrado: dados puxados do sistema.</p>
+            @endif
             @if ($veiculoExistente && $veiculoExistente->cliente_id !== $cliente_id)
                 <div class="notice" role="status">
                     <p>Placa já cadastrada{{ $veiculoExistente->modelo ? ' ('.$veiculoExistente->modelo.')' : '' }} para outro cliente. Se for o mesmo cliente, use “Usar este cadastro”. Se o veículo mudou de dono, confirme a transferência (fica no histórico).</p>
