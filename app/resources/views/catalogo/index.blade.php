@@ -1,6 +1,6 @@
 @extends('layouts.app', ['titulo' => 'Catálogo'])
 @section('conteudo')
-    <div class="page-head"><div><h1>Catálogo de serviços e produtos</h1><p class="subtitle">Preço de tabela e desconto máximo sem aprovação. Descontos acima do limite precisam de aprovação interna antes de concluir o orçamento. Itens sem limite próprio seguem a regra geral de {{ str_replace('.', ',', rtrim(rtrim(\App\Services\AprovacoesInternas::regraGeral(), '0'), '.')) }}%.</p></div></div>
+    <div class="page-head"><div><h1>Catálogo de serviços e produtos</h1><p class="subtitle">@if (config('oficina.desconto_exige_aprovacao'))Preço de tabela e desconto máximo sem aprovação. Descontos acima do limite precisam de aprovação interna antes de concluir o orçamento. Itens sem limite próprio seguem a regra geral de {{ str_replace('.', ',', rtrim(rtrim(\App\Services\AprovacoesInternas::regraGeral(), '0'), '.')) }}%.@else Preço de tabela de cada serviço ou produto. No orçamento, quem orça pode vender abaixo da tabela; o desconto fica registrado.@endif</p></div></div>
 
     @if ($relatorio)
         <section class="versao relatorio-importacao" aria-labelledby="relatorio-titulo">

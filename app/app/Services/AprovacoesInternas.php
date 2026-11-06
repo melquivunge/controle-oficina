@@ -35,7 +35,7 @@ class AprovacoesInternas
 
     public static function excede(int $precoUnitario, int $precoBase, string $limite, int $subtotal, int $desconto): bool
     {
-        if ($precoBase <= 0 || $subtotal <= 0) {
+        if (! config('oficina.desconto_exige_aprovacao') || $precoBase <= 0 || $subtotal <= 0) {
             return false;
         }
         $lhs = bcmul(bcmul((string) $precoUnitario, (string) ($subtotal - $desconto)), '100');

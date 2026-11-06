@@ -6,7 +6,26 @@
         @endif
         <section class="form-section">
             <h2>Cliente e veículo (ou item)</h2>
-            <p class="section-copy">Só o essencial. Se o cliente já veio antes, o cadastro aparece ao digitar telefone ou placa.</p>
+            <p class="section-copy">Só o essencial. Se o cliente já veio antes, busque pelo nome ou digite o telefone ou a placa.</p>
+            @unless ($cliente_id)
+                <div class="field busca-cliente">
+                    <label for="busca-cliente">Cliente já cadastrado? Buscar pelo nome</label>
+                    <input id="busca-cliente" type="search" wire:model.live.debounce.300ms="busca" placeholder="Digite pelo menos 3 letras do nome (ou telefone, placa)" autocomplete="off">
+                </div>
+            @endunless
+            @if ($cliente_id)
+                <p class="alert sucesso" role="status">Usando o cadastro existente de <strong>{{ $nome }}</strong>. <button type="button" class="linklike" wire:click="$set('cliente_id', null)">Não é este cliente</button></p>
+            @elseif ($sugestoes->isNotEmpty())
+                <div class="notice" role="status" aria-live="polite">
+                    <strong>Cadastro encontrado</strong>
+                    @foreach ($sugestoes as $s)
+                        <p>{{ $s->nome }} · {{ $s->telefoneFormatado() }} · {{ $s->veiculos->map->placaFormatada()->join(', ') ?: 'sem veículos' }}
+                            <button type="button" class="button" wire:click="usarCliente({{ $s->id }})">Usar este cadastro</button></p>
+                    @endforeach
+                </div>
+            @elseif (mb_strlen(trim($busca)) >= 3)
+                <p class="hint" role="status">Nenhum cliente encontrado. Preencha os dados abaixo para cadastrar.</p>
+            @endif
             <div class="fields">
                 @if ($unidades->count() > 1)
                     @include('livewire.partials.campo', ['nome' => 'unidade_id', 'rotulo' => 'Unidade', 'tipo' => 'select', 'opcoes' => ['' => 'Escolha a unidade'] + $unidades->pluck('nome', 'id')->all()])
@@ -42,17 +61,6 @@
                 </details>
             @endcan
 
-            @if ($cliente_id)
-                <p class="alert sucesso" role="status">Usando o cadastro existente de <strong>{{ $nome }}</strong>. <button type="button" class="linklike" wire:click="$set('cliente_id', null)">Não é este cliente</button></p>
-            @elseif ($sugestoes->isNotEmpty())
-                <div class="notice" role="status" aria-live="polite">
-                    <strong>Cadastro encontrado</strong>
-                    @foreach ($sugestoes as $s)
-                        <p>{{ $s->nome }} · {{ $s->telefoneFormatado() }} · {{ $s->veiculos->map->placaFormatada()->join(', ') ?: 'sem veículos' }}
-                            <button type="button" class="button" wire:click="usarCliente({{ $s->id }})">Usar este cadastro</button></p>
-                    @endforeach
-                </div>
-            @endif
             @if ($veiculoExistente && $veiculoExistente->cliente_id !== $cliente_id)
                 <div class="notice" role="status">
                     <p>Placa já cadastrada{{ $veiculoExistente->modelo ? ' ('.$veiculoExistente->modelo.')' : '' }} para outro cliente. Se for o mesmo cliente, use “Usar este cadastro”. Se o veículo mudou de dono, confirme a transferência (fica no histórico).</p>
