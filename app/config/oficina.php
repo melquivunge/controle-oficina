@@ -25,6 +25,11 @@ return [
     // Catálogo (31/10/2026): desconto máximo sem aprovação interna para itens livres e itens do catálogo sem limite próprio (%).
     'desconto_max_geral_percentual' => env('OFICINA_DESCONTO_MAX_GERAL', '10'),
     // 06/11/2026: quem orça (dono, gerente, supervisor) dá desconto livre. true religa o limite + aprovação interna.
+    // Consulta de placa (06/11/2026). 'integrasist' = fonte NÃO oficial (SINESP via terceiro); vazio = simulador fora de produção / indisponível em produção.
+    'placa' => [
+        'provedor' => env('OFICINA_PLACA_PROVEDOR'),
+        'url' => env('OFICINA_PLACA_URL', 'http://consulta.integrasist.com.br:3136'),
+    ],
     'desconto_exige_aprovacao' => (bool) env('OFICINA_DESCONTO_EXIGE_APROVACAO', false),
     // Demonstração: datas ancoradas nesta referência (resultados reproduzíveis).
     'demo' => [

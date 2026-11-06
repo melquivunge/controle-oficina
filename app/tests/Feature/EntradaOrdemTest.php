@@ -319,4 +319,28 @@ class EntradaOrdemTest extends TestCase
         config(['oficina.integracoes' => 'real']);
         $this->assertNull(app(\App\Integracoes\Placa\ConsultaPlaca::class)->consultar('BRA2E19'));
     }
+
+    /** Fonte não oficial (integrasist): mapeia a resposta, só usa marca/modelo/ano/cor; erro ou código ≠ 0 não bloqueia. */
+    public function test_consulta_placa_integrasist(): void
+    {
+        config(['oficina.placa.provedor' => 'integrasist']);
+        \Illuminate\Support\Facades\Http::fake([
+            '*/sinesp/placa/PWR8F45' => \Illuminate\Support\Facades\Http::response(['ano' => '2015', 'anoModelo' => '2015', 'chassi' => '***96462', 'codigoRetorno' => '0', 'cor' => 'PRATA',
+                'marca' => 'M.BENZ', 'mensagemRetorno' => 'Consulta efetuada com sucesso', 'modelo' => 'C180', 'municipio' => 'BRASILIA', 'placa' => 'PWR8F45', 'uf' => 'DF']),
+            '*/sinesp/placa/ERR1A23' => \Illuminate\Support\Facades\Http::response(['codigoRetorno' => '3', 'mensagemRetorno' => 'Veículo não encontrado']),
+            '*/sinesp/placa/OFF1A23' => \Illuminate\Support\Facades\Http::response('', 503),
+        ]);
+        $c = app(\App\Integracoes\Placa\ConsultaPlaca::class);
+        $this->assertInstanceOf(\App\Integracoes\Placa\IntegrasistPlaca::class, $c);
+        $this->assertSame(['marca' => 'M.BENZ', 'modelo' => 'C180', 'ano' => 2015, 'cor' => 'Prata'], $c->consultar('PWR8F45'));
+        $this->assertNull($c->consultar('ERR1A23'));
+        $this->assertNull($c->consultar('OFF1A23'));
+        $this->assertNull($c->consultar('../x'));
+        $c->consultar('PWR8F45'); // guardado: não consulta de novo
+        \Illuminate\Support\Facades\Http::assertSentCount(3);
+
+        $rec = $this->usuario(Papel::Recepcao, Unidade::factory()->create());
+        Livewire::actingAs($rec)->test(NovaEntrada::class)->set('placa', 'pwr8f45')->assertSet('modelo', 'C180')->assertSet('ano', '2015')
+            ->assertSee('preenchidos pela consulta da placa')->assertDontSee('SIMULAÇÃO');
+    }
 }
