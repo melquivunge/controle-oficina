@@ -296,7 +296,8 @@ class EntradaOrdemTest extends TestCase
         $esperado = app(\App\Integracoes\Placa\SimuladorPlaca::class)->consultar('BRA2E19');
 
         // Placa nova: preenche pela consulta; o que for digitado é salvo no cadastro do veículo.
-        $c = Livewire::actingAs($rec)->test(NovaEntrada::class)->set('placa', 'bra-2e19')
+        Livewire::actingAs($rec)->test(NovaEntrada::class)->set('placa', 'bra-2e19')->assertSet('marca', '')->assertSee('Buscar dados do veículo'); // digitar não consulta fora
+        $c = Livewire::actingAs($rec)->test(NovaEntrada::class)->set('placa', 'bra-2e19')->call('consultarPlaca')
             ->assertSet('marca', $esperado['marca'])->assertSet('modelo', $esperado['modelo'])->assertSet('ano', (string) $esperado['ano'])
             ->assertSet('cor', $esperado['cor'])->assertSee('preenchidos pela consulta da placa')->assertSee('SIMULAÇÃO: dados fictícios');
         $c->set('cor', 'Azul')->set('nome', 'Paulo Reis')->set('telefone', '61977776666')->set('motivo', 'Revisão')->call('salvar')->assertHasNoErrors();
@@ -313,11 +314,14 @@ class EntradaOrdemTest extends TestCase
 
         // Consulta sem resultado e troca de placa limpam o que veio da placa anterior.
         Livewire::actingAs($rec)->test(NovaEntrada::class)->set('placa', 'BRA2E19')->set('placa', 'QWE1R20')
-            ->assertSet('marca', '')->assertSet('modelo', '')->assertSet('ano', '');
+            ->assertSet('marca', '')->assertSet('modelo', '')->assertSet('ano', '')
+            ->call('consultarPlaca')->assertSet('marca', '')->assertSee('Não encontramos dados desta placa');
+        Livewire::actingAs($rec)->test(NovaEntrada::class)->set('placa', 'AB1')->call('consultarPlaca')->assertHasErrors('placa');
 
         // Produção sem provedor contratado: nada é consultado; a recepção digita.
         config(['oficina.integracoes' => 'real']);
         $this->assertNull(app(\App\Integracoes\Placa\ConsultaPlaca::class)->consultar('BRA2E19'));
+        Livewire::actingAs($rec)->test(NovaEntrada::class)->assertDontSee('Buscar dados do veículo'); // sem provedor: sem botão
     }
 
     /** Fonte não oficial (integrasist): mapeia a resposta, só usa marca/modelo/ano/cor; erro ou código ≠ 0 não bloqueia. */
@@ -343,7 +347,7 @@ class EntradaOrdemTest extends TestCase
         \Illuminate\Support\Facades\Http::assertSentCount(3);
 
         $rec = $this->usuario(Papel::Recepcao, Unidade::factory()->create());
-        Livewire::actingAs($rec)->test(NovaEntrada::class)->set('placa', 'pwr8f45')->assertSet('modelo', 'C180')->assertSet('ano', '2015')
+        Livewire::actingAs($rec)->test(NovaEntrada::class)->set('placa', 'pwr8f45')->call('consultarPlaca')->assertSet('modelo', 'C180')->assertSet('ano', '2015')
             ->assertSee('preenchidos pela consulta da placa')->assertDontSee('SIMULAÇÃO');
     }
 }
