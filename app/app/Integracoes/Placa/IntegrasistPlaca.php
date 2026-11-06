@@ -13,6 +13,12 @@ use Illuminate\Support\Facades\Log;
  */
 class IntegrasistPlaca implements ConsultaPlaca
 {
+    /** Placa antiga e Mercosul são o mesmo carro: JIK2116 = JIK2B16 (5º caractere: 0→A, 1→B, …). Causa do "sem resultado" de 06/11/2026. */
+    public static function mercosul(string $placa): string
+    {
+        return strlen($placa) === 7 && ctype_digit($placa[4]) ? substr($placa, 0, 4).chr(65 + (int) $placa[4]).substr($placa, 5) : $placa;
+    }
+
     /** Às vezes vem "MARCA/MODELO" (ou "I/TOYOTA HILUX ..." para importado) nos dois campos: separa. */
     public static function marcaModelo(string $marca, string $modelo): array
     {
@@ -36,7 +42,7 @@ class IntegrasistPlaca implements ConsultaPlaca
         return Cache::remember("placa:integrasist:{$placa}", now()->addDays(30), function () use ($placa) {
             $r = Http::timeout(6)->connectTimeout(3)->acceptJson()->get(rtrim((string) config('oficina.placa.url'), '/').'/sinesp/placa/'.$placa);
             $d = $r->successful() ? $r->json() : null;
-            if (! is_array($d) || (string) ($d['codigoRetorno'] ?? '') !== '0' || strtoupper((string) ($d['placa'] ?? '')) !== $placa) {
+            if (! is_array($d) || (string) ($d['codigoRetorno'] ?? '') !== '0' || self::mercosul(strtoupper((string) ($d['placa'] ?? ''))) !== self::mercosul($placa)) {
                 Log::info('consulta de placa sem resultado', ['status' => $r->status(), 'codigo' => is_array($d) ? ($d['codigoRetorno'] ?? null) : null]);
 
                 return null; // ponytail: null não fica no cache (remember não guarda null): tenta de novo na próxima
