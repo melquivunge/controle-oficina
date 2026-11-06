@@ -24,9 +24,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(\App\Integracoes\Fiscal\EmissorFiscal::class, fn () => config('oficina.integracoes') === 'simulado'
             ? new \App\Integracoes\Fiscal\SimuladorFiscal
             : new \App\Integracoes\Fiscal\EmissorIndisponivel);
-        $this->app->bind(\App\Integracoes\Placa\ConsultaPlaca::class, fn () => config('oficina.integracoes') === 'simulado' || config('database.default') === 'demo'
-            ? new \App\Integracoes\Placa\SimuladorPlaca
-            : new \App\Integracoes\Placa\ConsultaPlacaIndisponivel);
+        $this->app->bind(\App\Integracoes\Placa\ConsultaPlaca::class, fn () => match (true) {
+            config('oficina.placa.provedor') === 'integrasist' => new \App\Integracoes\Placa\IntegrasistPlaca, // só leitura; ligado explicitamente
+            config('oficina.integracoes') === 'simulado' || config('database.default') === 'demo' => new \App\Integracoes\Placa\SimuladorPlaca,
+            default => new \App\Integracoes\Placa\ConsultaPlacaIndisponivel,
+        });
     }
 
     public function boot(): void
