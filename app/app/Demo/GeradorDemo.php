@@ -41,10 +41,18 @@ class GeradorDemo
     private int $placaSeq = 0;
     private int $atendimentoSeq = 0; // entrada sem veículo determinística (sem consumir o RNG)
     private array $resumo = [];
+    private \Random\Randomizer $rng;
+
+    private function r(int $min, int $max): int
+    {
+        return $this->rng->getInt($min, $max);
+    }
 
     public function gerar(CarbonImmutable $referencia): array
     {
-        mt_srand(20261029);
+        // RNG próprio (não o global): o destrutor do Faker chama mt_srand() sem semente quando o GC o coleta,
+        // o que embaralhava a demo conforme o histórico do processo (causa demonstrada em 06/11/2026).
+        $this->rng = new \Random\Randomizer(new \Random\Engine\Mt19937(20261029));
         $dias = (int) config('oficina.demo.dias', 30);
         $inicio = $referencia->subDays($dias - 1)->setTimezone(Fuso::LOCAL)->startOfDay();
         $this->em($inicio->setTime(7, 0));
@@ -72,13 +80,13 @@ class GeradorDemo
             $data = $inicio->addDays($dia);
             $recente = $dia >= $dias - 2; // últimos dois dias: atendimentos em andamento
             foreach ($equipes as $eq) {
-                $qtd = $data->isSunday() ? 0 : mt_rand(2, 4);
+                $qtd = $data->isSunday() ? 0 : $this->r(2, 4);
                 for ($n = 0; $n < $qtd; $n++) {
-                    $this->atendimento($eq, $data->setTime(8, 0)->addMinutes(mt_rand(0, 300)), $recente, $referencia);
+                    $this->atendimento($eq, $data->setTime(8, 0)->addMinutes($this->r(0, 300)), $recente, $referencia);
                 }
                 if (! $data->isSunday()) {
                     $this->em($data->setTime(17, 30));
-                    $placas = mt_rand(1, 6) === 1 ? ['DMO'.mt_rand(1, 9).'Z'.str_pad((string) mt_rand(0, 99), 2, '0', STR_PAD_LEFT)] : [];
+                    $placas = $this->r(1, 6) === 1 ? ['DMO'.$this->r(1, 9).'Z'.str_pad((string) $this->r(0, 99), 2, '0', STR_PAD_LEFT)] : [];
                     $esperadas = app(Conferencias::class)->esperadas($eq['unidade']->id)->pluck('id')->all();
                     app(Conferencias::class)->registrar($eq['unidade']->id, $eq['recepcao'], $esperadas, $placas);
                     $this->conta('conferencias');
@@ -109,29 +117,29 @@ class GeradorDemo
     private function atendimento(array $eq, CarbonImmutable $t, bool $recente, CarbonImmutable $ref): void
     {
         [$u, $rec, $ger] = [$eq['unidade'], $eq['recepcao'], $eq['gerente']];
-        $mec = mt_rand(0, 1) ? $eq['mecanico'] : $eq['mecanico2'];
-        $nome = self::NOMES[mt_rand(0, count(self::NOMES) - 1)];
+        $mec = $this->r(0, 1) ? $eq['mecanico'] : $eq['mecanico2'];
+        $nome = self::NOMES[$this->r(0, count(self::NOMES) - 1)];
         $this->em($t);
         $semVeiculo = ++$this->atendimentoSeq % 17 === 0; // cliente trouxe só o jogo de rodas
         $placa = $this->placa();
         $o = app(Entradas::class)->registrar($rec, [
             'unidade_id' => $u->id, 'nome' => $nome, 'telefone' => '619'.str_pad((string) (10000000 + crc32($nome) % 8999999), 8, '0', STR_PAD_LEFT),
             'sem_veiculo' => $semVeiculo, 'item_descricao' => $semVeiculo ? 'Jogo de rodas aro 17 — 4 unidades (sem veículo)' : null,
-            'placa' => $placa, 'motivo' => self::MOTIVOS[mt_rand(0, count(self::MOTIVOS) - 1)], 'modelo' => self::MODELOS[mt_rand(0, count(self::MODELOS) - 1)],
-            'quilometragem' => mt_rand(8000, 160000),
+            'placa' => $placa, 'motivo' => self::MOTIVOS[$this->r(0, count(self::MOTIVOS) - 1)], 'modelo' => self::MODELOS[$this->r(0, count(self::MODELOS) - 1)],
+            'quilometragem' => $this->r(8000, 160000),
         ]);
         $this->conta('ordens');
 
         // Cenário escolhido pelo RNG; atendimentos recentes param em etapas intermediárias.
-        $cenario = $recente ? ['entrada', 'diagnostico', 'aguardando', 'autorizado', 'execucao', 'pronto'][mt_rand(0, 5)] : $this->sortear();
+        $cenario = $recente ? ['entrada', 'diagnostico', 'aguardando', 'autorizado', 'execucao', 'pronto'][$this->r(0, 5)] : $this->sortear();
         $this->conta('cenario_'.$cenario);
         if ($cenario === 'entrada') {
             return;
         }
-        $t = $t->addMinutes(mt_rand(20, 90));
+        $t = $t->addMinutes($this->r(20, 90));
         $this->em($t);
         app(Ordens::class)->iniciarDiagnostico($o, $mec);
-        app(Ordens::class)->registrarDiagnostico($o, 'Avaliação: '.mb_strtolower(self::MOTIVOS[mt_rand(0, 9)]).'.', $mec);
+        app(Ordens::class)->registrarDiagnostico($o, 'Avaliação: '.mb_strtolower(self::MOTIVOS[$this->r(0, 9)]).'.', $mec);
         if ($cenario === 'diagnostico') {
             return;
         }
@@ -143,7 +151,10 @@ class GeradorDemo
         }
         $itens = $this->itens($cenario === 'fiscal_rejeitado');
         $orc = app(Orcamentos::class);
-        $desconto = $cenario === 'desconto' ? 2000 * mt_rand(1, 3) : 0;
+        $desconto = $cenario === 'desconto' ? 2000 * $this->r(1, 3) : 0;
+        // Nunca maior que metade do subtotal (ex.: só 0,5 L de fluido de freio = R$ 29,15).
+        $subtotal = array_sum(array_map(fn ($i) => (int) round((float) str_replace(',', '.', $i['quantidade']) * (float) str_replace(',', '.', $i['preco']) * 100), $itens));
+        $desconto = min($desconto, intdiv($subtotal, 2));
         // Só gerente/proprietário orçam (decisão de 30/10/2026); a recepção acompanha o cliente.
         $v = $orc->salvarRascunho($o, $ger, $itens, $desconto, $desconto ? 'Cliente recorrente (demonstração)' : null);
         // Desconto acima do limite: a proprietária aprova antes do envio (aprovação interna), sem novo sorteio.
@@ -151,34 +162,34 @@ class GeradorDemo
         if ($aprovacao['exige'] && ! $aprovacao['liberado'] && $aprovacao['pedido']) {
             app(\App\Services\AprovacoesInternas::class)->decidir($aprovacao['pedido'], \App\Models\User::where('papel', 'proprietario')->orderBy('id')->firstOrFail(), 'aprovada', 'Cliente recorrente; desconto autorizado (demonstração).');
         }
-        $this->em($t = $t->addMinutes(mt_rand(15, 60)));
+        $this->em($t = $t->addMinutes($this->r(15, 60)));
         $orc->enviar($v, $ger);
         app(\App\Services\PrazosEntrega::class)->definir($o, $ger, diasUteis: 3); // data de entrega em dias úteis (Bloco A)
         if ($cenario === 'aguardando') {
             return;
         }
-        $this->em($t = $t->addMinutes(mt_rand(20, 180)));
+        $this->em($t = $t->addMinutes($this->r(20, 180)));
         if ($cenario === 'recusa') {
             $orc->decidir($v->id, $o->id, 'recusado', 'link_cliente', null, 'Vou pensar (demonstração)');
 
             return;
         }
-        mt_rand(0, 3) ? $orc->decidir($v->id, $o->id, 'aprovado', 'link_cliente') : $orc->decidirPresencial($v->fresh(), $rec, 'aprovado', 'Cliente aprovou por telefone');
+        $this->r(0, 3) ? $orc->decidir($v->id, $o->id, 'aprovado', 'link_cliente') : $orc->decidirPresencial($v->fresh(), $rec, 'aprovado', 'Cliente aprovou por telefone');
         if ($cenario === 'autorizado') {
             return;
         }
         $exec = app(Execucao::class);
-        $this->em($t = $t->addMinutes(mt_rand(20, 60)));
+        $this->em($t = $t->addMinutes($this->r(20, 60)));
         $exec->iniciar($o, $mec);
         if ($cenario === 'extra') {
             $this->em($t = $t->addMinutes(40));
             $v2 = $orc->salvarRascunho($o, $ger, [...$itens, ['descricao' => 'Coxim do motor (extra)', 'quantidade' => '1', 'preco' => '240,00']]);
             $orc->enviar($v2, $ger);
-            $this->em($t = $t->addMinutes(mt_rand(20, 90)));
-            $orc->decidir($v2->id, $o->id, mt_rand(0, 2) ? 'aprovado' : 'recusado', 'link_cliente');
+            $this->em($t = $t->addMinutes($this->r(20, 90)));
+            $orc->decidir($v2->id, $o->id, $this->r(0, 2) ? 'aprovado' : 'recusado', 'link_cliente');
         }
         foreach ($o->fresh()->orcamentoAprovado->itens as $i) {
-            $this->em($t = $t->addMinutes(mt_rand(20, 70)));
+            $this->em($t = $t->addMinutes($this->r(20, 70)));
             $exec->concluirItem($o, $i->id, $mec);
             if ($cenario === 'execucao' || $cenario === 'atraso') {
                 return; // fica em execução (atraso: atendimento antigo ainda aberto)
@@ -196,15 +207,15 @@ class GeradorDemo
     {
         $fin = app(Financeiro::class);
         $total = $fin->resumo($o)['saldo'];
-        $this->em($t = $t->addMinutes(mt_rand(10, 120)));
+        $this->em($t = $t->addMinutes($this->r(10, 120)));
         $p = null;
         if (in_array($cenario, ['dinheiro', 'cartao'], true)) {
-            $p = $fin->registrarManual($o, $rec, $cenario === 'dinheiro' ? 'dinheiro' : 'cartao_externo', $total, $cenario === 'cartao' ? 'NSU '.mt_rand(100000, 999999) : null);
+            $p = $fin->registrarManual($o, $rec, $cenario === 'dinheiro' ? 'dinheiro' : 'cartao_externo', $total, $cenario === 'cartao' ? 'NSU '.$this->r(100000, 999999) : null);
         } elseif (in_array($cenario, ['parcial', 'excecao'], true)) {
             $fin->registrarManual($o, $rec, 'dinheiro', intdiv($total, 2));
         } else {
             $c = $fin->gerarCobranca($o, $rec);
-            $this->em($t = $t->addMinutes(mt_rand(3, 40)));
+            $this->em($t = $t->addMinutes($this->r(3, 40)));
             $pago = match ($cenario) { 'pix_divergente' => $total - 1000, 'devolucao' => $total + 5000, default => null };
             app(SimuladorPix::class)->simularPagamento($c->txid, $pago);
             $fin->conciliarCobranca($c->txid);
@@ -236,9 +247,9 @@ class GeradorDemo
                 return; // aguardando nova tentativa ou devolução por outro meio
             }
         }
-        $this->em($t = $t->addMinutes(mt_rand(10, 240)));
+        $this->em($t = $t->addMinutes($this->r(10, 240)));
         $fin->entregar($o, $cenario === 'excecao' ? $ger : $rec, $cenario === 'excecao' ? 'Cliente frotista com faturamento mensal (demonstração)' : null);
-        if (mt_rand(0, 1) || $cenario === 'fiscal_rejeitado') {
+        if ($this->r(0, 1) || $cenario === 'fiscal_rejeitado') {
             app(Fiscal::class)->solicitar($o, $rec);
             $this->conta('documentos_fiscais');
         }
@@ -283,7 +294,7 @@ class GeradorDemo
     {
         $pesos = ['pix' => 32, 'dinheiro' => 12, 'cartao' => 12, 'recusa' => 7, 'extra' => 8, 'desconto' => 6, 'parcial' => 4, 'cancelamento' => 4,
             'devolucao' => 3, 'excecao' => 3, 'pix_divergente' => 2, 'atraso' => 4, 'fiscal_rejeitado' => 2, 'pronto' => 1];
-        $r = mt_rand(1, array_sum($pesos));
+        $r = $this->r(1, array_sum($pesos));
         foreach ($pesos as $c => $p) {
             if (($r -= $p) <= 0) {
                 return $c;
@@ -299,10 +310,10 @@ class GeradorDemo
             // Total terminado em 13 centavos: o simulador fiscal rejeita (cenário de falha recuperável).
             return [['descricao' => 'Diagnóstico eletrônico', 'quantidade' => '1', 'preco' => '90,00'], ['descricao' => 'Taxa de descarte', 'quantidade' => '1', 'preco' => '10,13']];
         }
-        $n = mt_rand(1, 3);
+        $n = $this->r(1, 3);
         $escolhidos = [];
         while (count($escolhidos) < $n) {
-            $escolhidos[mt_rand(0, count(self::SERVICOS) - 1)] = true;
+            $escolhidos[$this->r(0, count(self::SERVICOS) - 1)] = true;
         }
         return array_map(fn ($i) => array_combine(['descricao', 'quantidade', 'preco'], self::SERVICOS[$i]), array_keys($escolhidos));
     }

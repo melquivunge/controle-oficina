@@ -12,7 +12,7 @@ class Veiculo extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['placa', 'modelo', 'ano', 'cor'];
+    protected $fillable = ['placa', 'marca', 'modelo', 'ano', 'cor'];
 
     public function cliente(): BelongsTo
     {
@@ -22,6 +22,12 @@ class Veiculo extends Model
     public function ordens(): HasMany
     {
         return $this->hasMany(Ordem::class);
+    }
+
+    /** "Volkswagen Gol 1.0 · 2018 · Prata" (só o que estiver preenchido). */
+    public function descricao(): string
+    {
+        return collect([trim($this->marca.' '.$this->modelo), $this->ano, $this->cor])->filter()->join(' · ');
     }
 
     public function placaFormatada(): string

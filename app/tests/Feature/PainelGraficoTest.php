@@ -62,7 +62,7 @@ class PainelGraficoTest extends TestCase
         $this->travelTo(CarbonImmutable::parse($quando, 'America/Sao_Paulo'));
         $rec = $u->is($this->a) ? $this->recA : $this->usuario(Papel::Recepcao, $u);
 
-        return app(Entradas::class)->registrar($rec, ['unidade_id' => $u->id, 'nome' => 'Cliente '.$placa, 'telefone' => '6199'.random_int(1000000, 9999999),
+        return app(Entradas::class)->registrar($rec, ['unidade_id' => $u->id, 'nome' => 'Cliente '.$placa, 'telefone' => '6199'.random_int(100000, 999999).'1', // nunca termina em 0000 (o simulador recusa de propósito)
             'placa' => $placa, 'motivo' => 'Revisão']);
     }
 

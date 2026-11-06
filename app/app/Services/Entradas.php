@@ -145,7 +145,7 @@ class Entradas
     {
         $veiculo = Veiculo::where('placa', $dados['placa'])->lockForUpdate()->first();
         if (! $veiculo) {
-            $veiculo = new Veiculo(['placa' => $dados['placa'], 'modelo' => $dados['modelo'] ?? null]);
+            $veiculo = new Veiculo(['placa' => $dados['placa']] + self::dadosVeiculo($dados));
             $veiculo->cliente_id = $cliente->id;
             $veiculo->save();
             Auditoria::registrar('veiculo_criado', $veiculo, depois: ['placa' => $veiculo->placa, 'cliente_id' => $cliente->id], unidadeId: $dados['unidade_id']);
@@ -161,10 +161,20 @@ class Entradas
             $veiculo->save();
             Auditoria::registrar('veiculo_transferido', $veiculo, $antes, ['cliente_id' => $cliente->id], 'Veículo registrado na entrada com outro cliente', unidadeId: $dados['unidade_id']);
         }
-        if (! $veiculo->modelo && ! empty($dados['modelo'])) {
-            $veiculo->update(['modelo' => $dados['modelo']]);
+        // Completa só o que faltava no cadastro (o que já estava salvo não é sobrescrito).
+        $faltando = array_filter(self::dadosVeiculo($dados), fn ($v, $k) => $veiculo->{$k} === null || $veiculo->{$k} === '', ARRAY_FILTER_USE_BOTH);
+        if ($faltando) {
+            $veiculo->update($faltando);
         }
 
         return $veiculo;
+    }
+
+    /** @return array<string, string|int> marca/modelo/ano/cor informados (vazios descartados). */
+    private static function dadosVeiculo(array $dados): array
+    {
+        return array_filter(['marca' => trim((string) ($dados['marca'] ?? '')), 'modelo' => trim((string) ($dados['modelo'] ?? '')),
+            'ano' => ($dados['ano'] ?? '') === '' || ($dados['ano'] ?? null) === null ? null : (int) $dados['ano'], 'cor' => trim((string) ($dados['cor'] ?? ''))],
+            fn ($v) => $v !== '' && $v !== null);
     }
 }
