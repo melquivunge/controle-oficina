@@ -253,6 +253,14 @@ class EntradaOrdemTest extends TestCase
             ->set('busca', 'cost')->assertSee('Mariana Costa')->assertSee('Usar este cadastro')
             ->call('usarCliente', $o->cliente_id)->assertSet('cliente_id', $o->cliente_id)->assertSet('nome', 'Mariana Costa')
             ->assertSet('telefone', '61991234567')->assertSet('placa', $o->veiculo->placa)->assertSee('Usando o cadastro existente');
+        // Erro humano: sem acento, fora de ordem, letras trocadas, grafia parecida.
+        foreach (['mariana csota', 'COSTA mariana', 'marianna', 'Mariana Kosta'] as $digitado) {
+            Livewire::actingAs($rec)->test(NovaEntrada::class)->set('busca', $digitado)->assertSee('Mariana Costa');
+        }
+        app(Entradas::class)->registrar($rec, $this->entrada($a, ['nome' => 'João Lucas Thiago', 'telefone' => '61988887777', 'placa' => 'JLT1A23']));
+        foreach (['joao', 'lukas', 'tiago', 'jlt1a'] as $digitado) {
+            Livewire::actingAs($rec)->test(NovaEntrada::class)->set('busca', $digitado)->assertSee('João Lucas Thiago')->assertDontSee('Mariana Costa');
+        }
         // Id fora da busca digitada continua 404 (sem enumeração).
         Livewire::actingAs($rec)->test(NovaEntrada::class)->set('busca', 'xyzw')->call('usarCliente', $o->cliente_id)->assertStatus(404);
     }

@@ -36,6 +36,29 @@ class Cliente extends Model
     }
 
     /** Busca por nome, telefone ou placa. Sem permissão de contato, o telefone não entra na busca (evita sondar números). */
+    /**
+     * Busca tolerante a erro de digitação (06/11/2026): compara a "chave" do nome (sem acento, k=c, y=i, z=s, sem h,
+     * sem letra dobrada) por trecho ou semelhança de trigramas; telefone e placa por trecho. Ordena pelo mais parecido.
+     */
+    public function scopeParecido(Builder $q, string $termo): Builder
+    {
+        $termo = mb_substr(trim($termo), 0, 80);
+        $digitos = preg_replace('/\D/', '', $termo);
+        $placa = Normaliza::placa($termo);
+        $sim = 'word_similarity(oficina_chave_nome(?), oficina_chave_nome(nome))';
+
+        return $q->where(function (Builder $q) use ($termo, $digitos, $placa, $sim) {
+            $q->whereRaw("oficina_chave_nome(nome) like '%' || oficina_chave_nome(?) || '%'", [addcslashes($termo, '%_\\')])
+                ->orWhereRaw("{$sim} >= 0.4", [$termo]);
+            if (strlen($digitos) >= 4) {
+                $q->orWhere('telefone', 'like', '%'.$digitos.'%');
+            }
+            if (strlen($placa) >= 3 && preg_match('/\d/', $placa)) {
+                $q->orWhereHas('veiculos', fn (Builder $v) => $v->where('placa', 'like', '%'.$placa.'%'));
+            }
+        })->orderByRaw("{$sim} desc", [$termo])->orderBy('nome');
+    }
+
     public function scopeBuscar(Builder $q, string $termo, bool $porTelefone = true): Builder
     {
         $termo = trim($termo);
