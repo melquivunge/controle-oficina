@@ -13,6 +13,20 @@ use Illuminate\Support\Facades\Log;
  */
 class IntegrasistPlaca implements ConsultaPlaca
 {
+    /** Às vezes vem "MARCA/MODELO" (ou "I/TOYOTA HILUX ..." para importado) nos dois campos: separa. */
+    public static function marcaModelo(string $marca, string $modelo): array
+    {
+        $marca = trim($marca);
+        $modelo = trim($modelo);
+        if ($marca === '' || ($marca !== $modelo && ! str_contains($marca, '/'))) {
+            return [$marca, $modelo];
+        }
+        $s = preg_replace('#^I/#i', '', $marca); // I/ = importado
+        $partes = str_contains($s, '/') ? explode('/', $s, 2) : (preg_split('/\s+/', $s, 2) ?: [$s]);
+
+        return [trim($partes[0]), trim($partes[1] ?? '') ?: ($marca !== $modelo ? $modelo : '')];
+    }
+
     public function consultar(string $placa): ?array
     {
         if (! preg_match('/^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/', $placa)) {
@@ -29,6 +43,7 @@ class IntegrasistPlaca implements ConsultaPlaca
             }
             $texto = fn ($v, int $max) => ($v = trim((string) $v)) === '' ? null : mb_substr(mb_convert_case(mb_strtolower($v), MB_CASE_TITLE), 0, $max);
             $ano = (int) ($d['anoModelo'] ?? 0) ?: (int) ($d['ano'] ?? 0);
+            [$d['marca'], $d['modelo']] = self::marcaModelo((string) ($d['marca'] ?? ''), (string) ($d['modelo'] ?? ''));
 
             return ['marca' => mb_substr(mb_strtoupper(trim((string) ($d['marca'] ?? ''))), 0, 40) ?: null, // marca: sigla do DETRAN (M.BENZ, VW)
                 'modelo' => mb_substr(trim((string) ($d['modelo'] ?? '')), 0, 80) ?: null,
