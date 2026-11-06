@@ -44,7 +44,18 @@ class OrcamentoController extends Controller
         $token = $this->orcamentos->enviar($orcamento, $request->user());
         $this->aplicarPrazo($request, $ordem, $prazo);
 
-        return back()->with('sucesso', "Versão {$orcamento->versao} enviada.")->with('link_cliente', route('portal.show', $token));
+        return back()->with('sucesso', "Versão {$orcamento->versao} aguardando aprovação.")->with('link_cliente', route('portal.show', $token));
+    }
+
+    public function aprovar(Request $request, Ordem $ordem, Orcamento $orcamento)
+    {
+        abort_unless($orcamento->ordem_id === $ordem->id, 404);
+        $obs = $request->validate(['observacao' => ['nullable', 'string', 'max:500']])['observacao'] ?? null;
+        $prazo = $this->prazoInformado($request, $ordem);
+        $token = $this->orcamentos->aprovarDireto($orcamento, $request->user(), $obs);
+        $this->aplicarPrazo($request, $ordem, $prazo);
+
+        return back()->with('sucesso', "Versão {$orcamento->versao} aprovada.")->with('link_cliente', route('portal.show', $token));
     }
 
     public function presencial(Request $request, Ordem $ordem, Orcamento $orcamento)
@@ -52,10 +63,10 @@ class OrcamentoController extends Controller
         abort_unless($orcamento->ordem_id === $ordem->id, 404);
         $dados = $request->validate([
             'decisao' => ['required', 'in:aprovado,recusado'],
-            'observacao' => ['required', 'string', 'min:5', 'max:500'],
-        ], [], ['observacao' => 'como o cliente decidiu']);
+            'observacao' => ['nullable', 'string', 'max:500'],
+        ], [], ['observacao' => 'observação']);
         $prazo = $this->prazoInformado($request, $ordem);
-        $this->orcamentos->decidirPresencial($orcamento, $request->user(), $dados['decisao'], $dados['observacao']);
+        $this->orcamentos->decidirPresencial($orcamento, $request->user(), $dados['decisao'], $dados['observacao'] ?? null);
         if ($dados['decisao'] === 'aprovado') {
             $this->aplicarPrazo($request, $ordem, $prazo);
         }

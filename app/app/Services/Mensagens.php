@@ -21,7 +21,7 @@ class Mensagens
         $nome = strtok($ordem->cliente->nome, ' ');
         $texto = match ($tipo) {
             'entrada' => "Olá, {$nome}! A {$ordem->unidade->nome} registrou a entrada {$this->objeto($ordem)} (atendimento {$ordem->numero}). Acompanhe: ".self::MARCADOR_LINK,
-            'orcamento' => "{$nome}, o orçamento do atendimento {$ordem->numero} está pronto para sua aprovação: ".self::MARCADOR_LINK,
+            'orcamento' => "{$nome}, o orçamento do atendimento {$ordem->numero} está disponível para consulta: ".self::MARCADOR_LINK,
             'cobranca' => "{$nome}, a cobrança Pix de ".Dinheiro::formatar((int) $valorCentavos)." do atendimento {$ordem->numero} está disponível. Pague somente pelo link oficial: ".self::MARCADOR_LINK,
             'conclusao' => "{$nome}, ".($ordem->veiculo ? "o veículo {$ordem->veiculo->placaFormatada()} está pronto" : 'o item “'.\Illuminate\Support\Str::limit((string) $ordem->item_descricao, 60).'” está pronto')." para retirada na {$ordem->unidade->nome}. Detalhes: ".self::MARCADOR_LINK,
         };

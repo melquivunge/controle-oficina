@@ -44,8 +44,8 @@ class Orcamento extends Model
     public function rotuloStatus(): string
     {
         return match ($this->status) {
-            'rascunho' => 'Rascunho (não enviado)',
-            'enviado' => 'Aguardando decisão do cliente',
+            'rascunho' => 'Rascunho',
+            'enviado' => 'Aguardando aprovação',
             'aprovado' => 'Aprovado',
             'recusado' => 'Recusado',
             'substituido' => 'Substituído por versão mais nova',

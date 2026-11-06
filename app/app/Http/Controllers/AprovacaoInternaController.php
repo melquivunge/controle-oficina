@@ -32,6 +32,6 @@ class AprovacaoInternaController extends Controller
         ], [], ['justificativa' => 'justificativa']);
         $this->aprovacoes->decidir($aprovacao, $request->user(), $dados['decisao'], $dados['justificativa']);
 
-        return back()->with('sucesso', $dados['decisao'] === 'aprovada' ? 'Desconto aprovado. O orçamento já pode ser enviado ao cliente.' : 'Desconto recusado. Quem pediu verá a justificativa no orçamento.');
+        return back()->with('sucesso', $dados['decisao'] === 'aprovada' ? 'Desconto aprovado. O orçamento já pode ser aprovado.' : 'Desconto recusado. Quem pediu verá a justificativa no orçamento.');
     }
 }

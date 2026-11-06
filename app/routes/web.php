@@ -24,7 +24,6 @@ use Illuminate\Support\Facades\Route;
 // Área do cliente: link com token, sem conta.
 Route::middleware('throttle:portal')->group(function () {
     Route::get('/c/{token}', [PortalController::class, 'show'])->name('portal.show');
-    Route::post('/c/{token}/decisao', [PortalController::class, 'decidir'])->name('portal.decidir');
     Route::get('/c/{token}/documentos/{documento}', [PortalController::class, 'documento'])->name('portal.documento');
 });
 
@@ -61,6 +60,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/ordens/{ordem}/cancelar', [OrdemController::class, 'cancelar'])->name('ordens.cancelar');
         Route::post('/ordens/{ordem}/anexos', [OrdemController::class, 'anexar'])->middleware('throttle:30,1')->name('ordens.anexar');
         Route::post('/ordens/{ordem}/orcamentos/{orcamento}/enviar', [OrcamentoController::class, 'enviar'])->name('orcamentos.enviar');
+        Route::post('/ordens/{ordem}/orcamentos/{orcamento}/aprovar', [OrcamentoController::class, 'aprovar'])->name('orcamentos.aprovar');
         Route::post('/ordens/{ordem}/orcamentos/{orcamento}/presencial', [OrcamentoController::class, 'presencial'])->name('orcamentos.presencial');
         Route::post('/ordens/{ordem}/link', [OrcamentoController::class, 'novoLink'])->name('ordens.link');
         Route::post('/ordens/{ordem}/link/revogar', [OrcamentoController::class, 'revogarLinks'])->name('ordens.link.revogar');

@@ -113,23 +113,43 @@ class OrcamentoExecucaoTest extends TestCase
         }
     }
 
-    public function test_cliente_aprova_pelo_link_mesmo_com_funcionario_logado_e_auditoria_registra_cliente(): void
+    /** 06/11/2026: o cliente só visualiza; quem aprova é dono, gerente ou recepção, e a auditoria registra o funcionário. */
+    public function test_link_do_cliente_so_mostra_e_aprovacao_interna_registra_funcionario(): void
     {
         [$v1, $token] = $this->enviarV1();
         $this->get("/c/{$token}")->assertOk()->assertSee('R$ 480,00')->assertSee('Substituição de bieleta dianteira')
-            ->assertHeader('Cache-Control', 'no-store, private')->assertDontSee('61991234567');
+            ->assertHeader('Cache-Control', 'no-store, private')->assertDontSee('61991234567')->assertDontSee('Aprovar')->assertSee('em análise na oficina');
+        $this->post("/c/{$token}/decisao", ['orcamento_id' => $v1->id, 'decisao' => 'aprovado'])->assertNotFound();
+        $this->assertSame('enviado', $v1->fresh()->status);
 
-        $this->actingAs($this->recepcao)->post("/c/{$token}/decisao", ['orcamento_id' => $v1->id, 'decisao' => 'aprovado'])->assertRedirect("/c/{$token}");
+        $url = "/ordens/{$this->ordem->numero}/orcamentos/{$v1->id}/presencial";
+        $this->entrarComo($this->recepcao)->post($url, ['decisao' => 'aprovado'])->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame('aprovado', $v1->fresh()->status);
         $this->assertSame(StatusOrdem::Autorizado, $this->ordem->fresh()->status);
         $evento = AuditEvent::where('acao', 'orcamento_aprovado')->sole();
-        $this->assertNull($evento->ator_id);
-        $this->assertSame('cliente', $evento->ator_tipo);
+        $this->assertSame([$this->recepcao->id, 'usuario'], [$evento->ator_id, $evento->ator_tipo]);
         $this->assertSame(48000, Aprovacao::sole()->total_centavos);
 
-        // Repetição do envio não duplica aprovação.
-        $this->post("/c/{$token}/decisao", ['orcamento_id' => $v1->id, 'decisao' => 'aprovado'])->assertSessionHasErrors('decisao');
+        // Repetição não duplica aprovação.
+        $this->post($url, ['decisao' => 'aprovado'])->assertSessionHasErrors('decisao');
         $this->assertSame(1, Aprovacao::count());
+    }
+
+    /** Um clique: quem orça conclui e aprova o rascunho; recepção e mecânico não. */
+    public function test_gerente_aprova_rascunho_em_um_clique(): void
+    {
+        $v = app(Orcamentos::class)->salvarRascunho($this->ordem, $this->gerente, $this->itensPadrao());
+        $url = "/ordens/{$this->ordem->numero}/orcamentos/{$v->id}/aprovar";
+        $this->entrarComo($this->recepcao)->post($url)->assertForbidden();
+        $this->entrarComo($this->mecanico)->post($url)->assertForbidden();
+        $this->assertSame('rascunho', $v->fresh()->status);
+
+        $this->entrarComo($this->gerente)->get("/ordens/{$this->ordem->numero}?aba=orcamento")->assertSee('Aprovar orçamento')->assertSee('Deixar aguardando aprovação');
+        $this->post($url, ['prazo_dias' => 3])->assertRedirect()->assertSessionHasNoErrors()->assertSessionHas('link_cliente');
+        $this->assertSame('aprovado', $v->fresh()->status);
+        $this->assertSame(StatusOrdem::Autorizado, $this->ordem->fresh()->status);
+        $this->assertNotNull($this->ordem->fresh()->entrega_prevista_em);
+        $this->assertSame(['presencial', $this->gerente->id], [Aprovacao::sole()->canal, Aprovacao::sole()->registrado_por]);
     }
 
     public function test_link_invalido_expirado_revogado_ou_de_outra_ordem_nao_vaza_dados(): void
@@ -141,7 +161,6 @@ class OrcamentoExecucaoTest extends TestCase
         // Token de outra ordem não decide esta versão.
         $outra = app(Entradas::class)->registrar($this->recepcao, ['unidade_id' => $this->unidade->id, 'nome' => 'Outro', 'telefone' => '61999990001', 'placa' => 'XYZ9876', 'motivo' => 'Revisão']);
         $tokenOutra = app(Orcamentos::class)->novoLink($outra, $this->recepcao);
-        $this->post("/c/{$tokenOutra}/decisao", ['orcamento_id' => $v1->id, 'decisao' => 'aprovado'])->assertSessionHasErrors('decisao');
         $this->get("/c/{$tokenOutra}")->assertOk()->assertDontSee('Mariana')->assertDontSee('R$ 480,00');
         $this->assertSame('enviado', $v1->fresh()->status);
 
@@ -161,16 +180,17 @@ class OrcamentoExecucaoTest extends TestCase
 
         // Link antigo continua abrindo, mas mostra a versão atual; decisão sobre a versão antiga é rejeitada.
         $this->get("/c/{$token}")->assertOk()->assertSee('versão 2')->assertDontSee('R$ 480,00');
-        $this->post("/c/{$token2}/decisao", ['orcamento_id' => $v1->id, 'decisao' => 'aprovado'])->assertSessionHasErrors('decisao');
+        $base = "/ordens/{$this->ordem->numero}/orcamentos";
+        $this->entrarComo($this->gerente)->post("{$base}/{$v1->id}/presencial", ['decisao' => 'aprovado'])->assertSessionHasErrors('decisao');
         $this->assertSame('substituido', $v1->fresh()->status);
-        $this->post("/c/{$token2}/decisao", ['orcamento_id' => $v2->id, 'decisao' => 'aprovado'])->assertRedirect();
+        $this->post("{$base}/{$v2->id}/presencial", ['decisao' => 'aprovado'])->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame(36000, Orcamento::where('status', 'aprovado')->sole()->total_centavos);
     }
 
     public function test_recusa_volta_ao_diagnostico_e_nao_autoriza_execucao(): void
     {
         [$v1, $token] = $this->enviarV1();
-        $this->post("/c/{$token}/decisao", ['orcamento_id' => $v1->id, 'decisao' => 'recusado', 'observacao' => 'Caro'])->assertRedirect();
+        $this->entrarComo($this->gerente)->post("/ordens/{$this->ordem->numero}/orcamentos/{$v1->id}/presencial", ['decisao' => 'recusado', 'observacao' => 'Cliente achou caro'])->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame(StatusOrdem::Diagnostico, $this->ordem->fresh()->status);
         $this->expectException(ValidationException::class);
         app(Execucao::class)->iniciar($this->ordem->fresh(), $this->mecanico);

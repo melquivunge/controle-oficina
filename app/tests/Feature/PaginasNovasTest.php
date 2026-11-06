@@ -107,7 +107,7 @@ class PaginasNovasTest extends TestCase
         $this->entrarComo($this->gerA)->get('/orcamentos?status=rascunho')->assertSessionHasErrors('status');
         $this->entrarComo($this->dono)->get("/orcamentos?unidade={$this->b->id}")->assertOk()->assertSee($ob->numero)->assertDontSee($oa->numero);
         $this->entrarComo($this->mecA)->get('/orcamentos')->assertForbidden();
-        $this->entrarComo($this->recA)->get('/orcamentos')->assertOk()->assertDontSee('Enviar versão'); // recepção consulta (decisão 30/10), não orça
+        $this->entrarComo($this->recA)->get('/orcamentos')->assertOk()->assertDontSee('Aprovar orçamento'); // recepção consulta (decisão 30/10), não orça
     }
 
     public function test_pendencias_listam_por_unidade_e_resolucao_exige_texto_e_gera_auditoria(): void

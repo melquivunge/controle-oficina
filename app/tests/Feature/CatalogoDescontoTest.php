@@ -162,9 +162,10 @@ class CatalogoDescontoTest extends TestCase
             app(Orcamentos::class)->enviar($v, $this->gerente);
             $this->fail('Envio deveria estar bloqueado.');
         } catch (ValidationException $e) {
-            $this->assertStringContainsString('aprovação interna', $e->getMessage());
+            $this->assertStringContainsString('aprovação do desconto', $e->getMessage());
         }
         $this->entrarComo($this->gerente)->post(route('orcamentos.enviar', [$this->ordem, $v]))->assertSessionHasErrors('itens');
+        $this->post(route('orcamentos.aprovar', [$this->ordem, $v]))->assertSessionHasErrors('itens'); // um clique também barrado
         $this->assertSame('rascunho', $v->fresh()->status);
 
         // Quem pediu não aprova o próprio pedido, mesmo com a permissão concedida.
@@ -269,7 +270,7 @@ class CatalogoDescontoTest extends TestCase
         $this->assertSame(15750, (int) $item->preco_unitario_centavos);
         $this->assertSame(18000, (int) $item->preco_tabela_centavos);
         $this->assertSame('pendente', AprovacaoInterna::sole()->status);
-        $this->get(route('ordens.show', $this->ordem))->assertSee('Aguardando aprovação interna')->assertDontSee('Enviar versão 1 ao cliente');
+        $this->get(route('ordens.show', $this->ordem))->assertSee('Aguardando aprovação interna')->assertDontSee('Aprovar orçamento');
     }
 
     public function test_mecanico_nao_ve_precos_do_catalogo_na_ordem(): void

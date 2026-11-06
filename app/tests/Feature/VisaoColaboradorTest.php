@@ -173,7 +173,7 @@ class VisaoColaboradorTest extends TestCase
 
         $v = $s->salvarRascunho($o, $this->gerente, [['descricao' => 'Serviço', 'quantidade' => '1', 'preco' => '100']]);
         $this->entrarComo($this->recepcao)->post("/ordens/{$o->numero}/orcamentos/{$v->id}/enviar")->assertForbidden();
-        $this->entrarComo($this->gerente)->get("/ordens/{$o->numero}?aba=orcamento")->assertOk()->assertSee('Enviar versão 1');
+        $this->entrarComo($this->gerente)->get("/ordens/{$o->numero}?aba=orcamento")->assertOk()->assertSee('Aprovar orçamento');
         $this->entrarComo($this->gerente)->post("/ordens/{$o->numero}/orcamentos/{$v->id}/enviar", ['prazo_dias' => 4])->assertRedirect()->assertSessionHas('link_cliente');
         $this->assertSame('enviado', $v->fresh()->status);
         $this->assertNotNull($o->fresh()->entrega_prevista_em);

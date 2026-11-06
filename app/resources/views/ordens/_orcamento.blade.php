@@ -9,7 +9,7 @@
         <h2>Orçamento</h2>
         @if (session('link_cliente'))
             <div class="alert sucesso" role="status">
-                <strong>Link para o cliente</strong> (mostrado só agora; o envio por mensagem oficial será automático quando o canal estiver configurado):
+                <strong>Link para o cliente acompanhar</strong> (só para ver o orçamento; a aprovação é feita aqui, na oficina. Mostrado só agora):
                 <p class="code-box">{{ session('link_cliente') }}</p>
             </div>
         @endif
@@ -25,32 +25,32 @@
                     @endforeach
                 </ul>
                 @if ($v->desconto_centavos)<p class="hint">Desconto {{ \App\Support\Dinheiro::formatar($v->desconto_centavos) }} — {{ $v->desconto_motivo }}</p>@endif
-                <p class="hint">Enviada {{ \App\Support\Fuso::exibir($v->enviado_em) }}@if ($v->aprovacao) · {{ $v->aprovacao->decisao === 'aprovado' ? 'Aprovada' : 'Recusada' }} {{ \App\Support\Fuso::exibir($v->aprovacao->decidido_em) }} {{ $v->aprovacao->canal === 'link_cliente' ? 'pelo cliente (link)' : 'presencialmente, registrado por '.$v->aprovacao->registradoPor?->name }}{{ $v->aprovacao->observacao ? ' — '.$v->aprovacao->observacao : '' }}@endif</p>
+                <p class="hint">Concluída {{ \App\Support\Fuso::exibir($v->enviado_em) }}@if ($v->aprovacao) · {{ $v->aprovacao->decisao === 'aprovado' ? 'Aprovada' : 'Recusada' }} {{ \App\Support\Fuso::exibir($v->aprovacao->decidido_em) }} {{ $v->aprovacao->canal === 'link_cliente' ? 'pelo cliente (link)' : 'por '.$v->aprovacao->registradoPor?->name }}{{ $v->aprovacao->observacao ? ' — '.$v->aprovacao->observacao : '' }}@endif</p>
                 @if ($v->status === 'enviado')
                     @can('acompanharCliente', $ordem)
-                        <details><summary>Registrar decisão informada pessoalmente ou por telefone</summary>
-                            <form method="POST" action="{{ route('orcamentos.presencial', [$ordem, $v]) }}">
-                                @csrf
-                                @include('partials.campo', ['nome' => 'decisao', 'rotulo' => 'Decisão do cliente', 'tipo' => 'select', 'opcoes' => ['aprovado' => 'Aprovou', 'recusado' => 'Recusou'], 'id' => 'decisao-'.$v->id])
-                                @include('partials.campo', ['nome' => 'observacao', 'rotulo' => 'Como o cliente decidiu (ex.: ligação às 10h, falou com Ana)', 'id' => 'obs-'.$v->id])
-                                @can('definirPrazo', $ordem)
-                                    @include('partials.campo', ['nome' => 'prazo_dias', 'rotulo' => 'Prazo de entrega em dias úteis (se aprovou; opcional)', 'tipo' => 'number', 'id' => 'prazo-dias-'.$v->id, 'atributos' => ['min' => 1, 'max' => config('oficina.prazo_entrega_max_dias_uteis', 120), 'inputmode' => 'numeric']])
-                                @endcan
-                                <button class="button" type="submit">Registrar decisão</button>
-                            </form>
-                        </details>
+                        <form method="POST" action="{{ route('orcamentos.presencial', [$ordem, $v]) }}" class="decisao-interna">
+                            @csrf
+                            @include('partials.campo', ['nome' => 'observacao', 'rotulo' => 'Observação (opcional)', 'id' => 'obs-'.$v->id])
+                            @can('definirPrazo', $ordem)
+                                @include('partials.campo', ['nome' => 'prazo_dias', 'rotulo' => 'Prazo de entrega em dias úteis (se aprovar; opcional)', 'tipo' => 'number', 'id' => 'prazo-dias-'.$v->id, 'atributos' => ['min' => 1, 'max' => config('oficina.prazo_entrega_max_dias_uteis', 120), 'inputmode' => 'numeric']])
+                            @endcan
+                            <div class="inline-form">
+                                <button class="button primary" type="submit" name="decisao" value="aprovado">Aprovar versão {{ $v->versao }}</button>
+                                <button class="button" type="submit" name="decisao" value="recusado">Recusar</button>
+                            </div>
+                        </form>
                     @endcan
                 @endif
             </article>
         @empty
-            <p class="muted">Nenhuma versão enviada ainda.</p>
+            <p class="muted">Nenhuma versão concluída ainda.</p>
         @endforelse
 
         @can('orcar', $ordem)
             @if (in_array($ordem->status, \App\Services\Orcamentos::STATUS_EDITAVEIS, true))
                 <h3 style="margin-top:20px">{{ $rascunho ? "Rascunho da versão {$rascunho->versao}" : ($versoes->isEmpty() ? 'Montar orçamento' : 'Nova versão (ajuste ou serviço extra)') }}</h3>
                 @if ($ordem->status === \App\Enums\StatusOrdem::EmExecucao)
-                    <p class="hint">Serviços novos entram como extra e só podem ser executados após nova aprovação do cliente.</p>
+                    <p class="hint">Serviços novos entram como extra e só podem ser executados depois de aprovados.</p>
                 @endif
                 <livewire:orcamento-editor :ordem="$ordem" :key="'editor-'.$ordem->id.'-'.($rascunho?->updated_at?->timestamp ?? 0)" />
                 @php($liberacao = $rascunho ? app(\App\Services\AprovacoesInternas::class)->situacao($rascunho) : null)
@@ -61,7 +61,7 @@
                         <strong>{{ $pedido ? $pedido->rotuloStatus() : 'Desconto acima do limite' }}</strong>
                         — maior desconto {{ str_replace('.', ',', $liberacao['avaliacao']['maior']) }}%.
                         @if ($pedido?->status === 'pendente')
-                            Pedido de {{ $pedido->solicitante?->name }} em {{ \App\Support\Fuso::exibir($pedido->solicitado_em) }}. O envio ao cliente fica bloqueado até a decisão.
+                            Pedido de {{ $pedido->solicitante?->name }} em {{ \App\Support\Fuso::exibir($pedido->solicitado_em) }}. O orçamento fica bloqueado até a decisão.
                             @if (\App\Services\AprovacoesInternas::podeAprovar($u) && ($pedido->solicitado_por !== $u->id || $u->papel === \App\Enums\Papel::Proprietario))
                                 <a href="{{ route('aprovacoes.index') }}">Decidir em Aprovações</a>
                             @endif
@@ -77,7 +77,11 @@
                     <form method="POST" action="{{ route('orcamentos.enviar', [$ordem, $rascunho]) }}" style="margin-top:12px">
                         @csrf
                         @include('partials.campo', ['nome' => 'prazo_dias', 'rotulo' => 'Prazo de entrega em dias úteis (opcional)', 'tipo' => 'number', 'id' => 'prazo-dias-envio', 'valorAtual' => '', 'ajuda' => 'Seg–sex, sem feriados, a partir de hoje. A recepção informa a data ao cliente.', 'atributos' => ['min' => 1, 'max' => config('oficina.prazo_entrega_max_dias_uteis', 120), 'inputmode' => 'numeric']])
-                        <button class="button primary" type="submit">Enviar versão {{ $rascunho->versao }} ao cliente ({{ \App\Support\Dinheiro::formatar($rascunho->total_centavos) }})</button>
+                        <div class="inline-form">
+                            <button class="button primary" type="submit" formaction="{{ route('orcamentos.aprovar', [$ordem, $rascunho]) }}">Aprovar orçamento ({{ \App\Support\Dinheiro::formatar($rascunho->total_centavos) }})</button>
+                            <button class="button" type="submit">Deixar aguardando aprovação</button>
+                        </div>
+                        <p class="hint">"Deixar aguardando" permite que outra pessoa (dono, gerente ou recepção) aprove depois.</p>
                     </form>
                 @endif
             @elseif ($ordem->status === \App\Enums\StatusOrdem::Entrada)
@@ -94,7 +98,7 @@
         @endcan
     </div>
     @elseif (! $versoes->firstWhere('status', 'aprovado'))
-        <div class="form-section"><h2>Serviços</h2><p class="muted">Aguardando aprovação do orçamento pelo cliente. Os serviços aparecem aqui quando forem aprovados.</p></div>
+        <div class="form-section"><h2>Serviços</h2><p class="muted">Aguardando aprovação do orçamento. Os serviços aparecem aqui quando forem aprovados.</p></div>
     @endif
 
     @php($aprovado = $versoes->firstWhere('status', 'aprovado'))

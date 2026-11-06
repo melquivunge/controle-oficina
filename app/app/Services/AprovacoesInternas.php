@@ -136,7 +136,7 @@ class AprovacoesInternas
         }
         $msg = match ($s['pedido']?->status) {
             'recusada' => 'O desconto deste orçamento foi recusado na aprovação interna. Ajuste os valores antes de enviar.',
-            default => 'Desconto acima do limite: o orçamento só pode ser enviado ao cliente depois da aprovação interna.',
+            default => 'Desconto acima do limite: o orçamento só pode ser concluído depois da aprovação do desconto.',
         };
         throw ValidationException::withMessages(['itens' => $msg]);
     }

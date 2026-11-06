@@ -27,6 +27,11 @@ class Devolucao extends Model
         return $this->belongsTo(Pagamento::class);
     }
 
+    public function ordem(): BelongsTo
+    {
+        return $this->belongsTo(Ordem::class);
+    }
+
     public function autorizadoPor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'autorizado_por');
