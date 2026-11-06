@@ -331,6 +331,8 @@ class EntradaOrdemTest extends TestCase
         \Illuminate\Support\Facades\Http::fake([
             '*/sinesp/placa/PWR8F45' => \Illuminate\Support\Facades\Http::response(['ano' => '2015', 'anoModelo' => '2015', 'chassi' => '***96462', 'codigoRetorno' => '0', 'cor' => 'PRATA',
                 'marca' => 'M.BENZ', 'mensagemRetorno' => 'Consulta efetuada com sucesso', 'modelo' => 'C180', 'municipio' => 'BRASILIA', 'placa' => 'PWR8F45', 'uf' => 'DF']),
+            '*/sinesp/placa/JIK2116' => \Illuminate\Support\Facades\Http::response(['ano' => '2013', 'anoModelo' => '2014', 'codigoRetorno' => '0', 'cor' => 'PRETA',
+                'marca' => 'HYUNDAI', 'modelo' => 'ELANTRA', 'placa' => 'JIK2B16']), // fonte devolve no formato Mercosul
             '*/sinesp/placa/ERR1A23' => \Illuminate\Support\Facades\Http::response(['codigoRetorno' => '3', 'mensagemRetorno' => 'Veículo não encontrado']),
             '*/sinesp/placa/OFF1A23' => \Illuminate\Support\Facades\Http::response('', 503),
         ]);
@@ -340,11 +342,12 @@ class EntradaOrdemTest extends TestCase
         $this->assertSame(['TOYOTA', 'HILUX CDSRXA4FD'], \App\Integracoes\Placa\IntegrasistPlaca::marcaModelo('I/TOYOTA HILUX CDSRXA4FD', 'I/TOYOTA HILUX CDSRXA4FD'));
         $this->assertSame(['VW', 'GOL 1.0'], \App\Integracoes\Placa\IntegrasistPlaca::marcaModelo('VW/GOL 1.0', 'VW/GOL 1.0'));
         $this->assertSame(['M.BENZ', 'C180'], \App\Integracoes\Placa\IntegrasistPlaca::marcaModelo('M.BENZ', 'C180'));
+        $this->assertSame(['marca' => 'HYUNDAI', 'modelo' => 'ELANTRA', 'ano' => 2014, 'cor' => 'Preta'], $c->consultar('JIK2116'));
         $this->assertNull($c->consultar('ERR1A23'));
         $this->assertNull($c->consultar('OFF1A23'));
         $this->assertNull($c->consultar('../x'));
         $c->consultar('PWR8F45'); // guardado: não consulta de novo
-        \Illuminate\Support\Facades\Http::assertSentCount(3);
+        \Illuminate\Support\Facades\Http::assertSentCount(4);
 
         $rec = $this->usuario(Papel::Recepcao, Unidade::factory()->create());
         Livewire::actingAs($rec)->test(NovaEntrada::class)->set('placa', 'pwr8f45')->call('consultarPlaca')->assertSet('modelo', 'C180')->assertSet('ano', '2015')
