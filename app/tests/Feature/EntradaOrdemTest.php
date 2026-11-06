@@ -333,6 +333,9 @@ class EntradaOrdemTest extends TestCase
         $c = app(\App\Integracoes\Placa\ConsultaPlaca::class);
         $this->assertInstanceOf(\App\Integracoes\Placa\IntegrasistPlaca::class, $c);
         $this->assertSame(['marca' => 'M.BENZ', 'modelo' => 'C180', 'ano' => 2015, 'cor' => 'Prata'], $c->consultar('PWR8F45'));
+        $this->assertSame(['TOYOTA', 'HILUX CDSRXA4FD'], \App\Integracoes\Placa\IntegrasistPlaca::marcaModelo('I/TOYOTA HILUX CDSRXA4FD', 'I/TOYOTA HILUX CDSRXA4FD'));
+        $this->assertSame(['VW', 'GOL 1.0'], \App\Integracoes\Placa\IntegrasistPlaca::marcaModelo('VW/GOL 1.0', 'VW/GOL 1.0'));
+        $this->assertSame(['M.BENZ', 'C180'], \App\Integracoes\Placa\IntegrasistPlaca::marcaModelo('M.BENZ', 'C180'));
         $this->assertNull($c->consultar('ERR1A23'));
         $this->assertNull($c->consultar('OFF1A23'));
         $this->assertNull($c->consultar('../x'));
