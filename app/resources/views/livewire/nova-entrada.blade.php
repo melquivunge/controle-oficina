@@ -32,7 +32,28 @@
                 @endif
                 @include('livewire.partials.campo', ['nome' => 'telefone', 'rotulo' => 'Telefone com DDD', 'tipo' => 'tel', 'live' => true, 'atributos' => ['inputmode' => 'tel', 'autocomplete' => 'off']])
                 @unless ($sem_veiculo)
-                    @include('livewire.partials.campo', ['nome' => 'placa', 'rotulo' => 'Placa', 'live' => true, 'atributos' => ['autocomplete' => 'off', 'style' => 'text-transform:uppercase']])
+                    {{-- Consulta da placa (06/11/2026): sistema ao digitar; fonte externa só pelo botão, com "Consultando…" visível. --}}
+                    <div class="field consulta-placa">
+                        <label for="placa">Placa</label>
+                        <div class="consulta-placa__linha">
+                            <input id="placa" type="text" wire:model.live.debounce.400ms="placa" autocomplete="off" style="text-transform:uppercase"
+                                   @if ($consultaDisponivel) wire:keydown.enter.prevent="consultarPlaca" @endif
+                                   @error('placa') aria-invalid="true" aria-describedby="placa-erro" @enderror>
+                            @if ($consultaDisponivel)
+                                <button type="button" class="button" wire:click="consultarPlaca" wire:loading.attr="disabled" wire:target="consultarPlaca">Buscar dados do veículo</button>
+                            @endif
+                        </div>
+                        <p class="consulta-placa__carregando" wire:loading.flex wire:target="consultarPlaca" role="status"><span class="fiscal-giro" aria-hidden="true"></span> Consultando placa…</p>
+                        @error('placa')<span class="field-error" id="placa-erro">{{ $message }}</span>@enderror
+                        @if ($avisoPlaca)<span class="hint" role="status">{{ $avisoPlaca }}</span>@endif
+                        @if ($origemVeiculo === 'consulta')
+                            @php($simulada = app(\App\Integracoes\Placa\ConsultaPlaca::class) instanceof \App\Integracoes\Placa\SimuladorPlaca)
+                            <span class="hint" role="status">Marca, modelo, ano e cor preenchidos pela consulta da placa. Confira com o veículo.
+                                @if ($simulada)<strong>SIMULAÇÃO: dados fictícios, não vêm do DETRAN.</strong>@endif</span>
+                        @elseif ($origemVeiculo === 'sistema')
+                            <span class="hint" role="status">Veículo já cadastrado: dados puxados do sistema.</span>
+                        @endif
+                    </div>
                 @endunless
                 @include('livewire.partials.campo', ['nome' => 'nome', 'rotulo' => 'Nome do cliente', 'atributos' => ['autocomplete' => 'off']])
                 @unless ($sem_veiculo)
@@ -64,13 +85,6 @@
                 </details>
             @endcan
 
-            @if (! $sem_veiculo && $origemVeiculo === 'consulta')
-                @php($simulada = app(\App\Integracoes\Placa\ConsultaPlaca::class) instanceof \App\Integracoes\Placa\SimuladorPlaca)
-                <p class="hint" role="status">Marca, modelo, ano e cor preenchidos pela consulta da placa. Confira com o veículo.
-                    @if ($simulada)<strong>SIMULAÇÃO: dados fictícios, não vêm do DETRAN.</strong>@endif</p>
-            @elseif (! $sem_veiculo && $origemVeiculo === 'sistema')
-                <p class="hint" role="status">Veículo já cadastrado: dados puxados do sistema.</p>
-            @endif
             @if ($veiculoExistente && $veiculoExistente->cliente_id !== $cliente_id)
                 <div class="notice" role="status">
                     <p>Placa já cadastrada{{ $veiculoExistente->modelo ? ' ('.$veiculoExistente->modelo.')' : '' }} para outro cliente. Se for o mesmo cliente, use “Usar este cadastro”. Se o veículo mudou de dono, confirme a transferência (fica no histórico).</p>

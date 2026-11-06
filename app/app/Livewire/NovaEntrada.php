@@ -28,6 +28,7 @@ class NovaEntrada extends Component
     public string $marca = '';
     public string $ano = '';
     public string $cor = '';
+    public ?string $avisoPlaca = null; // resultado da consulta externa sem dados
     public ?string $origemVeiculo = null; // 'sistema' | 'consulta' (06/11/2026: dados puxados pela placa)
     public string $quilometragem = '';
     public string $observacoes = '';
@@ -113,11 +114,12 @@ class NovaEntrada extends Component
     }
 
     /**
-     * Placa completa: já cadastrada → puxa veículo e dono do sistema (se nenhum cliente foi escolhido/digitado);
-     * nova → consulta o provedor (simulador fora de produção). Tudo continua editável; falha da consulta não bloqueia.
+     * Ao digitar: placa já cadastrada → puxa veículo e dono do sistema (se nenhum cliente foi escolhido/digitado).
+     * A consulta externa (lenta, de terceiro) só roda pelo botão "Buscar dados do veículo" (consultarPlaca).
      */
     public function updatedPlaca(): void
     {
+        $this->avisoPlaca = null;
         $this->placa = Normaliza::placa($this->placa);
         if ($this->origemVeiculo) { // placa mudou: descarta o que foi puxado da placa anterior
             $this->marca = $this->modelo = $this->ano = $this->cor = '';
@@ -137,6 +139,24 @@ class NovaEntrada extends Component
                 $this->telefone = $dono->telefone;
             }
 
+        }
+    }
+
+    /** Botão "Buscar dados do veículo": consulta externa com indicador de carregamento na tela. Nunca bloqueia a entrada. */
+    public function consultarPlaca(): void
+    {
+        $this->updatedPlaca();
+        if (! preg_match(Normaliza::REGEX_PLACA, $this->placa)) {
+            $this->addError('placa', 'Digite a placa completa (ex.: ABC1D23).');
+
+            return;
+        }
+        if ($this->origemVeiculo === 'sistema') {
+            return; // já cadastrada: dados do sistema
+        }
+        if (! \Illuminate\Support\Facades\RateLimiter::attempt('consulta-placa:'.auth()->id(), 20, fn () => true)) {
+            $this->avisoPlaca = 'Muitas consultas seguidas. Aguarde um minuto ou preencha os dados à mão.';
+
             return;
         }
         try {
@@ -148,6 +168,8 @@ class NovaEntrada extends Component
         if ($dados) {
             $this->preencherVeiculo($dados);
             $this->origemVeiculo = 'consulta';
+        } else {
+            $this->avisoPlaca = 'Não encontramos dados desta placa agora. Preencha marca, modelo, ano e cor à mão.';
         }
     }
 
@@ -236,6 +258,7 @@ class NovaEntrada extends Component
         return view('livewire.nova-entrada', [
             'unidades' => Unidade::visiveisPara($user)->where('ativa', true)->orderBy('nome')->get(),
             'sugestoes' => $sugestoes,
+            'consultaDisponivel' => ! app(\App\Integracoes\Placa\ConsultaPlaca::class) instanceof \App\Integracoes\Placa\ConsultaPlacaIndisponivel,
             'veiculoExistente' => ! $this->sem_veiculo && strlen($this->placa) === 7 ? Veiculo::with('cliente')->where('placa', $this->placa)->first() : null,
         ]);
     }
