@@ -2,7 +2,12 @@
 
 namespace App\Services;
 
+use App\Enums\StatusOrdem;
+use App\Models\Devolucao;
 use App\Models\Empresa;
+use App\Models\Orcamento;
+use App\Models\Ordem;
+use App\Models\Pagamento;
 use App\Support\Fuso;
 use Carbon\CarbonImmutable;
 use OpenSpout\Common\Entity\Cell;
@@ -18,7 +23,8 @@ use OpenSpout\Writer\XLSX\Options;
 use OpenSpout\Writer\XLSX\Writer;
 
 /**
- * Exportação do painel em Excel (.xlsx): por unidade, por dia e por dia da semana, cada aba com linha TOTAL.
+ * Exportação do painel em Excel (.xlsx): por unidade, por dia, por dia da semana, lista de ordens e de recebimentos (06/11/2026),
+ * cada aba com linha TOTAL. Uma loja (filtro) ou todas juntas.
  * Valores em número de verdade (R$ formatado pela célula), não texto, para somar/filtrar no Excel.
  * Texto sempre como StringCell: nome começando com "=" nunca vira fórmula (injeção em planilha).
  */
@@ -45,7 +51,7 @@ final class PainelExcel
      * @param  array{dias: list<string>, entradas: list<int>, entregas: list<int>, aprovado: list<int>, recebido: list<int>}  $serie
      * @param  array{dias: array<int, array<string, mixed>>}  $semana
      */
-    public function gravar(string $arquivo, iterable $unidades, array $linhas, array $serie, array $semana, string $de, string $ate, string $unidade, string $responsavel): void
+    public function gravar(string $arquivo, iterable $unidades, array $linhas, array $serie, array $semana, string $de, string $ate, string $unidade, string $responsavel, ?int $responsavelId = null): void
     {
         $opcoes = new Options;
         // ponytail: largura vale para todas as abas (1ª coluna = rótulo, demais numéricas); por aba só se algum dia precisar.
@@ -101,6 +107,51 @@ final class PainelExcel
         $media = $ts['ocorrencias'] ? $ts['recebido'] / $ts['ocorrencias'] : 0;
         $this->linha($writer, 'TOTAL', [[$ts['recebido'] / 100, true], [$ts['entradas'], false], [$ts['ocorrencias'], false], [$ts['sem_venda'], false], [$media / 100, true]], false, true);
 
+        $nomes = collect($unidades)->pluck('nome', 'id');
+        $ids = $nomes->keys()->all();
+        $inicio = Fuso::inicioDoDia($de);
+        $fim = Fuso::inicioDoDia($ate)->addDay();
+        $doResponsavel = fn ($q, string $col = 'criado_por') => $q->when($responsavelId, fn ($q) => $q->where($col, $responsavelId));
+
+        // Aba 4: ordens que entraram no período. Recebido/saldo = situação atual da OS (todos os pagamentos e devoluções).
+        $writer->addNewSheetAndMakeItCurrent();
+        $this->cabecalho($writer, $nome, 'Ordens', $filtros, ['OS', 'Loja', 'Entrada', 'Cliente', 'Veículo / item', 'Situação', 'Aprovado', 'Recebido', 'Saldo']);
+        $t = [0, 0, 0];
+        $ordens = Ordem::with('cliente:id,nome', 'veiculo')->whereIn('unidade_id', $ids)
+            ->where('entrada_em', '>=', $inicio)->where('entrada_em', '<', $fim)->tap($doResponsavel)
+            ->addSelect(['aprovado_c' => Orcamento::selectRaw('coalesce(sum(total_centavos),0)')->whereColumn('ordem_id', 'ordens.id')->where('status', 'aprovado'),
+                'pago_c' => Pagamento::selectRaw('coalesce(sum(valor_centavos),0)')->whereColumn('ordem_id', 'ordens.id')->whereIn('status', ['confirmado', 'registrado']),
+                'devolvido_c' => Devolucao::selectRaw('coalesce(sum(valor_centavos),0)')->whereColumn('ordem_id', 'ordens.id')->where('status', 'concluida')])
+            ->orderBy('entrada_em')->orderBy('id');
+        $i = 0;
+        foreach ($ordens->lazy(500) as $o) {
+            $aprovado = (int) $o->aprovado_c;
+            $recebido = (int) $o->pago_c - (int) $o->devolvido_c;
+            $saldo = $o->status === StatusOrdem::Cancelado ? 0 : max(0, $aprovado - $recebido);
+            $t = [$t[0] + $aprovado, $t[1] + $recebido, $t[2] + $saldo];
+            $this->linha($writer, $o->numero, [$nomes[$o->unidade_id], Fuso::exibir($o->entrada_em, 'd/m/Y'), $o->cliente->nome,
+                trim($o->identificacao().' '.($o->veiculo?->modelo ?? '')), $o->status->rotulo(), [$aprovado / 100, true], [$recebido / 100, true], [$saldo / 100, true]], $i++ % 2 === 1);
+        }
+        $this->linha($writer, 'TOTAL', ["{$i} ordens", '', '', '', '', [$t[0] / 100, true], [$t[1] / 100, true], [$t[2] / 100, true]], false, true);
+
+        // Aba 5: recebimentos efetivos no período (Pix confirmado e registros manuais) e devoluções concluídas (negativas).
+        $writer->addNewSheetAndMakeItCurrent();
+        $this->cabecalho($writer, $nome, 'Recebimentos', $filtros, ['Data', 'Loja', 'OS', 'Cliente', 'Forma', 'Valor']);
+        $daOrdem = fn ($q) => $q->whereHas('ordem', fn ($q) => $doResponsavel($q));
+        $linhas = Pagamento::with('ordem:id,numero,cliente_id', 'ordem.cliente:id,nome')->whereIn('unidade_id', $ids)->whereIn('status', ['confirmado', 'registrado'])
+            ->where('recebido_em', '>=', $inicio)->where('recebido_em', '<', $fim)->when($responsavelId, $daOrdem)->get()
+            ->map(fn ($p) => [$p->recebido_em, $nomes[$p->unidade_id], $p->ordem->numero, $p->ordem->cliente->nome, ['pix' => 'Pix', 'dinheiro' => 'Dinheiro', 'cartao_externo' => 'Cartão'][$p->meio] ?? $p->meio, $p->valor_centavos])
+            ->concat(Devolucao::with('ordem:id,numero,cliente_id', 'ordem.cliente:id,nome')->whereIn('unidade_id', $ids)->where('status', 'concluida')
+                ->where('concluida_em', '>=', $inicio)->where('concluida_em', '<', $fim)->when($responsavelId, $daOrdem)->get()
+                ->map(fn ($d) => [$d->concluida_em, $nomes[$d->unidade_id], $d->ordem->numero, $d->ordem->cliente->nome, 'Devolução', -$d->valor_centavos]))
+            ->sortBy(fn ($l) => $l[0]->getTimestamp())->values();
+        $soma = 0;
+        foreach ($linhas as $n => [$quando, $loja, $os, $cliente, $forma, $valor]) {
+            $soma += $valor;
+            $this->linha($writer, Fuso::exibir($quando, 'd/m/Y H:i'), [$loja, $os, $cliente, $forma, [$valor / 100, true]], $n % 2 === 1);
+        }
+        $this->linha($writer, 'TOTAL', [$linhas->count().' lançamentos', '', '', '', [$soma / 100, true]], false, true);
+
         $writer->close();
     }
 
@@ -120,7 +171,7 @@ final class PainelExcel
         $writer->addRow((new Row($celulas))->setHeight(32));
     }
 
-    /** @param list<array{0: int|float, 1: bool}> $valores [valor, é dinheiro] */
+    /** @param list<string|array{0: int|float, 1: bool}> $valores texto ou [valor, é dinheiro] */
     private function linha(Writer $writer, string $rotulo, array $valores, bool $zebra, bool $total = false): void
     {
         $estilo = function () use ($zebra, $total): Style {
@@ -134,8 +185,8 @@ final class PainelExcel
             return $s;
         };
         $celulas = [new StringCell($rotulo, $estilo())];
-        foreach ($valores as [$v, $din]) {
-            $celulas[] = Cell::fromValue($v, $estilo()->setFormat($din ? self::MOEDA : self::INTEIRO));
+        foreach ($valores as $c) {
+            $celulas[] = is_string($c) ? new StringCell($c, $estilo()) : Cell::fromValue($c[0], $estilo()->setFormat($c[1] ? self::MOEDA : self::INTEIRO));
         }
         $writer->addRow((new Row($celulas))->setHeight(20));
     }

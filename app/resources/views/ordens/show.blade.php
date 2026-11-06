@@ -38,11 +38,11 @@
             <article><p>Entrada</p><strong>{{ \App\Support\Fuso::exibir($ordem->entrada_em, 'd/m H:i') }}</strong><small>por {{ $ordem->autor->name }}</small></article>
             <article><p>Entrega prevista</p><strong @class(['prazo-atrasado' => $atrasada])>{{ $ordem->entrega_prevista_em?->format('d/m') ?? '—' }}</strong><small>@if ($atrasada)Atrasada · @endif{{ $ordem->entrega_prevista_em ? \Illuminate\Support\Str::ucfirst($ordem->entrega_prevista_em->locale('pt_BR')->isoFormat('dddd')).' · dias úteis' : 'Ainda não definida' }}</small></article>
             @if ($verValores)
-            <article><p>Aprovado</p><strong>{{ \App\Support\Dinheiro::formatar($fin['aprovado']) }}</strong><small>Versão aprovada pelo cliente</small></article>
+            <article><p>Aprovado</p><strong>{{ \App\Support\Dinheiro::formatar($fin['aprovado']) }}</strong><small>Versão aprovada</small></article>
             <article><p>Saldo a receber</p><strong @class(['accent' => $fin['saldo'] === 0 && $fin['aprovado'] > 0])>{{ \App\Support\Dinheiro::formatar($fin['saldo']) }}</strong><small>@if ($fin['em_revisao'])Em revisão: {{ \App\Support\Dinheiro::formatar($fin['em_revisao']) }}@else Recebido {{ \App\Support\Dinheiro::formatar($fin['recebido'] - $fin['devolvido']) }}@endif</small></article>
             @else
             @php($totalItens = $aprovadoAtual?->itens->count() ?? 0)
-            <article><p>Serviços concluídos</p><strong>{{ $aprovadoAtual ? $aprovadoAtual->itens->whereNotNull('concluido_em')->count().'/'.$totalItens : '—' }}</strong><small>{{ $aprovadoAtual ? 'da versão aprovada' : 'Aguardando aprovação do cliente' }}</small></article>
+            <article><p>Serviços concluídos</p><strong>{{ $aprovadoAtual ? $aprovadoAtual->itens->whereNotNull('concluido_em')->count().'/'.$totalItens : '—' }}</strong><small>{{ $aprovadoAtual ? 'da versão aprovada' : 'Aguardando aprovação' }}</small></article>
             <article><p>Fotos</p><strong>{{ $ordem->anexos->count() }}</strong><small>na aba Diagnóstico e fotos</small></article>
             @endif
         </section>

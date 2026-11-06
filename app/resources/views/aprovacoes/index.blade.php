@@ -1,6 +1,6 @@
 @extends('layouts.app', ['titulo' => 'Aprovações de desconto'])
 @section('conteudo')
-    <div class="page-head"><div><h1>Aprovações de desconto</h1><p class="subtitle">Orçamentos com desconto acima do limite do catálogo (ou da regra geral) só são enviados ao cliente depois de aprovados aqui. Quem pediu não decide o próprio pedido.</p></div></div>
+    <div class="page-head"><div><h1>Aprovações de desconto</h1><p class="subtitle">Orçamentos com desconto acima do limite do catálogo (ou da regra geral) só podem ser concluídos depois de aprovados aqui. Quem pediu não decide o próprio pedido.</p></div></div>
 
     <h2>Pendentes</h2>
     @forelse ($pendentes as $p)

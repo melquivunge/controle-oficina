@@ -61,7 +61,21 @@ class PainelExcelTest extends TestCase
         $this->assertStringContainsString('.xlsx', $resp->headers->get('Content-Disposition'));
         $arquivo = $resp->baseResponse->getFile()->getPathname();
         $abas = $this->ler($arquivo);
-        $this->assertSame(['Resumo por unidade', 'Por dia', 'Dia da semana'], array_keys($abas));
+        $this->assertSame(['Resumo por unidade', 'Por dia', 'Dia da semana', 'Ordens', 'Recebimentos'], array_keys($abas));
+
+        // 06/11/2026: uma linha por OS e por recebimento, com TOTAL; loja em texto (nome com "=" não vira fórmula).
+        $ordens = array_slice($abas['Ordens'], 2);
+        $this->assertSame(['OS', 'Loja', 'Entrada', 'Cliente', 'Veículo / item', 'Situação', 'Aprovado', 'Recebido', 'Saldo'], $ordens[0]);
+        $this->assertSame(3, count($ordens) - 1, '2 ordens + TOTAL');
+        $this->assertSame(['=Oficina A', 'Mariana', 'Autorizado'], [$ordens[1][1], $ordens[1][3], $ordens[1][5]]);
+        $this->assertEqualsWithDelta(250.0, $ordens[1][6], 0.001);
+        $this->assertEqualsWithDelta(150.0, $ordens[1][8], 0.001); // saldo 250 - 100
+        $this->assertSame('TOTAL', $ordens[3][0]);
+        $this->assertEqualsWithDelta([500.0, 125.5, 374.5], array_slice($ordens[3], 6, 3), 0.001);
+        $receb = array_slice($abas['Recebimentos'], 2);
+        $this->assertSame(['Data', 'Loja', 'OS', 'Cliente', 'Forma', 'Valor'], $receb[0]);
+        $this->assertSame(['Dinheiro', 'Dinheiro'], [$receb[1][4], $receb[2][4]]);
+        $this->assertEqualsWithDelta(125.5, $receb[3][5], 0.001);
 
         $resumo = $abas['Resumo por unidade'];
         $this->assertStringContainsString('Resumo por unidade', $resumo[0][0]);
@@ -102,5 +116,13 @@ class PainelExcelTest extends TestCase
         // Gerente só vê a própria unidade.
         $g = $this->ler($this->entrarComo($ger)->get('/painel/exportar?periodo=7&formato=xlsx')->assertOk()->baseResponse->getFile()->getPathname());
         $this->assertSame(['=Oficina A', 'TOTAL'], array_column(array_slice($g['Resumo por unidade'], 3), 0));
+        $this->assertSame(['=Oficina A'], array_values(array_unique(array_column(array_slice($g['Ordens'], 3, -1), 1))));
+        $this->assertCount(1 + 1, array_slice($g['Recebimentos'], 3), 'só o recebimento da própria loja + TOTAL');
+
+        // Uma loja escolhida (dono): só ela nas listas. Painel simples oferece o download.
+        $so = $this->ler($this->entrarComo($dono)->get("/painel/exportar?periodo=7&formato=xlsx&unidade={$c->id}")->assertOk()->baseResponse->getFile()->getPathname());
+        $this->assertSame(['Oficina C'], array_values(array_unique(array_column(array_slice($so['Ordens'], 3, -1), 1))));
+        $dono->forceFill(['painel_simples' => true])->save();
+        $this->entrarComo($dono)->get('/')->assertOk()->assertSee('Baixar planilha Excel')->assertSee('Todas as lojas juntas');
     }
 }

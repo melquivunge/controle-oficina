@@ -41,7 +41,7 @@ class Acoes
         'conferencia_realizada' => 'Conferência diária registrada',
         'divergencia_resolvida' => 'Divergência de conferência resolvida',
         'orcamento_rascunho' => 'Rascunho de orçamento salvo',
-        'orcamento_enviado' => 'Orçamento enviado ao cliente',
+        'orcamento_enviado' => 'Orçamento concluído (aguardando aprovação)',
         'orcamento_aprovado' => 'Orçamento aprovado',
         'orcamento_recusado' => 'Orçamento recusado',
         'link_cliente_gerado' => 'Link do cliente gerado',

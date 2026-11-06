@@ -118,7 +118,7 @@ class OrcamentoEditor extends Component
             return null;
         }
         $orcamentos->salvarRascunho(Ordem::findOrFail($this->ordemId), auth()->user(), $this->itens, $desconto, $this->desconto_motivo ?: null, $this->observacao ?: null);
-        session()->flash('sucesso', 'Rascunho do orçamento salvo. Revise e envie ao cliente.');
+        session()->flash('sucesso', 'Rascunho do orçamento salvo. Revise e aprove.');
 
         return $this->redirectRoute('ordens.show', Ordem::findOrFail($this->ordemId));
     }

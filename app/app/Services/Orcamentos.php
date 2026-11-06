@@ -71,7 +71,7 @@ class Orcamentos
         });
     }
 
-    /** Envia a versão ao cliente. Retorna o token do link em texto puro (exibido uma vez). */
+    /** Conclui a versão: fica aguardando aprovação interna. Retorna o token do link do cliente (só visualização), em texto puro (exibido uma vez). */
     public function enviar(Orcamento $orcamento, User $ator): string
     {
         $this->autorizar($ator, 'orcar', $orcamento->ordem);
@@ -149,11 +149,26 @@ class Orcamentos
         });
     }
 
-    public function decidirPresencial(Orcamento $orc, User $ator, string $decisao, string $observacao): Aprovacao
+    /**
+     * Decisão interna (06/11/2026: quem aprova é dono, gerente/supervisor ou recepção, não o cliente).
+     * ponytail: grava canal 'presencial' (= registrado por funcionário; o CHECK do banco exige registrado_por).
+     */
+    public function decidirPresencial(Orcamento $orc, User $ator, string $decisao, ?string $observacao = null): Aprovacao
     {
         $this->autorizar($ator, 'acompanharCliente', $orc->ordem);
 
         return $this->decidir($orc->id, $orc->ordem_id, $decisao, 'presencial', $ator, $observacao);
+    }
+
+    /** Um clique: conclui o rascunho e aprova na hora (só quem orça). Tudo ou nada. */
+    public function aprovarDireto(Orcamento $rascunho, User $ator, ?string $observacao = null): string
+    {
+        return DB::transaction(function () use ($rascunho, $ator, $observacao) {
+            $token = $this->enviar($rascunho, $ator);
+            $this->decidirPresencial($rascunho->fresh(), $ator, 'aprovado', $observacao);
+
+            return $token;
+        });
     }
 
     /** Links anteriores seguem válidos (mensagens já enviadas), salvo revogação explícita. */

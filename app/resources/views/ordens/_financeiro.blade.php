@@ -13,7 +13,7 @@
             @error($campoErro)<p class="alert erro" role="alert">{{ $message }}</p>@enderror
         @endforeach
         <div class="pg-resumo">
-            <div><span>Aprovado pelo cliente</span><strong>{{ \App\Support\Dinheiro::formatar($fin['aprovado']) }}</strong></div>
+            <div><span>Aprovado</span><strong>{{ \App\Support\Dinheiro::formatar($fin['aprovado']) }}</strong></div>
             <div><span>Recebido</span><strong>{{ \App\Support\Dinheiro::formatar($fin['recebido'] - $fin['devolvido']) }}</strong>@if ($fin['devolvido'])<small>já descontado {{ \App\Support\Dinheiro::formatar($fin['devolvido']) }} devolvido</small>@endif</div>
             <div class="pg-saldo"><span>Saldo a receber</span><strong>{{ \App\Support\Dinheiro::formatar($fin['saldo']) }}</strong>@if ($fin['em_revisao'])<small>{{ \App\Support\Dinheiro::formatar($fin['em_revisao']) }} em revisão (ainda não quita)</small>@endif</div>
         </div>

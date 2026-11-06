@@ -87,7 +87,7 @@
     </div>
     @if (! $podeDesconto)<p class="hint">Descontos exigem permissão de gerente.</p>@endif
     @if ($acimaDoLimite)
-        <p class="alert aviso" role="status">Desconto acima do limite sem aprovação (item do catálogo ou regra geral de {{ str_replace('.', ',', rtrim(rtrim($regraGeral, '0'), '.')) }}%). Ao salvar, o pedido vai para aprovação interna; o orçamento só poderá ser enviado ao cliente depois de aprovado.</p>
+        <p class="alert aviso" role="status">Desconto acima do limite sem aprovação (item do catálogo ou regra geral de {{ str_replace('.', ',', rtrim(rtrim($regraGeral, '0'), '.')) }}%). Ao salvar, o pedido vai para aprovação interna; o orçamento só poderá ser concluído depois de aprovado.</p>
     @endif
 
     <dl class="totais">

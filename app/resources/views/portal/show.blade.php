@@ -34,7 +34,7 @@
     @if ($pendente)
         <section class="form-panel">
             <div class="form-section">
-                <h2>Orçamento para sua aprovação · versão {{ $pendente->versao }}</h2>
+                <h2>Orçamento · versão {{ $pendente->versao }}</h2>
                 @if ($ordem->diagnostico)<p style="white-space:pre-line">{{ $ordem->diagnostico }}</p>@endif
                 <div class="table-wrap"><table class="data-table">
                     <thead><tr><th>Serviço ou peça</th><th>Qtd.</th><th>Preço unitário</th><th>Total</th></tr></thead>
@@ -51,16 +51,7 @@
                     <dt>Total desta versão</dt><dd><strong>{{ \App\Support\Dinheiro::formatar($pendente->total_centavos) }}</strong></dd>
                 </dl>
                 @if ($pendente->observacao_cliente)<p class="notice">{{ $pendente->observacao_cliente }}</p>@endif
-                <p class="hint">Nenhum serviço fora desta lista será feito sem uma nova aprovação sua.</p>
-                <form method="POST" action="{{ route('portal.decidir', $token) }}">
-                    @csrf
-                    <input type="hidden" name="orcamento_id" value="{{ $pendente->id }}">
-                    <div class="field"><label for="observacao">Comentário para a oficina (opcional)</label><input id="observacao" name="observacao" maxlength="500"></div>
-                    <div class="decisao">
-                        <button class="button primary" type="submit" name="decisao" value="aprovado">Aprovar {{ \App\Support\Dinheiro::formatar($pendente->total_centavos) }}</button>
-                        <button class="button" type="submit" name="decisao" value="recusado">Recusar este orçamento</button>
-                    </div>
-                </form>
+                <p class="notice">Este orçamento está em análise na oficina. Dúvidas? Fale com a loja.</p>
             </div>
         </section>
     @elseif ($aprovado)

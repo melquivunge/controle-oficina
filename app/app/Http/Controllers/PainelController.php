@@ -120,7 +120,7 @@ class PainelController extends Controller
             $serie = $series->diarias($ids, $de, $ate, Fuso::inicioDoDia($de), Fuso::inicioDoDia($ate)->addDay(), $responsavelId);
             $arquivo = tempnam(sys_get_temp_dir(), 'painel');
             app(PainelExcel::class)->gravar($arquivo, $lista, $linhas, $serie, SeriesPainel::porDiaDaSemana($serie), $de, $ate,
-                $unidadeId ? $unidades->firstWhere('id', $unidadeId)->nome : 'Todas', $responsavel);
+                $unidadeId ? $unidades->firstWhere('id', $unidadeId)->nome : 'Todas', $responsavel, $responsavelId);
 
             return response()->download($arquivo, "painel-{$de}-a-{$ate}.xlsx", ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'])->deleteFileAfterSend();
         }
