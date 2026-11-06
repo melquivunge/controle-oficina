@@ -298,7 +298,7 @@ class EntradaOrdemTest extends TestCase
         // Placa nova: preenche pela consulta; o que for digitado é salvo no cadastro do veículo.
         $c = Livewire::actingAs($rec)->test(NovaEntrada::class)->set('placa', 'bra-2e19')
             ->assertSet('marca', $esperado['marca'])->assertSet('modelo', $esperado['modelo'])->assertSet('ano', (string) $esperado['ano'])
-            ->assertSet('cor', $esperado['cor'])->assertSee('preenchidos pela consulta da placa');
+            ->assertSet('cor', $esperado['cor'])->assertSee('preenchidos pela consulta da placa')->assertSee('SIMULAÇÃO: dados fictícios');
         $c->set('cor', 'Azul')->set('nome', 'Paulo Reis')->set('telefone', '61977776666')->set('motivo', 'Revisão')->call('salvar')->assertHasNoErrors();
         $v = \App\Models\Veiculo::where('placa', 'BRA2E19')->sole();
         $this->assertSame([$esperado['marca'], $esperado['modelo'], $esperado['ano'], 'Azul'], [$v->marca, $v->modelo, $v->ano, $v->cor]);

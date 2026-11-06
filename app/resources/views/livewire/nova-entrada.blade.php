@@ -65,7 +65,9 @@
             @endcan
 
             @if (! $sem_veiculo && $origemVeiculo === 'consulta')
-                <p class="hint" role="status">Marca, modelo, ano e cor preenchidos pela consulta da placa@if (app(\App\Integracoes\Placa\ConsultaPlaca::class) instanceof \App\Integracoes\Placa\SimuladorPlaca) <strong>(SIMULAÇÃO: dados fictícios, não vêm do DETRAN)</strong>@endif. Confira com o veículo.</p>
+                @php($simulada = app(\App\Integracoes\Placa\ConsultaPlaca::class) instanceof \App\Integracoes\Placa\SimuladorPlaca)
+                <p class="hint" role="status">Marca, modelo, ano e cor preenchidos pela consulta da placa. Confira com o veículo.
+                    @if ($simulada)<strong>SIMULAÇÃO: dados fictícios, não vêm do DETRAN.</strong>@endif</p>
             @elseif (! $sem_veiculo && $origemVeiculo === 'sistema')
                 <p class="hint" role="status">Veículo já cadastrado: dados puxados do sistema.</p>
             @endif
