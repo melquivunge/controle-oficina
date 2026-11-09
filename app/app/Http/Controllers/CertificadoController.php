@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CertificadoDigital;
 use App\Models\Empresa;
+use App\Rules\Cnpj;
 use App\Services\Auditoria;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -36,7 +37,7 @@ class CertificadoController extends Controller
         if ($cnpjEmpresa === '' || $doc !== $cnpjEmpresa) {
             throw ValidationException::withMessages(['certificado' => $cnpjEmpresa === ''
                 ? 'Cadastre o CNPJ da empresa (Configurações → Empresa) antes de enviar o certificado.'
-                : 'O certificado é de outro CNPJ. Envie o certificado da empresa cadastrada.']);
+                : 'Este certificado é do CNPJ '.Cnpj::exibicao($doc).', mas a empresa cadastrada está com o CNPJ '.Cnpj::exibicao($cnpjEmpresa).'. Corrija em Identidade da empresa ou envie o certificado certo.']);
         }
         $novo = CertificadoDigital::create(['pfx' => base64_encode($conteudo), 'senha' => $request->input('senha'), 'documento' => $doc,
             'titular' => mb_substr(\Illuminate\Support\Str::before((string) $cert->getCompanyName(), ':'), 0, 200), 'valido_de' => $cert->getValidFrom(), 'valido_ate' => $cert->getValidTo(),

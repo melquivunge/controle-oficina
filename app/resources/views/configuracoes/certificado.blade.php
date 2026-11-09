@@ -38,6 +38,6 @@
                 @include('partials.campo', ['nome' => 'senha', 'rotulo' => 'Senha do certificado', 'tipo' => 'password', 'obrigatorio' => true, 'autocomplete' => 'off'])
             </div>
         </section>
-        <div class="form-actions"><button class="button primary" type="submit">Guardar certificado</button></div>
+        <div class="form-footer"><button class="button primary" type="submit">Guardar certificado</button></div>
     </form>
 @endsection

@@ -138,7 +138,7 @@ class FiscalRealTest extends TestCase
     {
         Empresa::atual()->update(['cnpj' => '11444777000161']);
         $this->entrarComo($this->usuario(Papel::Proprietario))->post(route('certificado.store'), ['certificado' => $this->pfx(), 'senha' => 'senha-teste'])
-            ->assertSessionHasErrors(['certificado' => 'O certificado é de outro CNPJ. Envie o certificado da empresa cadastrada.']);
+            ->assertSessionHasErrors(['certificado' => 'Este certificado é do CNPJ 11.222.333/0001-81, mas a empresa cadastrada está com o CNPJ 11.444.777/0001-61. Corrija em Identidade da empresa ou envie o certificado certo.']);
         $this->assertSame(0, CertificadoDigital::count());
     }
 

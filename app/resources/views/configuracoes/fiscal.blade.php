@@ -27,6 +27,6 @@
                 @include('partials.campo', ['nome' => $c, 'rotulo' => \App\Support\DadosFiscais::ROTULOS[$c], 'valorAtual' => $dados[$c]])
             @endforeach
         </div></section>
-        <div class="form-actions"><button class="button primary" type="submit">Salvar dados fiscais</button></div>
+        <div class="form-footer"><button class="button primary" type="submit">Salvar dados fiscais</button></div>
     </form>
 @endsection
