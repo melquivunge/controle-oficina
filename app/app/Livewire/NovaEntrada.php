@@ -46,7 +46,9 @@ class NovaEntrada extends Component
     {
         $this->authorize('registrar_entrada');
         $user = auth()->user();
-        $this->unidade_id = $user->visaoGlobal() ? null : $user->unidade_id;
+        $ativas = Unidade::visiveisPara($user)->where('ativa', true)->pluck('id');
+        // Com uma só unidade o campo não aparece na tela: já vem escolhida (com visão global ficava vazio e a validação barrava sem mostrar erro).
+        $this->unidade_id = $user->visaoGlobal() ? ($ativas->count() === 1 ? $ativas->first() : null) : $user->unidade_id;
         // Pré-preenchimento vindo de outra tela (ex.: Central de WhatsApp); o cadastro existente é sugerido pela busca normal.
         $this->telefone = Normaliza::telefone((string) request()->query('telefone', ''));
         $this->nome = mb_substr(trim((string) request()->query('nome', '')), 0, 150);

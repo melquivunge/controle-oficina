@@ -381,4 +381,14 @@ class EntradaOrdemTest extends TestCase
         $this->assertSame('61955554444', $importado->fresh()->telefone);
         $this->get(route('veiculos.index'))->assertOk()->assertSee('ABC1D23');
     }
+
+    public function test_proprietario_com_uma_so_unidade_registra_entrada(): void
+    {
+        \App\Models\Unidade::query()->update(['ativa' => false]);
+        $u = \App\Models\Unidade::factory()->create();
+        \Livewire\Livewire::actingAs($this->usuario(\App\Enums\Papel::Proprietario))->test(\App\Livewire\NovaEntrada::class)
+            ->set('nome', 'Cliente Unico')->set('telefone', '6199157768')->set('placa', 'UBS2B09')->set('motivo', 'Teste')
+            ->call('salvar')->assertHasNoErrors();
+        $this->assertSame(1, \App\Models\Ordem::where('unidade_id', $u->id)->count());
+    }
 }
