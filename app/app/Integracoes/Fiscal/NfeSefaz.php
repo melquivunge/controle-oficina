@@ -4,6 +4,7 @@ namespace App\Integracoes\Fiscal;
 
 use App\Models\CertificadoDigital;
 use App\Models\Empresa;
+use App\Support\Municipios;
 use NFePHP\Common\Certificate;
 use NFePHP\DA\NFe\Danfe;
 use NFePHP\NFe\Common\Standardize;
@@ -40,7 +41,7 @@ class NfeSefaz
 
     // ponytail: sem consulta prévia; reenviar a mesma chave dá duplicidade (204/539), tratada em emitir().
 
-    /** O que falta no cliente; a SEFAZ recusa (726) e não adianta repetir. ponytail: só DF; outras UFs exigem código IBGE do município e CFOP 6xxx. */
+    /** O que falta no cliente; a SEFAZ recusa (726) e não adianta repetir. ponytail: destinatário sempre não contribuinte (indIEDest 9): o cadastro não guarda a inscrição estadual do cliente. */
     private static function pendencia(array $d): ?string
     {
         $l = $d['cliente_local'] ?? [];
@@ -51,7 +52,8 @@ class NfeSefaz
             return 'Para a NF-e, cadastre o endereço completo do cliente (rua, bairro e UF).';
         }
 
-        return strtoupper($l['uf']) === 'DF' ? null : 'NF-e para cliente fora do DF ainda não está disponível neste sistema.';
+        return strtoupper($l['uf']) === 'DF' || Municipios::codigo($l['uf'], (string) ($l['cidade'] ?? '')) ? null
+            : 'Confira a cidade e a UF do cliente: não encontrei esse município na tabela do IBGE.';
     }
 
     public function emitir(array $dados): array
@@ -114,12 +116,13 @@ class NfeSefaz
             throw new RuntimeException('Informe a inscrição estadual em Configurações → Dados fiscais para emitir NF-e.');
         }
         $homolog = $this->ambiente === 2;
+        $interestadual = strtoupper((string) ($d['cliente_local']['uf'] ?? 'DF')) !== 'DF';
         $chave = self::chave($d, $cnpj);
         $o = fn (array $a) => (object) $a;
         $m = new Make;
         $m->taginfNFe($o(['versao' => '4.00', 'Id' => 'NFe'.$chave, 'pk_nItem' => null]));
         $m->tagide($o(['cUF' => 53, 'cNF' => substr($chave, 35, 8), 'natOp' => $f['nfe_natureza'], 'mod' => 55, 'serie' => (int) $d['serie'],
-            'nNF' => $d['numero_dps'], 'dhEmi' => now('America/Sao_Paulo')->subMinute()->format('Y-m-d\TH:i:sP'), 'tpNF' => 1, 'idDest' => 1,
+            'nNF' => $d['numero_dps'], 'dhEmi' => now('America/Sao_Paulo')->subMinute()->format('Y-m-d\TH:i:sP'), 'tpNF' => 1, 'idDest' => $interestadual ? 2 : 1,
             'cMunFG' => $f['municipio_ibge'], 'tpImp' => 1, 'tpEmis' => 1, 'cDV' => substr($chave, -1), 'tpAmb' => $this->ambiente, 'finNFe' => 1,
             'indFinal' => 1, 'indPres' => 1, 'procEmi' => 0, 'verProc' => 'ControleOficina1']));
         $m->tagemit($o(['xNome' => $e->razao_social ?: $e->nome_fantasia, 'xFant' => $e->nome_fantasia, 'IE' => $f['inscricao_estadual'],
@@ -132,8 +135,10 @@ class NfeSefaz
             $m->tagdest($o(['xNome' => $homolog ? 'NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL' : NfseNacional::texto($d['cliente'], 60),
                 'indIEDest' => 9, strlen($doc) === 14 ? 'CNPJ' : 'CPF' => $doc, 'email' => $d['cliente_email'] ?: null]));
             $l = $d['cliente_local'];
+            $fora = strtoupper($l['uf']) !== 'DF';
+            [$cMun, $xMun] = $fora ? Municipios::buscar($l['uf'], (string) $l['cidade']) : [$f['municipio_ibge'], 'Brasilia'];
             $m->tagenderDest($o(['xLgr' => NfseNacional::texto($l['logradouro'], 60), 'nro' => NfseNacional::texto($l['numero'] ?: 'SN', 60), 'xCpl' => $l['complemento'] ? NfseNacional::texto($l['complemento'], 60) : null,
-                'xBairro' => NfseNacional::texto($l['bairro'], 60), 'cMun' => $f['municipio_ibge'], 'xMun' => 'Brasilia', 'UF' => 'DF', 'CEP' => preg_replace('/\D/', '', (string) $l['cep']) ?: null, 'cPais' => 1058, 'xPais' => 'Brasil']));
+                'xBairro' => NfseNacional::texto($l['bairro'], 60), 'cMun' => $cMun, 'xMun' => $xMun, 'UF' => strtoupper($l['uf']), 'CEP' => preg_replace('/\D/', '', (string) $l['cep']) ?: null, 'cPais' => 1058, 'xPais' => 'Brasil']));
         }
         $itens = array_values($d['itens']);
         $bruto = array_sum(array_column($itens, 'total_centavos'));
@@ -147,11 +152,14 @@ class NfeSefaz
             $vUn = number_format($i['total_centavos'] / 100 / max($q, 0.0001), 10, '.', '');
             $m->tagprod($o(['item' => $n, 'cProd' => (string) ($i['codigo'] ?? $n), 'cEAN' => 'SEM GTIN', 'cEANTrib' => 'SEM GTIN',
                 'xProd' => $homolog && $n === 1 ? 'NOTA FISCAL EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL' : NfseNacional::texto($i['descricao'], 120),
-                'NCM' => $i['ncm'] ?: $f['nfe_ncm_padrao'], 'CFOP' => $f['nfe_cfop_dentro'], 'uCom' => 'UN', 'qCom' => $q, 'vUnCom' => $vUn,
+                'NCM' => $i['ncm'] ?: $f['nfe_ncm_padrao'], 'CFOP' => $interestadual ? $f['nfe_cfop_fora'] : $f['nfe_cfop_dentro'], 'uCom' => 'UN', 'qCom' => $q, 'vUnCom' => $vUn,
                 'vProd' => number_format($i['total_centavos'] / 100, 2, '.', ''), 'uTrib' => 'UN', 'qTrib' => $q, 'vUnTrib' => $vUn,
                 'vDesc' => $desc > 0 ? number_format($desc / 100, 2, '.', '') : null, 'indTot' => 1]));
             $m->tagimposto($o(['item' => $n]));
             $m->tagICMSSN($o(['item' => $n, 'orig' => 0, 'CSOSN' => $f['nfe_csosn']]));
+            if ($interestadual) { // como 3 das 4 notas do sistema antigo: DIFAL zerado (ponytail: contador confirma; uma nota para a BA destacou o valor)
+                $m->tagICMSUFDest($o(['item' => $n, 'vBCUFDest' => 0, 'vBCFCPUFDest' => 0, 'pFCPUFDest' => 0, 'pICMSUFDest' => 0, 'pICMSInter' => 12, 'pICMSInterPart' => 100, 'vFCPUFDest' => 0, 'vICMSUFDest' => 0, 'vICMSUFRemet' => 0]));
+            }
             $m->tagPIS($o(['item' => $n, 'CST' => '49', 'vBC' => 0, 'pPIS' => 0, 'vPIS' => 0]));
             $m->tagCOFINS($o(['item' => $n, 'CST' => '49', 'vBC' => 0, 'pCOFINS' => 0, 'vCOFINS' => 0]));
         }

@@ -17,6 +17,7 @@ use App\Services\Fiscal;
 use App\Services\Orcamentos;
 use App\Services\Ordens;
 use App\Support\DadosFiscais;
+use App\Support\Municipios;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request;
@@ -418,7 +419,7 @@ class FiscalRealTest extends TestCase
         config(['oficina.fiscal.modo' => 'homologacao']);
         $this->guardarCertificado();
         $this->sefinAutoriza();
-        Http::swap(new \Illuminate\Http\Client\Factory);
+        Http::swap(new Factory);
         Http::preventStrayRequests();
         $chave = str_repeat('5', 50);
         Http::fake(['*/dps/*' => Http::response('', 404), '*/nfse' => Http::response(['chaveAcesso' => $chave, 'nfseXmlGZipB64' => base64_encode(gzencode('<NFSe><nNFSe>9</nNFSe></NFSe>'))], 201),
@@ -455,7 +456,7 @@ class FiscalRealTest extends TestCase
     {
         $this->guardarCertificado();
         $cert = CertificadoDigital::sole()->certificado();
-        $d = ['fiscal' => \App\Support\DadosFiscais::atuais(), 'serie' => '3', 'numero_dps' => 1, 'valor_centavos' => 3000, 'ordem' => 'A-1', 'cliente' => 'Mariana Costa',
+        $d = ['fiscal' => DadosFiscais::atuais(), 'serie' => '3', 'numero_dps' => 1, 'valor_centavos' => 3000, 'ordem' => 'A-1', 'cliente' => 'Mariana Costa',
             'cliente_documento' => '52998224725', 'cliente_email' => 'm@exemplo.test', 'itens' => [['descricao' => 'Alinhamento', 'quantidade' => '1']]];
         foreach ([1 => 'producao', 2 => 'homologacao'] as $amb => $nome) {
             $xml = Signer::sign($cert, (new NfseNacional($amb))->dps($d), 'infDPS', 'Id', OPENSSL_ALGO_SHA256, [true, false, null, null], 'DPS');
@@ -481,6 +482,44 @@ class FiscalRealTest extends TestCase
         $d = FiscalDocument::where('ordem_id', $o->id)->sole();
         $this->assertSame('rejeitado', $d->status);
         $this->assertStringContainsString('endereço completo do cliente', $d->mensagem);
+        Http::assertNothingSent();
+    }
+
+    public function test_municipio_e_encontrado_sem_acento_e_por_uf(): void
+    {
+        $this->assertSame('3550308', Municipios::codigo('SP', 'São Paulo'));
+        $this->assertSame('5208707', Municipios::codigo('go', ' goiânia '));
+        $this->assertNull(Municipios::codigo('SP', 'Cidade Inexistente'));
+    }
+
+    public function test_nfe_para_fora_do_df_segue_o_sistema_antigo_e_passa_no_schema(): void
+    {
+        config(['oficina.fiscal.modo' => 'homologacao']);
+        $this->guardarCertificado();
+        Empresa::atual()->forceFill(['fiscal' => ['inscricao_estadual' => '0734567800155']])->save();
+        $dados = ['tipo' => 'nfe', 'chave' => str_repeat('b', 64), 'fiscal' => DadosFiscais::atuais(), 'serie' => '1', 'numero_dps' => 9, 'criado_em' => now(), 'valor_centavos' => 40000,
+            'ordem' => 'A-2', 'cliente' => 'Cliente SP', 'cliente_documento' => '52998224725', 'cliente_email' => null,
+            'cliente_local' => ['logradouro' => 'Rua B', 'numero' => '5', 'complemento' => '', 'bairro' => 'Centro', 'cidade' => 'São Paulo', 'uf' => 'SP', 'cep' => '01001000'],
+            'itens' => [['descricao' => 'Roda', 'quantidade' => '1', 'total_centavos' => 40000, 'ncm' => '87087090', 'codigo' => 5]]];
+        $tools = new Tools(json_encode(['atualizacao' => '2026-11-09 00:00:00', 'tpAmb' => 2, 'razaosocial' => 'Oficina Teste Ltda', 'siglaUF' => 'DF', 'cnpj' => self::CNPJ, 'schemes' => 'PL_010_V1.30', 'versao' => '4.00']), CertificadoDigital::atual()->certificado());
+        $xml = $tools->signNFe((new NfeSefaz(2))->xml($dados));
+        foreach (['<idDest>2</idDest>', '<CFOP>6108</CFOP>', '<indIEDest>9</indIEDest>', '<indFinal>1</indFinal>', '<cMun>3550308</cMun>', '<UF>SP</UF>', '<pICMSInter>12.00</pICMSInter>', '<vICMSUFDest>0.00</vICMSUFDest>'] as $t) {
+            $this->assertStringContainsString($t, $xml);
+        }
+    }
+
+    public function test_nfe_para_cidade_desconhecida_avisa_antes_de_enviar(): void
+    {
+        config(['oficina.fiscal.modo' => 'homologacao']);
+        $this->guardarCertificado();
+        Empresa::atual()->forceFill(['fiscal' => ['inscricao_estadual' => '0734567800155']])->save();
+        Http::fake();
+        $o = $this->aprovada([['descricao' => 'Válvula', 'quantidade' => '1', 'preco' => '20', 'tipo' => 'produto']]);
+        DB::table('clientes')->where('id', $o->cliente_id)->update(['logradouro' => 'Rua A', 'bairro' => 'Centro', 'cidade' => 'Cidade Inexistente', 'uf' => 'SP']);
+        app(Fiscal::class)->solicitar($o, $this->usuario(Papel::Recepcao, $this->unidade));
+        $d = FiscalDocument::where('ordem_id', $o->id)->sole();
+        $this->assertSame('rejeitado', $d->status);
+        $this->assertStringContainsString('Confira a cidade', $d->mensagem);
         Http::assertNothingSent();
     }
 

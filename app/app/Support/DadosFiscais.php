@@ -20,7 +20,7 @@ final class DadosFiscais
         'municipio_ibge' => '5300108', // Brasília/DF
         'nfse_serie' => '3', 'nfse_proximo_numero' => '', 'nfe_proximo_numero' => '',
         'nfse_c_trib_nac' => '140101', 'nfse_c_trib_mun' => '1401', 'nfse_c_nbs' => '120013110', 'nfse_aliquota_iss' => '2.00',
-        'nfe_serie' => '1', 'nfe_cfop_dentro' => '5102', 'nfe_cfop_fora' => '6102', 'nfe_csosn' => '102', 'nfe_ncm_padrao' => '87087090',
+        'nfe_serie' => '1', 'nfe_cfop_dentro' => '5102', 'nfe_cfop_fora' => '6108', 'nfe_csosn' => '102', 'nfe_ncm_padrao' => '87087090',
         'nfe_natureza' => 'VENDA DE MERCADORIA',
     ];
 

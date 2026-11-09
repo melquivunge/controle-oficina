@@ -22,7 +22,7 @@
             @endforeach
         </div></section>
         <section class="form-section"><h2>Nota de venda de peças (NF-e 4.00 — SEFAZ)</h2>
-            <p class="hint">Padrão do sistema antigo: CFOP 5102 (dentro do DF) e 6102 (fora), CSOSN 102, NCM 8708.70.90 (rodas). O NCM de cada peça pode ser definido no catálogo.</p><div class="fields">
+            <p class="hint">Padrão do sistema antigo: CFOP 5102 (dentro do DF) e 6108 (fora, consumidor final), CSOSN 102, NCM 8708.70.90 (rodas). O NCM de cada peça pode ser definido no catálogo.</p><div class="fields">
             @foreach (['nfe_serie', 'nfe_proximo_numero', 'nfe_cfop_dentro', 'nfe_cfop_fora', 'nfe_csosn', 'nfe_ncm_padrao', 'nfe_natureza'] as $c)
                 @include('partials.campo', ['nome' => $c, 'rotulo' => \App\Support\DadosFiscais::ROTULOS[$c], 'valorAtual' => $dados[$c]])
             @endforeach
