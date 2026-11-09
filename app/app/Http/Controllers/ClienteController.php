@@ -37,7 +37,8 @@ class ClienteController extends Controller
         return view('clientes.show', [
             'cliente' => $cliente,
             'ordens' => Ordem::visiveisPara($request->user())->with('veiculo', 'unidade')->where('cliente_id', $cliente->id)->orderByDesc('entrada_em')->limit(100)->get(),
-            'possiveisDuplicados' => Cliente::ativos()->whereKeyNot($cliente->id)->where('telefone', $cliente->telefone)->get(),
+            // Sem telefone (importados do sistema antigo): não sugere todos os sem telefone como duplicados.
+            'possiveisDuplicados' => $cliente->telefone === '' ? collect() : Cliente::ativos()->whereKeyNot($cliente->id)->where('telefone', $cliente->telefone)->get(),
         ]);
     }
 

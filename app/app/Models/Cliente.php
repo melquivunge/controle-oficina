@@ -15,6 +15,23 @@ class Cliente extends Model
 
     protected $fillable = ['nome', 'telefone', 'email', 'observacoes', 'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf'];
 
+    protected function casts(): array
+    {
+        return ['legado' => 'array'];
+    }
+
+    /** CPF/CNPJ formatado (documento importado do sistema antigo). */
+    public function documentoFormatado(): ?string
+    {
+        $d = (string) $this->documento;
+
+        return match (strlen($d)) {
+            11 => preg_replace('/^(\d{3})(\d{3})(\d{3})(\d{2})$/', '$1.$2.$3-$4', $d),
+            14 => preg_replace('/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/', '$1.$2.$3/$4-$5', $d),
+            default => null,
+        };
+    }
+
     public function veiculos(): HasMany
     {
         return $this->hasMany(Veiculo::class);

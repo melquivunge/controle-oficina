@@ -10,9 +10,35 @@
             <section>
                 <div class="section-head"><h2>Veículos</h2></div>
                 @foreach ($cliente->veiculos as $v)
-                    <p><span class="plate">{{ $v->placaFormatada() }}</span> {{ $v->modelo }}</p>
+                    <p><span class="plate">{{ $v->placaFormatada() }}</span> {{ $v->descricao() }}</p>
                 @endforeach
             </section>
+            @can('ver_contato_cliente')
+                @if ($cliente->legado)
+                    {{-- Importação do sistema antigo (09/11/2026): registro original completo, só leitura. --}}
+                    <section class="legado" style="margin-top:28px">
+                        <div class="section-head"><h2>Dados do sistema antigo</h2><small>Importado do SGA · código {{ $cliente->legado_codigo }}</small></div>
+                        @if ($cliente->documentoFormatado())<p><strong>{{ strlen($cliente->documento) === 11 ? 'CPF' : 'CNPJ' }}:</strong> {{ $cliente->documentoFormatado() }}</p>@endif
+                        <details><summary>Ver todos os campos do cadastro antigo</summary>
+                            <dl class="legado-campos">
+                                @foreach (collect($cliente->legado)->except('_veiculos_nao_importados') as $campo => $valor)
+                                    <dt>{{ $campo }}</dt><dd>{{ is_array($valor) ? json_encode($valor, JSON_UNESCAPED_UNICODE) : $valor }}</dd>
+                                @endforeach
+                            </dl>
+                        </details>
+                        @foreach ($cliente->veiculos->whereNotNull('legado') as $v)
+                            <details><summary>Veículo {{ $v->placaFormatada() }}: todos os campos antigos</summary>
+                                <dl class="legado-campos">@foreach ($v->legado as $campo => $valor)<dt>{{ $campo }}</dt><dd>{{ $valor }}</dd>@endforeach</dl>
+                            </details>
+                        @endforeach
+                        @foreach ($cliente->legado['_veiculos_nao_importados'] ?? [] as $v)
+                            <details><summary>Veículo {{ $v['PLACA'] ?? 'sem placa' }} (não importado como veículo: placa já em uso ou inválida)</summary>
+                                <dl class="legado-campos">@foreach ($v as $campo => $valor)<dt>{{ $campo }}</dt><dd>{{ $valor }}</dd>@endforeach</dl>
+                            </details>
+                        @endforeach
+                    </section>
+                @endif
+            @endcan
         </div>
         <aside class="form-aside">
             <section class="helper">

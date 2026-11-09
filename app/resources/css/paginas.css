@@ -254,3 +254,10 @@ label.check{display:flex;align-items:center;gap:8px;min-height:44px}
 .consulta-placa__linha input{flex:1 1 140px;min-width:0}
 .consulta-placa__linha .button{flex:0 0 auto;min-height:44px}
 .consulta-placa__carregando{display:none;align-items:center;gap:8px;margin:6px 0 0;color:var(--t-alerta-texto,#6b4e0e);font-weight:600;font-size:14px}
+
+/* Ficha do cliente: dados do sistema antigo (09/11/2026). */
+.legado details{margin-top:8px}
+.legado summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}
+.legado-campos{display:grid;grid-template-columns:minmax(120px,max-content) 1fr;gap:4px 16px;margin:8px 0 0;font-size:14px}
+.legado-campos dt{color:var(--t-texto-2,#4b5563);font-family:ui-monospace,monospace;font-size:12px}
+.legado-campos dd{margin:0;overflow-wrap:anywhere}

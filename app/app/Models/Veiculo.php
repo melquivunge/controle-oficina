@@ -14,6 +14,11 @@ class Veiculo extends Model
 
     protected $fillable = ['placa', 'marca', 'modelo', 'ano', 'cor'];
 
+    protected function casts(): array
+    {
+        return ['legado' => 'array'];
+    }
+
     public function cliente(): BelongsTo
     {
         return $this->belongsTo(Cliente::class);

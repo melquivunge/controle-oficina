@@ -94,6 +94,7 @@ class Acoes
         // Pós-venda e aviso ao colaborador
         'pos_venda_contato' => 'Contato de pós-venda registrado',
         'pos_venda_exportado' => 'Lista de pós-venda exportada',
+        'importacao_sga' => 'Importação de clientes e veículos do sistema antigo (SGA)',
         'aviso_colaborador_enfileirado' => 'Aviso de serviço ao colaborador enviado à fila',
     ];
 
