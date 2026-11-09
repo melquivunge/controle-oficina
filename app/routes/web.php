@@ -81,6 +81,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/ordens/{ordem}/combinado/cancelar', [\App\Http\Controllers\CombinadoController::class, 'cancelar'])->middleware('can:combinar_pagamento')->name('combinados.cancelar');
         Route::post('/ordens/{ordem}/fiscal', [FiscalController::class, 'solicitar'])->name('fiscal.solicitar');
         Route::post('/ordens/{ordem}/fiscal/{documento}/reprocessar', [FiscalController::class, 'reprocessar'])->name('fiscal.reprocessar');
+        Route::post('/ordens/{ordem}/fiscal/{documento}/interromper', [FiscalController::class, 'interromper'])->name('fiscal.interromper');
         Route::post('/ordens/{ordem}/fiscal/{documento}/cancelar', [FiscalController::class, 'cancelar'])->name('fiscal.cancelar');
         Route::get('/ordens/{ordem}/fiscal/{documento}', [FiscalController::class, 'baixar'])->name('fiscal.baixar');
         Route::get('/ordens/{ordem}/fiscal-status', [FiscalController::class, 'status'])->middleware('throttle:60,1')->name('fiscal.status');

@@ -30,6 +30,9 @@
                 @if ($d->status === 'rejeitado' || ($d->status === 'pendente' && $d->mensagem))
                     <form method="POST" action="{{ route('fiscal.reprocessar', [$ordem, $d]) }}">@csrf<button class="button" type="submit">Tentar de novo</button></form>
                 @endif
+                @if ($d->status === 'pendente')
+                    <form method="POST" action="{{ route('fiscal.interromper', [$ordem, $d]) }}">@csrf<button class="button" type="submit" data-confirmar="Parar de tentar emitir esta nota?">Parar emissão</button></form>
+                @endif
             @endcan
         </div>
         @if ($d->status === 'autorizado')

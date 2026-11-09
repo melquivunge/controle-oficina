@@ -271,6 +271,58 @@ class FiscalRealTest extends TestCase
         }
     }
 
+    private function pendenteNaSefin(): array
+    {
+        config(['oficina.fiscal.modo' => 'homologacao']);
+        $this->guardarCertificado();
+        Http::fake(['*/dps/*' => Http::response('', 404), '*/nfse' => Http::response('Service Unavailable', 503)]);
+        $o = $this->aprovada();
+        try {
+            app(Fiscal::class)->solicitar($o, $this->usuario(Papel::Recepcao, $this->unidade));
+        } catch (\RuntimeException) {
+        }
+
+        return [$o, FiscalDocument::where('ordem_id', $o->id)->sole()];
+    }
+
+    public function test_parar_emissao_encerra_as_tentativas_e_devolve_o_numero(): void
+    {
+        [$o, $d] = $this->pendenteNaSefin();
+        $outra = $this->usuario(Papel::Recepcao, Unidade::factory()->create());
+        $this->entrarComo($outra)->post(route('fiscal.interromper', [$o, $d]))->assertForbidden();
+        $this->assertSame('pendente', $d->fresh()->status);
+
+        $rec = $this->usuario(Papel::Recepcao, $this->unidade);
+        $this->entrarComo($rec)->get("/ordens/{$o->numero}?aba=documentos")->assertSee('Parar emissão');
+        $this->entrarComo($rec)->post(route('fiscal.interromper', [$o, $d]))->assertSessionHas('sucesso', 'Emissão interrompida. O sistema parou de tentar.');
+        $this->assertSame('rejeitado', $d->fresh()->status);
+        $this->assertTrue(\App\Models\AuditEvent::where('acao', 'fiscal_interrompido')->exists());
+
+        $posts = fn () => Http::recorded(fn ($r) => $r->method() === 'POST')->count();
+        $antes = $posts();
+        (new ProcessarDocumentoFiscal($d->id))->handle(app(Fiscal::class)); // tentativa que já estava na fila
+        $this->assertSame($antes, $posts(), 'não envia mais');
+        $this->assertSame('rejeitado', $d->fresh()->status);
+
+        Http::swap(new \Illuminate\Http\Client\Factory);
+        Http::preventStrayRequests();
+        $this->sefinAutoriza();
+        $novo = app(Fiscal::class)->reprocessar($d->fresh(), $rec)->fresh();
+        $this->assertSame(['autorizado', 1], [$novo->status, (int) $novo->numero_dps]);
+    }
+
+    public function test_parar_emissao_nao_abandona_nota_que_a_fazenda_ja_autorizou(): void
+    {
+        [$o, $d] = $this->pendenteNaSefin();
+        $chave = str_repeat('5', 50);
+        Http::swap(new \Illuminate\Http\Client\Factory);
+        Http::preventStrayRequests();
+        Http::fake(['*/dps/*' => Http::response(['chaveAcesso' => $chave]), '*/danfse/*' => Http::response('%PDF-1.4'),
+            '*/nfse/*' => Http::response(['nfseXmlGZipB64' => base64_encode(gzencode('<NFSe><nNFSe>7</nNFSe></NFSe>'))])]);
+        $this->assertFalse(app(Fiscal::class)->interromper($d, $this->usuario(Papel::Recepcao, $this->unidade)));
+        $this->assertSame(['autorizado', $chave, '7'], [$d->fresh()->status, $d->fresh()->chave_acesso, $d->fresh()->numero]);
+    }
+
     /** Sem Http::fake: as opções de mTLS precisam passar pelo handler cURL real do Guzzle (erro visto na produção). */
     public function test_mtls_passa_pelo_curl_real_e_nao_deixa_chave_em_arquivo(): void
     {

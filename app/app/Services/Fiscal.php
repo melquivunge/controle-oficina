@@ -86,20 +86,71 @@ class Fiscal
             if ($this->emissor instanceof EmissorReal) {
                 $doc = $this->numerar($doc, $this->emissor->ambiente(), $fiscal);
             }
-            $dados = [
-                'tipo' => $doc->tipo, 'fiscal' => $fiscal, 'serie' => $doc->serie, 'numero_dps' => $doc->numero_dps, 'criado_em' => $doc->created_at,
-                'valor_centavos' => $doc->valor_centavos, 'ordem' => $ordem->numero, 'unidade' => $ordem->unidade->nome, 'cliente' => $ordem->cliente->nome,
-                'cliente_documento' => $ordem->cliente->documento,
-                'cliente_endereco' => $ordem->cliente->enderecoTexto(), 'cliente_telefone' => $ordem->cliente->telefoneFormatado(), 'cliente_email' => $ordem->cliente->email,
-                'itens' => Orcamento::findOrFail($doc->orcamento_id)->itens()->with('catalogoItem')->get()->where('tipo', $doc->tipo === 'nfe' ? 'produto' : 'servico')
-                    ->map(fn ($i) => $i->only('descricao', 'quantidade', 'preco_unitario_centavos', 'total_centavos', 'tipo')
-                        + ['ncm' => $i->catalogoItem?->ncm, 'codigo' => $i->catalogo_item_id])->values()->all(),
-            ];
+            $dados = $this->dados($doc, $ordem, $fiscal);
             $r = $this->emissor->consultar($doc->chave_idempotencia, $dados) ?? $this->emissor->emitir($doc->chave_idempotencia, $dados);
         } catch (\Throwable $e) {
             $doc->update(['status' => 'pendente', 'mensagem' => mb_substr($e->getMessage(), 0, 300)]); // visível e recuperável
             throw $e;
         }
+        $this->registrarResultado($doc, $ordem, $r);
+    }
+
+    /**
+     * Interrompe nota pendente: a fila para de tentar e ela vira rejeitada (o número volta e "Tentar de novo" continua possível).
+     * NFS-e já numerada consulta a Sefin antes: se a nota existe, registra como autorizada em vez de abandonar.
+     * ponytail: NF-e não consulta (falta o XML assinado para autorizar); resposta perdida reaparece como duplicidade na nova tentativa.
+     *
+     * @return bool true se interrompeu; false se a Fazenda já tinha a nota
+     */
+    public function interromper(FiscalDocument $doc, User $ator): bool
+    {
+        if (! $ator->pode('cobrar') || ! $ator->acessaUnidade($doc->unidade_id)) {
+            throw new AuthorizationException('Sem permissão.');
+        }
+        $interrompivel = fn (FiscalDocument $d) => $d->status === 'pendente' || ($d->status === 'processando' && $d->updated_at->lt(now()->subMinutes(5)));
+        if (! $interrompivel($doc)) {
+            throw ValidationException::withMessages(['fiscal' => 'Esta nota não está mais aguardando emissão.']);
+        }
+        $ordem = Ordem::with('cliente', 'unidade')->findOrFail($doc->ordem_id);
+        if ($this->emissor instanceof EmissorReal && $doc->tipo === 'nfse' && $doc->numero_dps) {
+            try {
+                $r = $this->emissor->consultar($doc->chave_idempotencia, $this->dados($doc, $ordem, DadosFiscais::atuais()));
+            } catch (\Throwable) {
+                throw ValidationException::withMessages(['fiscal' => 'Não consegui confirmar com a Fazenda se esta nota já existe. Tente interromper de novo em instantes.']);
+            }
+            if ($r) {
+                $this->registrarResultado($doc, $ordem, $r);
+
+                return false;
+            }
+        }
+        DB::transaction(function () use ($doc, $ator, $ordem, $interrompivel) {
+            $d = FiscalDocument::lockForUpdate()->findOrFail($doc->id);
+            if (! $interrompivel($d)) {
+                throw ValidationException::withMessages(['fiscal' => 'Esta nota não está mais aguardando emissão.']);
+            }
+            $d->update(['status' => 'rejeitado', 'mensagem' => 'Emissão interrompida por '.$ator->name.'.']);
+            Auditoria::registrar('fiscal_interrompido', $ordem, depois: ['documento_id' => $d->id, 'tipo' => $d->tipo], ator: $ator);
+        });
+
+        return true;
+    }
+
+    private function dados(FiscalDocument $doc, Ordem $ordem, array $fiscal): array
+    {
+        return [
+            'tipo' => $doc->tipo, 'fiscal' => $fiscal, 'serie' => $doc->serie, 'numero_dps' => $doc->numero_dps, 'criado_em' => $doc->created_at,
+            'valor_centavos' => $doc->valor_centavos, 'ordem' => $ordem->numero, 'unidade' => $ordem->unidade->nome, 'cliente' => $ordem->cliente->nome,
+            'cliente_documento' => $ordem->cliente->documento,
+            'cliente_endereco' => $ordem->cliente->enderecoTexto(), 'cliente_telefone' => $ordem->cliente->telefoneFormatado(), 'cliente_email' => $ordem->cliente->email,
+            'itens' => Orcamento::findOrFail($doc->orcamento_id)->itens()->with('catalogoItem')->get()->where('tipo', $doc->tipo === 'nfe' ? 'produto' : 'servico')
+                ->map(fn ($i) => $i->only('descricao', 'quantidade', 'preco_unitario_centavos', 'total_centavos', 'tipo')
+                    + ['ncm' => $i->catalogoItem?->ncm, 'codigo' => $i->catalogo_item_id])->values()->all(),
+        ];
+    }
+
+    private function registrarResultado(FiscalDocument $doc, Ordem $ordem, array $r): void
+    {
         $arquivo = null;
         $base = "fiscal/{$doc->unidade_id}/{$doc->id}-".preg_replace('/\W/', '', (string) ($r['numero'] ?? 'sem-numero'));
         if (! empty($r['documento'])) {

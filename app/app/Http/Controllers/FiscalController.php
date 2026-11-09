@@ -30,6 +30,13 @@ class FiscalController extends Controller
         return back()->with('sucesso', 'Nova tentativa de emissão enviada.');
     }
 
+    public function interromper(Request $request, Ordem $ordem, FiscalDocument $documento, Fiscal $fiscal)
+    {
+        abort_unless($documento->ordem_id === $ordem->id, 404);
+
+        return back()->with('sucesso', $fiscal->interromper($documento, $request->user()) ? 'Emissão interrompida. O sistema parou de tentar.' : 'A Fazenda já tinha esta nota: ela foi registrada como autorizada.');
+    }
+
     public function cancelar(Request $request, Ordem $ordem, FiscalDocument $documento, Fiscal $fiscal)
     {
         abort_unless($documento->ordem_id === $ordem->id, 404);
