@@ -83,6 +83,7 @@
                     @include('partials.campo', ['nome' => 'telefone', 'rotulo' => 'Telefone com DDD', 'tipo' => 'tel', 'valorAtual' => $cliente->telefone])
                     @include('partials.campo', ['nome' => 'email', 'rotulo' => 'E-mail (opcional)', 'tipo' => 'email', 'valorAtual' => $cliente->email])
                     @can('ver_contato_cliente')
+                        @include('partials.campo', ['nome' => 'documento', 'rotulo' => 'CPF ou CNPJ (obrigatório para emitir nota)', 'valorAtual' => $cliente->documento, 'atributos' => ['inputmode' => 'numeric']])
                         <details class="endereco-cliente" @if(\App\Support\Endereco::preenchido($cliente) || $errors->hasAny(\App\Support\Endereco::CAMPOS)) open @endif>
                             <summary>Endereço (opcional)</summary>
                             @include('partials.endereco-campos', ['valores' => $cliente, 'idPrefixo' => 'cliente'])

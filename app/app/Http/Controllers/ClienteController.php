@@ -4,10 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\Cliente;
 use App\Models\Ordem;
+use App\Models\Veiculo;
 use App\Services\Auditoria;
+use App\Services\UnificacaoClientes;
+use App\Support\Endereco;
 use App\Support\Normaliza;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 /** Cadastro único da rede; o histórico exibido respeita as unidades visíveis ao usuário. */
@@ -32,13 +37,13 @@ class ClienteController extends Controller
     /**
      * OS do sistema antigo (só leitura, 09/11/2026) com serviços e peças, mais recentes primeiro.
      *
-     * @return \Illuminate\Support\Collection<int, array{os: array, itens: list<array>, placa: ?string}>
+     * @return Collection<int, array{os: array, itens: list<array>, placa: ?string}>
      */
-    private static function historicoAntigo(Cliente $cliente): \Illuminate\Support\Collection
+    private static function historicoAntigo(Cliente $cliente): Collection
     {
         $linhas = DB::table('legado_registros')->where('cliente_id', $cliente->id)->whereIn('tabela', ['TBL_OS', 'TBL_SERVICO', 'TBL_PECA'])
             ->get(['tabela', 'grupo', 'veiculo_id', 'dados']);
-        $placas = \App\Models\Veiculo::whereIn('id', $linhas->pluck('veiculo_id')->filter()->unique())->get()->keyBy('id');
+        $placas = Veiculo::whereIn('id', $linhas->pluck('veiculo_id')->filter()->unique())->get()->keyBy('id');
         $itens = $linhas->where('tabela', '!=', 'TBL_OS')->groupBy('grupo');
 
         return $linhas->where('tabela', 'TBL_OS')->map(fn ($l) => [
@@ -58,9 +63,9 @@ class ClienteController extends Controller
     {
         $request->merge(['telefone' => Normaliza::telefone($request->input('telefone')), 'placa' => Normaliza::placa($request->input('placa')),
             'documento' => preg_replace('/\D/', '', (string) $request->input('documento'))]);
-        $comEndereco = $request->user()->can('ver_contato_cliente') && $request->hasAny(\App\Support\Endereco::CAMPOS);
+        $comEndereco = $request->user()->can('ver_contato_cliente') && $request->hasAny(Endereco::CAMPOS);
         if ($comEndereco) {
-            $request->merge(\App\Support\Endereco::normalizar($request->all()));
+            $request->merge(Endereco::normalizar($request->all()));
         }
         $dados = $request->validate([
             'nome' => ['required', 'string', 'min:2', 'max:150'],
@@ -68,25 +73,25 @@ class ClienteController extends Controller
             'email' => ['nullable', 'email', 'max:255'],
             'documento' => ['nullable', 'regex:/^(\d{11}|\d{14})$/'],
             'observacoes' => ['nullable', 'string', 'max:2000'],
-            'placa' => ['nullable', 'regex:'.Normaliza::REGEX_PLACA, \Illuminate\Validation\Rule::unique('veiculos', 'placa')],
+            'placa' => ['nullable', 'regex:'.Normaliza::REGEX_PLACA, Rule::unique('veiculos', 'placa')],
             'marca' => ['nullable', 'string', 'max:40'], 'modelo' => ['nullable', 'string', 'max:80'],
             'ano' => ['nullable', 'integer', 'min:1950', 'max:'.(now()->year + 1)], 'cor' => ['nullable', 'string', 'max:30'],
-        ] + ($comEndereco ? \App\Support\Endereco::regras() : []), [
+        ] + ($comEndereco ? Endereco::regras() : []), [
             'telefone.regex' => 'Informe o telefone com DDD (10 ou 11 dígitos).', 'documento.regex' => 'CPF (11 dígitos) ou CNPJ (14 dígitos).',
             'placa.regex' => 'Placa inválida (ex.: ABC1D23).', 'placa.unique' => 'Esta placa já está cadastrada. Busque pela placa em Clientes.',
-        ] + \App\Support\Endereco::MENSAGENS, \App\Support\Endereco::atributos());
+        ] + Endereco::MENSAGENS, Endereco::atributos());
         $mesmoTelefone = Cliente::ativos()->where('telefone', $dados['telefone'])->first();
         if ($mesmoTelefone && ! $request->boolean('confirmar_telefone')) {
             throw ValidationException::withMessages(['telefone' => "Este telefone já é de “{$mesmoTelefone->nome}”. Se for outra pessoa com o mesmo número, marque a confirmação."])
                 ->redirectTo(route('clientes.create'));
         }
-        $cliente = DB::transaction(function () use ($dados, $request) {
-            $c = new Cliente(collect($dados)->only(['nome', 'telefone', 'email', 'observacoes', ...\App\Support\Endereco::CAMPOS])->all());
+        $cliente = DB::transaction(function () use ($dados) {
+            $c = new Cliente(collect($dados)->only(['nome', 'telefone', 'email', 'observacoes', ...Endereco::CAMPOS])->all());
             $c->documento = $dados['documento'] ?: null;
             $c->save();
             Auditoria::registrar('cliente_criado', $c, depois: $c->only(['nome', 'telefone']));
             if (! empty($dados['placa'])) {
-                $v = new \App\Models\Veiculo(['placa' => $dados['placa'], 'marca' => $dados['marca'] ?? null, 'modelo' => $dados['modelo'] ?? null,
+                $v = new Veiculo(['placa' => $dados['placa'], 'marca' => $dados['marca'] ?? null, 'modelo' => $dados['modelo'] ?? null,
                     'ano' => $dados['ano'] ?? null, 'cor' => $dados['cor'] ?? null]);
                 $v->cliente_id = $c->id;
                 $v->save();
@@ -126,19 +131,27 @@ class ClienteController extends Controller
         abort_unless($request->user()->visaoGlobal() || ! $cliente->ordens()->exists() || Ordem::visiveisPara($request->user())->where('cliente_id', $cliente->id)->exists(), 403);
         $request->merge(['telefone' => Normaliza::telefone($request->input('telefone'))]);
         // Endereço só entra para quem vê contato do cliente (mecânico nunca); sem a permissão, os campos são ignorados.
-        $comEndereco = $request->user()->can('ver_contato_cliente') && $request->hasAny(\App\Support\Endereco::CAMPOS);
+        $comEndereco = $request->user()->can('ver_contato_cliente') && $request->hasAny(Endereco::CAMPOS);
         if ($comEndereco) {
-            $request->merge(\App\Support\Endereco::normalizar($request->all()));
+            $request->merge(Endereco::normalizar($request->all()));
+        }
+        $comDocumento = $request->user()->can('ver_contato_cliente') && $request->has('documento');
+        if ($comDocumento) {
+            $request->merge(['documento' => preg_replace('/\D/', '', (string) $request->input('documento'))]);
+            $request->validate(['documento' => ['nullable', 'regex:/^(\d{11}|\d{14})$/']], ['documento.regex' => 'CPF (11 dígitos) ou CNPJ (14 dígitos).']);
         }
         $dados = $request->validate([
             'nome' => ['required', 'string', 'min:2', 'max:150'],
             'telefone' => ['required', 'regex:/^\d{10,11}$/'],
             'email' => ['nullable', 'email', 'max:255'],
             'observacoes' => ['nullable', 'string', 'max:2000'],
-        ] + ($comEndereco ? \App\Support\Endereco::regras() : []), ['telefone.regex' => 'Informe o telefone com DDD (10 ou 11 dígitos).'] + \App\Support\Endereco::MENSAGENS, \App\Support\Endereco::atributos());
+        ] + ($comEndereco ? Endereco::regras() : []), ['telefone.regex' => 'Informe o telefone com DDD (10 ou 11 dígitos).'] + Endereco::MENSAGENS, Endereco::atributos());
 
-        DB::transaction(function () use ($cliente, $dados) {
+        DB::transaction(function () use ($cliente, $dados, $comDocumento, $request) {
             $antes = $cliente->only(array_keys($dados));
+            if ($comDocumento) {
+                $cliente->documento = $request->input('documento') ?: null; // fora do fillable; não vai para a auditoria em claro
+            }
             $cliente->update($dados);
             Auditoria::registrar('cliente_alterado', $cliente, $antes, $cliente->only(array_keys($dados)));
         });
@@ -151,7 +164,7 @@ class ClienteController extends Controller
     {
         $this->authorize('mesclar_clientes');
         $dados = $request->validate(['duplicado_id' => ['required', 'integer'], 'motivo' => ['required', 'string', 'min:5', 'max:500']], [], ['motivo' => 'motivo']);
-        app(\App\Services\UnificacaoClientes::class)->unificar($cliente, Cliente::findOrFail($dados['duplicado_id']), $request->user(), $dados['motivo']);
+        app(UnificacaoClientes::class)->unificar($cliente, Cliente::findOrFail($dados['duplicado_id']), $request->user(), $dados['motivo']);
 
         return back()->with('sucesso', 'Cadastros unificados. Atendimentos, veículos, histórico antigo e dados do outro cadastro foram mantidos nesta ficha.');
     }

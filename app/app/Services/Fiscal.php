@@ -42,6 +42,9 @@ class Fiscal
             if (! $orc || $o->status === StatusOrdem::Cancelado) {
                 throw ValidationException::withMessages(['fiscal' => 'É preciso um orçamento aprovado em ordem não cancelada.']);
             }
+            if ($this->emissor instanceof EmissorReal && ! in_array(strlen((string) preg_replace('/\D/', '', (string) $o->cliente?->documento)), [11, 14], true)) {
+                throw ValidationException::withMessages(['fiscal' => 'Para emitir a nota, cadastre o CPF ou CNPJ na ficha do cliente.']); // sem tomador o DF não deixa cancelar (E0824)
+            }
             $ativos = FiscalDocument::where('ordem_id', $o->id)->whereIn('status', ['pendente', 'processando', 'autorizado'])->pluck('tipo')->all();
             $partes = array_filter(DadosFiscais::partes($orc->itens, (int) $orc->desconto_centavos), fn ($v) => $v > 0);
             $faltam = array_diff_key($partes, array_flip($ativos));

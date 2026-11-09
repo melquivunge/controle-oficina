@@ -26,6 +26,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use NFePHP\Common\Signer;
 use NFePHP\NFe\Tools;
 use Tests\TestCase;
@@ -346,6 +347,28 @@ class FiscalRealTest extends TestCase
         $this->assertSame($antes, glob('/dev/shm/oficina-*') ?: [], 'chave apagada ao terminar');
     }
 
+    public function test_emissao_real_exige_cpf_ou_cnpj_que_pode_ser_cadastrado_na_ficha(): void
+    {
+        config(['oficina.fiscal.modo' => 'homologacao']);
+        $this->guardarCertificado();
+        Http::fake();
+        $o = $this->aprovada();
+        DB::table('clientes')->where('id', $o->cliente_id)->update(['documento' => null]);
+        $rec = $this->usuario(Papel::Recepcao, $this->unidade);
+        $this->entrarComo($rec)->post(route('fiscal.solicitar', $o))->assertSessionHasErrors(['fiscal' => 'Para emitir a nota, cadastre o CPF ou CNPJ na ficha do cliente.']);
+        $this->assertSame(0, FiscalDocument::where('ordem_id', $o->id)->count());
+        Http::assertNothingSent();
+
+        $this->entrarComo($rec)->get(route('clientes.show', $o->cliente_id))->assertSee('CPF ou CNPJ');
+        $this->entrarComo($rec)->put(route('clientes.update', $o->cliente_id), ['nome' => 'Mariana Costa', 'telefone' => '61991234567', 'documento' => '529.982.247-25'])->assertSessionHasNoErrors();
+        $this->assertSame('52998224725', DB::table('clientes')->where('id', $o->cliente_id)->value('documento'));
+        $this->entrarComo($rec)->put(route('clientes.update', $o->cliente_id), ['nome' => 'Mariana Costa', 'telefone' => '61991234567', 'documento' => '123'])->assertSessionHasErrors('documento');
+
+        $mec = $this->usuario(Papel::Mecanico, $this->unidade);
+        $this->entrarComo($mec)->put(route('clientes.update', $o->cliente_id), ['nome' => 'Mariana Costa', 'telefone' => '61991234567', 'documento' => '11144477735']);
+        $this->assertSame('52998224725', DB::table('clientes')->where('id', $o->cliente_id)->value('documento'), 'quem não vê contato não altera');
+    }
+
     public function test_cancelamento_recusado_pela_fazenda_mostra_o_motivo_e_mantem_a_nota(): void
     {
         config(['oficina.fiscal.modo' => 'homologacao']);
@@ -354,10 +377,10 @@ class FiscalRealTest extends TestCase
         $o = $this->aprovada();
         app(Fiscal::class)->solicitar($o, $this->usuario(Papel::Recepcao, $this->unidade));
         $d = FiscalDocument::where('ordem_id', $o->id)->sole();
-        Http::swap(new \Illuminate\Http\Client\Factory);
+        Http::swap(new Factory);
         Http::preventStrayRequests();
         Http::fake(['*/eventos' => Http::response(['erros' => [['Codigo' => 'E0824', 'Descricao' => 'NFS-e sem identificação do tomador não pode ser cancelada']]], 400)]);
-        $this->withoutExceptionHandling([\Illuminate\Validation\ValidationException::class]);
+        $this->withoutExceptionHandling([ValidationException::class]);
 
         $this->entrarComo($this->usuario(Papel::Gerente, $this->unidade))->from("/ordens/{$o->numero}?aba=documentos")
             ->post(route('fiscal.cancelar', [$o, $d]), ['motivo' => 'Valor lançado errado na ordem de serviço'])->assertRedirect()->assertSessionHasErrors('fiscal');
