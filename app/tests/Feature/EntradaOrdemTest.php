@@ -392,7 +392,7 @@ class EntradaOrdemTest extends TestCase
     {
         $u = Unidade::factory()->create();
         $rec = $this->usuario(Papel::Recepcao, $u);
-        $base = fn () => Livewire::actingAs($rec)->test(NovaEntrada::class)->set('nome', 'Cliente Novo')->set('telefone', '61991110000')->set('placa', 'ABC1D23')->set('motivo', 'Teste');
+        $base = fn () => Livewire::actingAs($rec)->test(NovaEntrada::class)->set('nome', 'Cliente Novo')->set('telefone', '61991112345')->set('placa', 'ABC1D23')->set('motivo', 'Teste');
         $base()->set('documento', '123')->call('salvar')->assertHasErrors(['documento' => 'regex']);
         $this->assertSame(0, Ordem::count());
         $base()->assertSee('CPF ou CNPJ')->set('documento', '529.982.247-25')->call('salvar')->assertHasNoErrors();
