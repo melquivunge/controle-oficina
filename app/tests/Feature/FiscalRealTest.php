@@ -17,6 +17,7 @@ use App\Services\Fiscal;
 use App\Services\Orcamentos;
 use App\Services\Ordens;
 use App\Support\DadosFiscais;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request;
 use Illuminate\Http\UploadedFile;
@@ -297,7 +298,7 @@ class FiscalRealTest extends TestCase
         $this->entrarComo($rec)->get("/ordens/{$o->numero}?aba=documentos")->assertSee('Parar emissão');
         $this->entrarComo($rec)->post(route('fiscal.interromper', [$o, $d]))->assertSessionHas('sucesso', 'Emissão interrompida. O sistema parou de tentar.');
         $this->assertSame('rejeitado', $d->fresh()->status);
-        $this->assertTrue(\App\Models\AuditEvent::where('acao', 'fiscal_interrompido')->exists());
+        $this->assertTrue(AuditEvent::where('acao', 'fiscal_interrompido')->exists());
 
         $posts = fn () => Http::recorded(fn ($r) => $r->method() === 'POST')->count();
         $antes = $posts();
@@ -305,7 +306,7 @@ class FiscalRealTest extends TestCase
         $this->assertSame($antes, $posts(), 'não envia mais');
         $this->assertSame('rejeitado', $d->fresh()->status);
 
-        Http::swap(new \Illuminate\Http\Client\Factory);
+        Http::swap(new Factory);
         Http::preventStrayRequests();
         $this->sefinAutoriza();
         $novo = app(Fiscal::class)->reprocessar($d->fresh(), $rec)->fresh();
@@ -316,7 +317,7 @@ class FiscalRealTest extends TestCase
     {
         [$o, $d] = $this->pendenteNaSefin();
         $chave = str_repeat('5', 50);
-        Http::swap(new \Illuminate\Http\Client\Factory);
+        Http::swap(new Factory);
         Http::preventStrayRequests();
         Http::fake(['*/dps/*' => Http::response(['chaveAcesso' => $chave]), '*/danfse/*' => Http::response('%PDF-1.4'),
             '*/nfse/*' => Http::response(['nfseXmlGZipB64' => base64_encode(gzencode('<NFSe><nNFSe>7</nNFSe></NFSe>'))])]);
@@ -335,7 +336,7 @@ class FiscalRealTest extends TestCase
         try {
             $m->invoke($n, CertificadoDigital::sole()->certificado())->connectTimeout(1)->timeout(2)->get('https://127.0.0.1:1/');
             $this->fail('a porta 1 não deveria responder');
-        } catch (\Illuminate\Http\Client\ConnectionException) {
+        } catch (ConnectionException) {
             $this->addToAssertionCount(1); // chegou a tentar conectar: as opções foram aceitas
         }
         unset($n, $m);
@@ -396,6 +397,7 @@ class FiscalRealTest extends TestCase
         Empresa::atual()->forceFill(['fiscal' => ['inscricao_estadual' => '0734567800155']])->save();
         $dados = ['tipo' => 'nfe', 'chave' => str_repeat('a', 64), 'fiscal' => DadosFiscais::atuais(), 'serie' => '1', 'numero_dps' => 8,
             'criado_em' => now(), 'valor_centavos' => 39000, 'ordem' => 'A-1', 'cliente' => 'Mariana Costa', 'cliente_documento' => '52998224725', 'cliente_email' => null,
+            'cliente_local' => ['logradouro' => 'Rua A', 'numero' => '', 'complemento' => '', 'bairro' => 'Asa Sul', 'cidade' => 'Brasília', 'uf' => 'DF', 'cep' => '70040010'],
             'itens' => [['descricao' => 'Roda aro 17', 'quantidade' => '2', 'total_centavos' => 40000, 'ncm' => '87087090', 'codigo' => 5]]];
         $chave = NfeSefaz::chave($dados, self::CNPJ);
         $this->assertSame(44, strlen($chave));
@@ -405,9 +407,30 @@ class FiscalRealTest extends TestCase
             'cnpj' => self::CNPJ, 'schemes' => 'PL_010_V1.30', 'versao' => '4.00']), CertificadoDigital::atual()->certificado());
         $assinado = $tools->signNFe($xml); // valida no XSD antes de assinar
         $this->assertStringContainsString('Id="NFe'.$chave.'"', $assinado);
-        foreach (['<vDesc>10.00</vDesc>', '<vNF>390.00</vNF>', '<CSOSN>102</CSOSN>', '<CFOP>5102</CFOP>', '<tpAmb>2</tpAmb>', 'SEM VALOR FISCAL'] as $t) {
+        foreach (['<vDesc>10.00</vDesc>', '<vNF>390.00</vNF>', '<CSOSN>102</CSOSN>', '<enderDest>', '<nro>SN</nro>', '<cMun>5300108</cMun>', '<CFOP>5102</CFOP>', '<tpAmb>2</tpAmb>', 'SEM VALOR FISCAL'] as $t) {
             $this->assertStringContainsString($t, $assinado);
         }
+    }
+
+    public function test_nfse_informa_finalidade_so_no_leiaute_da_homologacao(): void
+    {
+        $d = ['fiscal' => DadosFiscais::atuais(), 'serie' => '3', 'numero_dps' => 1, 'valor_centavos' => 3000, 'ordem' => 'A-1', 'cliente' => 'X', 'itens' => []];
+        $this->assertStringContainsString('<tpEmit>1</tpEmit><finNFSe>0</finNFSe><cLocEmi>', preg_replace('/>\s+</', '><', (new NfseNacional(2))->dps($d)));
+        $this->assertStringNotContainsString('finNFSe', (new NfseNacional(1))->dps($d), 'produção segue o leiaute aceito hoje');
+    }
+
+    public function test_nfe_sem_cpf_ou_endereco_no_df_e_recusada_antes_de_enviar(): void
+    {
+        config(['oficina.fiscal.modo' => 'homologacao']);
+        $this->guardarCertificado();
+        Empresa::atual()->forceFill(['fiscal' => ['inscricao_estadual' => '0734567800155']])->save();
+        Http::fake();
+        $o = $this->aprovada([['descricao' => 'Válvula', 'quantidade' => '1', 'preco' => '20', 'tipo' => 'produto']]);
+        app(Fiscal::class)->solicitar($o, $this->usuario(Papel::Recepcao, $this->unidade));
+        $d = FiscalDocument::where('ordem_id', $o->id)->sole();
+        $this->assertSame('rejeitado', $d->status);
+        $this->assertStringContainsString('endereço completo do cliente', $d->mensagem);
+        Http::assertNothingSent();
     }
 
     public function test_nfe_sem_inscricao_estadual_nao_envia(): void
@@ -416,6 +439,7 @@ class FiscalRealTest extends TestCase
         $this->guardarCertificado();
         Http::fake();
         $o = $this->aprovada([['descricao' => 'Válvula', 'quantidade' => '1', 'preco' => '20', 'tipo' => 'produto']]);
+        DB::table('clientes')->where('id', $o->cliente_id)->update(['logradouro' => 'Rua A', 'bairro' => 'Asa Sul', 'cidade' => 'Brasília', 'uf' => 'DF']);
         try {
             app(Fiscal::class)->solicitar($o, $this->usuario(Papel::Recepcao, $this->unidade));
         } catch (\RuntimeException) {

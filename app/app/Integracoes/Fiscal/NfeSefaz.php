@@ -40,8 +40,25 @@ class NfeSefaz
 
     // ponytail: sem consulta prévia; reenviar a mesma chave dá duplicidade (204/539), tratada em emitir().
 
+    /** O que falta no cliente; a SEFAZ recusa (726) e não adianta repetir. ponytail: só DF; outras UFs exigem código IBGE do município e CFOP 6xxx. */
+    private static function pendencia(array $d): ?string
+    {
+        $l = $d['cliente_local'] ?? [];
+        if (! in_array(strlen((string) preg_replace('/\D/', '', (string) ($d['cliente_documento'] ?? ''))), [11, 14], true)) {
+            return 'Para a NF-e, cadastre o CPF ou CNPJ do cliente.';
+        }
+        if (empty($l['logradouro']) || empty($l['bairro']) || empty($l['uf'])) {
+            return 'Para a NF-e, cadastre o endereço completo do cliente (rua, bairro e UF).';
+        }
+
+        return strtoupper($l['uf']) === 'DF' ? null : 'NF-e para cliente fora do DF ainda não está disponível neste sistema.';
+    }
+
     public function emitir(array $dados): array
     {
+        if ($falta = self::pendencia($dados)) {
+            return ['status' => 'rejeitado', 'numero' => null, 'protocolo' => null, 'mensagem' => $falta, 'documento' => null];
+        }
         [$tools, $cert] = $this->tools();
         $xml = $tools->signNFe($this->xml($dados));
         $resp = $tools->sefazEnviaLote([$xml], (string) $dados['numero_dps'], 1);
@@ -114,6 +131,9 @@ class NfeSefaz
         if (in_array(strlen($doc), [11, 14], true)) {
             $m->tagdest($o(['xNome' => $homolog ? 'NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL' : NfseNacional::texto($d['cliente'], 60),
                 'indIEDest' => 9, strlen($doc) === 14 ? 'CNPJ' : 'CPF' => $doc, 'email' => $d['cliente_email'] ?: null]));
+            $l = $d['cliente_local'];
+            $m->tagenderDest($o(['xLgr' => NfseNacional::texto($l['logradouro'], 60), 'nro' => NfseNacional::texto($l['numero'] ?: 'SN', 60), 'xCpl' => $l['complemento'] ? NfseNacional::texto($l['complemento'], 60) : null,
+                'xBairro' => NfseNacional::texto($l['bairro'], 60), 'cMun' => $f['municipio_ibge'], 'xMun' => 'Brasilia', 'UF' => 'DF', 'CEP' => preg_replace('/\D/', '', (string) $l['cep']) ?: null, 'cPais' => 1058, 'xPais' => 'Brasil']));
         }
         $itens = array_values($d['itens']);
         $bruto = array_sum(array_column($itens, 'total_centavos'));

@@ -139,6 +139,9 @@ class NfseNacional
         $el('nDPS', (string) $d['numero_dps']);
         $el('dCompet', now('America/Sao_Paulo')->format('Y-m-d'));
         $el('tpEmit', '1');
+        if ($this->ambiente === 2) { // a homologação adotou o leiaute de 20/10/2026; a produção ainda aceita o formato do sistema antigo
+            $el('finNFSe', '0');
+        }
         $el('cLocEmi', $loc);
         $x->startElement('prest');
         $el('CNPJ', $cnpj);

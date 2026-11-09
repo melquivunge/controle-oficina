@@ -142,6 +142,7 @@ class Fiscal
             'tipo' => $doc->tipo, 'fiscal' => $fiscal, 'serie' => $doc->serie, 'numero_dps' => $doc->numero_dps, 'criado_em' => $doc->created_at,
             'valor_centavos' => $doc->valor_centavos, 'ordem' => $ordem->numero, 'unidade' => $ordem->unidade->nome, 'cliente' => $ordem->cliente->nome,
             'cliente_documento' => $ordem->cliente->documento,
+            'cliente_local' => $ordem->cliente->only('logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf', 'cep'),
             'cliente_endereco' => $ordem->cliente->enderecoTexto(), 'cliente_telefone' => $ordem->cliente->telefoneFormatado(), 'cliente_email' => $ordem->cliente->email,
             'itens' => Orcamento::findOrFail($doc->orcamento_id)->itens()->with('catalogoItem')->get()->where('tipo', $doc->tipo === 'nfe' ? 'produto' : 'servico')
                 ->map(fn ($i) => $i->only('descricao', 'quantidade', 'preco_unitario_centavos', 'total_centavos', 'tipo')
