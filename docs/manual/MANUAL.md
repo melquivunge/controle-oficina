@@ -309,12 +309,18 @@ No alto aparecem três valores: **Aprovado**, **Recebido** e **Saldo a receber**
 Em **Como o cliente vai pagar?**:
 
 1. Escolha a **forma de pagamento**:
-   - **Pix:** gera uma cobrança Pix na conta oficial da unidade. **Só conta como recebido quando o banco confirmar.** Comprovante mostrado pelo cliente **não** quita a ordem.
+   - **Pix (cobrança do sistema):** gera uma cobrança Pix na conta oficial da unidade. **Só conta como recebido quando o banco confirmar.**
+   - **Pix já recebido no app do banco:** o cliente já fez o Pix direto para a conta da oficina. Antes de registrar, **abra o aplicativo do banco e confira que o valor entrou**. Depois anexe o comprovante e marque a confirmação (veja o passo 4).
    - **Dinheiro:** registra o valor recebido em mãos.
    - **Cartão na maquininha:** registra o valor passado na maquininha (que é separada do sistema).
 2. Confira o **Valor recebido agora**. Já vem preenchido com o saldo, mas pode ser menor (pagamento parcial).
 3. Se quiser, preencha **Observação** (ex.: número NSU do cartão).
-4. Clique no botão (o texto muda conforme a forma: **Gerar cobrança Pix** ou **Confirmar pagamento**).
+4. Em **Comprovante**:
+   - **Pix já recebido no app do banco:** anexe a **foto ou o PDF do comprovante** (até 8 MB) e marque **"Pix: conferi no aplicativo do banco que o valor entrou na conta"**. Sem os dois, o sistema não registra. Comprovante de Pix falso é um golpe comum; por isso a conferência no extrato é obrigatória.
+   - **Cartão na maquininha:** se tiver, anexe a foto do recibo da maquininha (opcional).
+5. Clique no botão (o texto muda conforme a forma: **Gerar cobrança Pix** ou **Confirmar pagamento**).
+
+Na lista de pagamentos da OS, o link **Ver comprovante** abre o arquivo anexado. Só quem recebe pagamentos na loja consegue abrir.
 
 O sistema **bloqueia**:
 
