@@ -34,7 +34,7 @@ O Controle de Oficina registra tudo o que acontece com cada veículo, da chegada
 
 - **quem recebeu** o carro e o que o cliente contou;
 - **o que o mecânico encontrou** (diagnóstico e fotos);
-- **o orçamento** e a **aprovação do cliente**;
+- **o orçamento** e a **aprovação**, feita pela equipe da oficina depois de falar com o cliente;
 - **os serviços feitos**;
 - **o pagamento** (Pix, dinheiro ou cartão) e a **entrega**.
 
@@ -43,8 +43,8 @@ Cada ação fica guardada com o nome de quem fez e o horário. Isso vale para as
 Três ideias guiam o sistema:
 
 - **Orçado, aprovado e recebido são coisas diferentes.** Um orçamento enviado não é dinheiro. Um orçamento aprovado também não. Só conta como recebido o que entrou de fato.
-- **Nada é feito sem aprovação do cliente.** O mecânico só executa os serviços da versão do orçamento que o cliente aprovou.
-- **Alertas pedem revisão, não acusam ninguém.** Quando algo foge do normal (desconto alto, entrega sem pagamento, diferença no caixa), o sistema avisa para alguém conferir.
+- **Nada é feito sem orçamento aprovado.** O mecânico só executa os serviços da versão do orçamento que foi aprovada na oficina.
+- **Alertas pedem revisão, não acusam ninguém.** Quando algo foge do normal (entrega sem pagamento, diferença no caixa, Pix com valor diferente), o sistema avisa para alguém conferir.
 
 Todos os horários são de Brasília.
 
@@ -56,14 +56,16 @@ Cada veículo que chega vira uma **ordem de serviço (OS)**, com número própri
 |---|---|---|
 | **Aguardando diagnóstico** | O carro chegou e a entrada foi registrada. | Recepção registra; mecânico assume. |
 | **Em diagnóstico** | O mecânico está avaliando o carro. | Mecânico registra o que encontrou; gerente monta o orçamento. |
-| **Aguardando aprovação** | O orçamento foi enviado ao cliente. | Cliente aprova ou recusa (pelo link ou pessoalmente). |
-| **Autorizado** | O cliente aprovou. O serviço pode começar. | Mecânico inicia a execução. |
+| **Aguardando aprovação** | O orçamento está pronto e espera a decisão. | Dono, gerente ou recepção conversam com o cliente e clicam em **Aprovar** ou **Recusar** na própria OS. |
+| **Autorizado** | O orçamento foi aprovado. O serviço pode começar. | Mecânico inicia a execução. |
 | **Em execução** | O mecânico está fazendo os serviços aprovados. | Mecânico marca cada serviço como concluído. |
 | **Pronto para entrega** | Todos os serviços foram concluídos. | Recepção recebe o pagamento e entrega. |
 | **Entregue** | O carro saiu da oficina. | — |
 | **Cancelado** | A ordem foi encerrada sem conclusão, com motivo. | Gerente (ou quem tem permissão). |
 
-O sistema só deixa a OS andar pelos caminhos permitidos. Por exemplo: não dá para pular de "Em diagnóstico" direto para "Em execução". Se o cliente recusar o orçamento, a OS volta para "Em diagnóstico" para um novo orçamento. Se for preciso um serviço extra durante a execução, o gerente envia uma nova versão do orçamento e o cliente aprova de novo.
+O sistema só deixa a OS andar pelos caminhos permitidos. Por exemplo: não dá para pular de "Em diagnóstico" direto para "Em execução". Se o orçamento for recusado, a OS volta para "Em diagnóstico" para um novo orçamento. Se for preciso um serviço extra durante a execução, o gerente monta uma nova versão do orçamento, e ela precisa ser aprovada de novo.
+
+**Quem aprova é a oficina, não o cliente.** O cliente pode receber um link para **ver** o orçamento, mas não aprova por ele. A aprovação é sempre registrada por alguém da equipe, com o nome de quem clicou (veja [6.4](#64-aprovar-o-orçamento-na-oficina)).
 
 ## 3. Quem pode fazer o quê
 
@@ -74,9 +76,9 @@ O sistema tem cinco papéis. O dono define o papel de cada pessoa em **Usuários
 | Registrar entrada de veículo | Sim | — | Sim | Sim | Sim |
 | Ver preços, valores e telefone do cliente | Sim | **Nunca** | Sim | Sim | Sim |
 | Diagnosticar e executar serviços | — | Sim (só as próprias OS ou sem responsável) | Sim | Sim | Sim |
-| Montar e enviar orçamento | — | — | Sim | Sim | Sim |
-| Dar desconto | Só se o dono liberar | — | Sim | Sim | Sim |
-| Registrar a decisão do cliente dada pessoalmente ou por telefone | Sim | — | Sim | Sim | Sim |
+| Montar orçamento (e aprová-lo com um clique) | — | — | Sim | Sim | Sim |
+| Dar desconto (vender abaixo da tabela, sem pedir aprovação) | Só se o dono liberar | — | Sim | Sim | Sim |
+| Aprovar ou recusar orçamento que está aguardando aprovação | Sim | — | Sim | Sim | Sim |
 | Gerar cobrança Pix e registrar dinheiro/cartão | Sim | — | Sim | Sim | Sim |
 | Combinar pagamento do saldo em datas | Só se o dono liberar | — | Sim | Sim | Sim |
 | Entregar veículo já pago | Sim | — | Sim | Sim | Sim |
@@ -87,9 +89,8 @@ O sistema tem cinco papéis. O dono define o papel de cada pessoa em **Usuários
 | Resolver pendências e divergências | — | — | Sim | Sim | Sim |
 | Painel com valores, relatórios e auditoria | — | — | Sim | Sim | Sim |
 | Catálogo de serviços | — | — | Sim | Sim | Sim |
-| Aprovar desconto acima do limite | — | — | Só se o dono liberar | Só se o dono liberar | Sim |
 | Feriados locais da unidade | — | — | — | Sim | Sim |
-| Configurações (empresa, unidades, usuários, contas, integrações) | — | — | — | — | Sim |
+| Configurações (empresa, unidades, usuários, contas, integrações, dados fiscais) | — | — | — | — | Sim |
 | Ver todas as unidades | — | — | — | — (só as que supervisiona) | Sim |
 
 Observações importantes:
@@ -97,6 +98,7 @@ Observações importantes:
 - **Recepção, mecânico e gerente** trabalham em **uma unidade**. Não conseguem abrir nada de outra unidade.
 - **Supervisor** tem a visão de gerente em **várias unidades** escolhidas pelo dono.
 - **Mecânico nunca vê** preço, valores, pagamentos nem telefone do cliente, mesmo que alguém tente liberar.
+- **Desconto não precisa mais de aprovação.** Quem orça pode vender abaixo do preço de tabela; o preço de tabela e o desconto ficam registrados. A antiga regra de aprovar desconto acima de um limite está desligada e só volta se o suporte religar.
 - As permissões marcadas como "só se o dono liberar" podem ser dadas individualmente a uma pessoa na tela do usuário (veja [10.6](#106-usuários-e-permissões)).
 - Todas essas regras são conferidas pelo sistema no servidor. Esconder ou mostrar um botão é só conforto: mesmo que alguém digite o endereço de uma página proibida, o sistema bloqueia (veja [14](#14-mensagens-de-erro-e-telas-de-aviso)).
 
@@ -153,11 +155,11 @@ A tela tem três partes:
 
 **Menu lateral (à esquerda).** Mostra só o que o seu papel pode usar. Os grupos são:
 
-- **Principal:** Painel, Nova entrada, Ordens de serviço, Orçamentos, Fila do mecânico, Caixa (ou Recebimentos), Conferência física.
+- **Principal:** Painel, Nova entrada, Ordens de serviço, OS do sistema antigo (só para empresas que tinham um sistema anterior), Orçamentos, Fila do mecânico, Caixa (ou Recebimentos), Conferência física.
 - **Atendimento:** Central de WhatsApp e Pós-venda.
 - **Cadastros:** Clientes e Veículos.
-- **Gestão:** Relatórios por unidade, Aprovações de desconto, Pendências e mensagens, Auditoria.
-- **Configurações:** só para o dono (e Catálogo para o gerente).
+- **Gestão:** Relatórios por unidade, Pendências e mensagens, Auditoria. (O item **Aprovações de desconto** não aparece mais; veja [8.3](#83-desconto-sem-aprovação).)
+- **Configurações:** só para o dono, incluindo **Dados fiscais** (o Catálogo também aparece para o gerente).
 - No rodapé: **Minha conta e segurança** e **Sair**.
 
 Números em vermelho ao lado de um item indicam quantas coisas esperam por você (por exemplo, conversas de WhatsApp sem resposta ou pendências abertas).
@@ -215,21 +217,40 @@ Menu **Nova entrada** (ou o botão **＋ Nova entrada** do painel).
 
 **Passo a passo:**
 
-1. **Telefone com DDD** do cliente (só números, 10 ou 11 dígitos).
-2. **Placa** do veículo.
-3. **Nome do cliente.**
-4. **Modelo do veículo** (opcional).
-5. **Endereço do cliente** (opcional; clique para abrir). Se preencher, o endereço da ficha do cliente é atualizado.
-6. Em **Motivo da visita**, escreva **o que o cliente relatou**, com as palavras dele, mesmo sem diagnóstico. É obrigatório.
-7. **Quilometragem** e **Observações** (opcionais).
-8. **Fotos do veículo** (opcional, até 5; JPG, PNG ou WebP, até 8 MB cada).
-9. Clique em **Registrar entrada**.
+1. Se o cliente já veio antes, comece pelo campo **Cliente já cadastrado? Buscar pelo nome** (veja abaixo).
+2. **Telefone com DDD** do cliente (só números, 10 ou 11 dígitos).
+3. **Placa** do veículo. Se a placa já estiver no sistema, os dados do carro aparecem sozinhos (veja abaixo).
+4. **Nome do cliente.**
+5. **Marca**, **Modelo do veículo**, **Ano** e **Cor** (todos opcionais).
+6. **Endereço do cliente** (opcional; clique para abrir). Se preencher, o endereço da ficha do cliente é atualizado.
+7. Em **Motivo da visita**, escreva **o que o cliente relatou**, com as palavras dele, mesmo sem diagnóstico. É obrigatório.
+8. **Quilometragem** e **Observações** (opcionais).
+9. **Fotos do veículo** (opcional, até 5; JPG, PNG ou WebP, até 8 MB cada).
+10. Clique em **Registrar entrada**.
 
 O sistema cria a ordem numerada da unidade, e o mecânico passa a vê-la na fila para diagnóstico. O botão **Cancelar** volta ao painel sem gravar nada.
 
-**Cliente que já veio antes.** Ao digitar o telefone ou a placa, o sistema procura o cadastro. Se encontrar, aparece o quadro **Cadastro encontrado** com nome, telefone e placas. Clique em **Usar este cadastro** para não duplicar o cliente.
+**Cliente que já veio antes.** Use o campo **Cliente já cadastrado? Buscar pelo nome**:
+
+1. Digite **pelo menos 3 letras** do nome. Também pode digitar o telefone ou a placa.
+2. A busca aceita pequenos erros de digitação: nome sem acento, nome e sobrenome fora de ordem, letras trocadas e trocas comuns como **k/c**, **y/i**, **z/s** ou o **h** que não se fala (por exemplo, "Tiago" acha "Thiago").
+3. Aparece o quadro **Cadastro encontrado** com nome, telefone e placas de cada cliente parecido.
+4. Clique em **Usar este cadastro** no cliente certo. O sistema preenche **nome** e **telefone**. Se o cliente tiver **um só carro**, a placa e os dados do carro também vêm preenchidos.
+5. Se escolheu o cliente errado, clique em **Não é este cliente**.
+
+Se nada for encontrado, aparece *"Nenhum cliente encontrado. Preencha os dados abaixo para cadastrar."* Ao digitar o telefone ou a placa direto nos campos, o sistema também procura o cadastro. Sempre use o cadastro existente para não duplicar o cliente.
 
 ![Nova entrada mostrando "Cadastro encontrado" e aviso de placa já cadastrada para outro cliente](imagens/nova-entrada-cadastro.jpg)
+
+**Placa já cadastrada.** Ao digitar uma placa que já está no sistema, ele puxa sozinho o carro (marca, modelo, ano e cor) e o cliente dono do carro. Aparece a frase *"Veículo já cadastrado: dados puxados do sistema."*
+
+**Placa nova: buscar os dados do carro.** Para uma placa que o sistema ainda não conhece:
+
+1. Digite a placa.
+2. Clique em **Buscar dados do veículo** (ou tecle **Enter** no campo da placa).
+3. Enquanto procura, aparece *"Consultando placa…"*.
+4. Se encontrar, marca, modelo, ano e cor são preenchidos. **Confira sempre com o carro na sua frente** e corrija o que estiver diferente.
+5. Se não encontrar, aparece *"Não encontramos dados desta placa agora. Preencha marca, modelo, ano e cor à mão."* Preencha você mesmo (esses campos são opcionais).
 
 **Placa de outro dono.** Se a placa já estiver ligada a outro cliente, aparece um aviso. Se for o mesmo cliente, use **Usar este cadastro**. Se o carro mudou de dono, marque **Confirmo que o veículo mudou de dono** — a transferência fica registrada no histórico. Sem essa confirmação, o sistema não registra a entrada.
 
@@ -255,15 +276,26 @@ Menu **Ordens de serviço**. Busque por **número, nome, telefone ou placa**, fi
 
 As linhas mostram cliente, veículo, placa, data de entrada, etapa atual e a data de entrega prevista. Ordens com entrega atrasada aparecem destacadas com "Atrasada".
 
-### 6.4 Acompanhar o orçamento com o cliente
+Se a empresa usava outro sistema antes, aparece o link **Ver as N OS do sistema antigo** (N é a quantidade). Ele abre a lista das ordens antigas (veja [6.14](#614-os-do-sistema-antigo)).
 
-A recepção **não monta orçamento** (isso é do gerente), mas acompanha o cliente. Na OS, aba **Orçamento e execução**:
+### 6.4 Aprovar o orçamento na oficina
 
-![Aba Orçamento vista pela recepção: versões enviadas e botões de link do cliente](imagens/os-orcamento-recepcao.jpg)
+**A aprovação do orçamento é feita na oficina, não pelo cliente.** A recepção **não monta orçamento** (isso é de quem orça: gerente, supervisor ou dono), mas pode aprovar ou recusar um orçamento que ficou **aguardando aprovação**. Na OS, aba **Orçamento e execução**:
 
-- Cada **versão** enviada aparece com itens, total e situação (aguardando decisão, aprovado, recusado).
-- **Registrar decisão informada pessoalmente ou por telefone:** quando o cliente responde no balcão ou por telefone, escolha **Aprovou** ou **Recusou**, escreva **como o cliente decidiu** (ex.: "ligação às 10h, falou com Ana") e clique em **Registrar decisão**.
-- **Gerar novo link para o cliente:** cria um novo endereço para o cliente ver e aprovar o orçamento e **desativa os links enviados antes**. O link aparece **uma única vez** na tela, logo após gerar. Copie e envie ao cliente. O link vale 30 dias.
+![Aba Orçamento vista pela recepção. A foto é de uma versão anterior do sistema: hoje a versão aguardando aparece com os botões "Aprovar versão N" e "Recusar"](imagens/os-orcamento-recepcao.jpg)
+
+> **Sobre a foto.** Ela foi tirada antes da mudança e ainda mostra o formulário antigo de "registrar decisão". Hoje a tela traz os botões descritos abaixo.
+
+1. Fale com o cliente (no balcão, por telefone ou por WhatsApp) e combine a decisão.
+2. Na versão que está aguardando, escreva uma **Observação** se quiser (opcional; ex.: "cliente aprovou por telefone às 10h").
+3. Se for aprovar e você puder definir prazo, informe o **Prazo de entrega em dias úteis** (opcional).
+4. Clique em **Aprovar versão N** (N é o número da versão) ou em **Recusar**.
+
+Cada versão mostra itens, total e situação (aguardando, aprovada, recusada), com a data e o nome de quem aprovou ou recusou.
+
+**Link para o cliente acompanhar (só para ver).** O cliente pode receber um link para **ver** o orçamento. Pelo link ele **não aprova nem recusa**: a página diz *"Este orçamento está em análise na oficina."* (veja [13](#13-o-que-o-cliente-vê-pelo-link)).
+
+- **Gerar novo link para o cliente:** cria um novo endereço e **desativa os links enviados antes**. O link aparece **uma única vez** na tela, logo após gerar. Copie e envie ao cliente. O link vale 30 dias.
 - **Revogar links do cliente:** desativa todos os links já enviados (use se o link foi para a pessoa errada).
 
 ### 6.5 Receber o pagamento
@@ -272,7 +304,7 @@ Na OS, aba **Pagamentos e entrega**.
 
 ![Aba Pagamentos vista pela recepção, com as opções de parcelar bloqueadas](imagens/os-pagamentos-recepcao.jpg)
 
-No alto aparecem três valores: **Aprovado pelo cliente**, **Recebido** e **Saldo a receber**.
+No alto aparecem três valores: **Aprovado**, **Recebido** e **Saldo a receber**.
 
 Em **Como o cliente vai pagar?**:
 
@@ -331,7 +363,7 @@ Veículos deixados sem marcação são registrados como **ausentes**. Ausências
 
 ### 6.9 Clientes
 
-Menu **Clientes**. Lista os clientes atendidos nas suas unidades, do mais recente para o mais antigo. Busque por nome, telefone ou placa.
+Menu **Clientes**. Lista os clientes atendidos nas suas unidades, do mais recente para o mais antigo. A lista também mostra **cadastros que ainda não tiveram atendimento** no sistema novo, inclusive os clientes trazidos do sistema antigo. Busque por nome, telefone ou placa.
 
 ![Lista de clientes com busca](imagens/clientes.jpg)
 
@@ -341,7 +373,24 @@ Clique em um cliente para abrir a ficha:
 
 Na ficha você vê os **atendimentos**, os **veículos** e os **dados de contato** (nome, telefone, e-mail e endereço). Altere o que precisar e clique em **Salvar dados**.
 
-Clientes são criados na entrada; o telefone evita duplicidade. Se houver outro cadastro com o mesmo telefone, o gerente vê o quadro **Possível cadastro duplicado** e pode **Unificar cadastros** (os atendimentos e veículos vão para a ficha atual; nada é apagado).
+**Completar um cadastro.** Recepção e gerente podem completar cadastros que ainda não tiveram atendimento. Exemplo: um cliente importado sem telefone. Abra a ficha, digite o telefone em **Dados de contato** e clique em **Salvar dados**.
+
+**Cadastrar só o cliente, sem abrir OS.** Use o botão **Novo cliente**, no alto da lista. Serve para quem ainda não trouxe o carro. Para receber o carro hoje, use **Nova entrada**.
+
+1. Preencha **Nome** e **Telefone com DDD** (obrigatórios).
+2. Se tiver, preencha **CPF ou CNPJ**, **E-mail**, **Endereço** e **Observações** (todos opcionais).
+3. Em **Veículo (opcional)**, informe **Placa**, **Marca**, **Modelo**, **Ano** e **Cor**.
+4. Clique em **Cadastrar cliente**.
+
+Se o telefone já for de outro cliente, o sistema avisa e mostra a opção **É outra pessoa com o mesmo telefone (família ou empresa): cadastrar mesmo assim**. Marque só se for mesmo outra pessoa; se for o mesmo cliente, use o cadastro que já existe. **Placa repetida é recusada**: se a placa já está no sistema, procure o carro pela busca.
+
+**Cadastro duplicado.** Quem pode unificar (o gerente, por exemplo) vê na ficha o quadro **Possível cadastro duplicado**. O sistema sugere outros cadastros com o **mesmo telefone** ou o **mesmo nome**, mostrando o telefone e o CPF/CNPJ de cada um, para ajudar a conferir se é a mesma pessoa.
+
+1. Em **Cadastro a unificar**, escolha o outro cadastro.
+2. Escreva o **Motivo**.
+3. Clique em **Unificar cadastros**.
+
+A ficha aberta fica como a principal. Ela recebe do outro cadastro os **atendimentos**, os **veículos**, as **conversas**, o **histórico do sistema antigo** e os **dados que faltavam** (por exemplo, o telefone ou o CPF). **Nada é apagado.**
 
 ### 6.10 Veículos
 
@@ -390,6 +439,34 @@ Clique em um atendimento para registrar o contato:
 6. Clique em **Registrar contato**.
 
 Cada tentativa fica no **Histórico de contatos**. Um novo contato encerra o retorno agendado anteriormente.
+
+### 6.13 Clientes do sistema antigo
+
+Se a empresa usava outro sistema antes, os **clientes e veículos** desse sistema foram trazidos para cá. Eles aparecem na lista de **Clientes** e na busca da **Nova entrada** como qualquer outro cliente.
+
+Na ficha de um cliente que veio do sistema antigo aparecem duas seções a mais:
+
+- **Histórico no sistema antigo:** cada OS antiga, com **número, data, placa, total e situação** (Aberta, Finalizada ou Cancelada). Clique na linha para abrir e ver o veículo, as datas, se foi pago e os **serviços e peças**. O link **Abrir OS completa** leva à página da OS antiga (veja [6.14](#614-os-do-sistema-antigo)).
+- **Dados do sistema antigo:** o **CPF ou CNPJ** e o botão **Ver todos os campos do cadastro antigo**, que mostra o cadastro original completo, só para consulta.
+
+Essas informações são **só para consulta**. Não podem ser alteradas.
+
+**Clientes sem telefone.** Alguns clientes vieram do sistema antigo **sem telefone**. Na primeira visita, peça o telefone e complete o cadastro (veja [6.9](#69-clientes)).
+
+### 6.14 OS do sistema antigo
+
+Menu **OS do sistema antigo**. Esse item **só aparece para empresas que tinham um sistema anterior**. Também dá para chegar pelo link **Ver as N OS do sistema antigo**, na página **Ordens de serviço**.
+
+São as ordens de serviço feitas no sistema anterior, **só para consulta**. Elas **não entram** no painel, no caixa nem nos relatórios. As OS novas continuam em **Ordens de serviço**.
+
+1. Em **Número, cliente, telefone ou placa**, digite o que procura.
+2. Se quiser, escolha a **Situação** (Aberta, Finalizada ou Cancelada) e o período (**Entrada de** / **até**).
+3. Clique em **Filtrar**.
+4. Clique no número da OS para abrir.
+
+A página da OS antiga mostra cliente, veículo, quilometragem, datas de entrada e saída, valores de serviços e peças, total, se foi pago, descrição, observações e a lista de **Serviços e peças**. Quem não tem acesso a valores não vê os preços.
+
+**Imprimir para o cliente.** Clique em **Imprimir (versão simples)**. Abre uma folha em linguagem simples com cliente, veículo, datas, o que foi feito, os totais e se foi pago. Use para imprimir ou salvar em PDF.
 
 ---
 
@@ -444,7 +521,7 @@ O diagnóstico só pode ser registrado com a ordem **em diagnóstico**, **aguard
 
 ### 7.4 Executar os serviços
 
-Quando o cliente aprova, a ordem fica **Autorizado**. Na aba **Serviços e execução**:
+Quando o orçamento é aprovado na oficina, a ordem fica **Autorizado**. Na aba **Serviços e execução**:
 
 1. Clique em **Iniciar execução**.
 2. Ao terminar cada serviço, clique em **Marcar como concluído**. O sistema registra quem concluiu e quando.
@@ -454,11 +531,11 @@ Quando o cliente aprova, a ordem fica **Autorizado**. Na aba **Serviços e execu
 
 O sistema **bloqueia**:
 
-- executar serviço que **não está na versão aprovada** pelo cliente (*"Este serviço não está autorizado pelo cliente."*);
+- executar serviço que **não está na versão aprovada** (*"Este serviço não está autorizado pelo cliente."*);
 - concluir serviço antes de iniciar a execução;
 - liberar para entrega com algum serviço pendente (*"Conclua todos os serviços autorizados antes de liberar para entrega."*).
 
-Se precisar de um serviço a mais, avise o gerente: ele envia uma nova versão do orçamento como **extra**, e o serviço só pode ser feito depois que o cliente aprovar.
+Se precisar de um serviço a mais, avise o gerente: ele monta uma nova versão do orçamento com o **extra**, e o serviço só pode ser feito depois que essa versão for aprovada.
 
 No celular:
 
@@ -492,51 +569,57 @@ Além do que a recepção vê, o gerente vê os valores:
 Botões do alto:
 
 - **Versão simples:** resumo em linguagem direta (veja [10.2](#102-painel-versão-simples)).
-- **Exportar CSV** e **Exportar Excel:** baixam os números do período.
+- **Exportar CSV** e **Exportar Excel:** baixam os números do período (veja [8.13](#813-planilha-excel)).
 - **Responsável (entrada):** filtra só as ordens cuja entrada foi registrada por uma pessoa.
 
-### 8.2 Montar e enviar um orçamento
+### 8.2 Montar e aprovar um orçamento
 
-Na OS (etapa **Em diagnóstico**), aba **Orçamento e execução**.
+Quem orça (gerente, supervisor ou dono) monta o orçamento na OS (etapa **Em diagnóstico**), aba **Orçamento e execução**.
 
 ![Editor de orçamento com itens, desconto, observação e totais](imagens/os-montar-orcamento.jpg)
 
-1. Em **Incluir do catálogo**, escolha um serviço ou produto e clique em **Incluir**. O preço de tabela da unidade vem preenchido.
-2. Para algo fora do catálogo, clique em **＋ Adicionar item livre** e preencha **Descrição**, **Qtd.** e **Preço unitário**.
+1. Em **Incluir do catálogo**, escolha um serviço ou produto e clique em **Incluir**. O preço de tabela da unidade vem preenchido. Cada item mostra se é **Serviço** ou **Peça/produto** (isso define em qual nota fiscal ele sai; veja [11.5](#115-aba-documentos-e-mensagens)).
+2. Para algo fora do catálogo, clique em **＋ Adicionar item livre** e preencha **Descrição**, **Qtd.** e **Preço unitário**. No campo **Tipo**, escolha **Serviço** ou **Peça/produto**.
 3. Se aparecerem **Adicionais sugeridos**, você pode incluí-los com um clique.
-4. Se for o caso, informe **Desconto (R$)** e o **Motivo do desconto** (obrigatório quando há desconto). Itens do catálogo também aceitam desconto em % sobre a tabela.
+4. Se for o caso, dê o desconto. Use **Desc. % sobre a tabela** nos itens do catálogo ou informe **Desconto (R$, opcional)** no total, com o **Motivo do desconto** (obrigatório quando há desconto no total). **Não é preciso pedir aprovação** (veja [8.3](#83-desconto-sem-aprovação)).
 5. Escreva uma **Observação para o cliente** (opcional).
 6. Confira **Subtotal**, **Desconto** e **Total**. O total é calculado item por item (quantidade × preço, arredondado ao centavo).
 7. Clique em **Salvar rascunho**.
-8. Informe o **Prazo de entrega em dias úteis** (opcional) e clique em **Enviar versão N ao cliente**.
+8. Informe o **Prazo de entrega em dias úteis** (opcional).
+9. Escolha uma das duas opções:
+   - **Aprovar orçamento (R$ ...)**: aprova na hora, com **um clique**. A OS vai para **Autorizado** e o mecânico já pode começar. Use quando o cliente já concordou.
+   - **Deixar aguardando aprovação**: a OS vai para **Aguardando aprovação**. Depois, o dono, o gerente ou a recepção abrem a OS e clicam em **Aprovar versão N** ou **Recusar** (veja [6.4](#64-aprovar-o-orçamento-na-oficina)).
 
-Ao enviar, a OS vai para **Aguardando aprovação** e o sistema mostra o **link para o cliente** uma única vez. Na demonstração, a mensagem ao cliente é apenas simulada.
+O cliente **não aprova pelo link**. O link, se for enviado, serve só para ele ver o orçamento. Na demonstração, a mensagem ao cliente é apenas simulada.
 
 **Regras e bloqueios:**
 
 - O desconto não pode ser maior que o subtotal.
 - Quem não tem permissão de desconto vê *"Descontos exigem permissão de gerente."*
-- **Desconto acima do limite** do catálogo (ou da regra geral): ao salvar, o pedido vai para **aprovação interna** e o orçamento **só pode ser enviado depois de aprovado** (veja [8.3](#83-aprovações-de-desconto)).
-- Não é possível enviar se houver outra versão aguardando decisão do cliente.
-- Cada envio cria uma **nova versão**. As versões antigas ficam guardadas.
+- Não é possível concluir uma nova versão se houver outra aguardando aprovação.
+- Cada versão concluída fica guardada. As versões antigas não são apagadas.
 
-**Serviço extra durante a execução.** Com a OS **Em execução**, o editor mostra *"Serviços novos entram como extra e só podem ser executados após nova aprovação do cliente."* Monte a nova versão e envie.
+**Serviço extra durante a execução.** Com a OS **Em execução**, o editor mostra *"Serviços novos entram como extra e só podem ser executados depois de aprovados."* Monte a nova versão e aprove (ou deixe aguardando aprovação).
 
-Veja também como fica uma OS aguardando a resposta do cliente (com a opção de registrar a decisão dada pessoalmente):
+Veja também como fica uma OS aguardando aprovação:
 
-![OS aguardando aprovação, com a versão enviada e o editor para nova versão](imagens/os-aguardando-aprovacao.jpg)
+![OS aguardando aprovação, com a versão concluída e o editor para nova versão. A foto é de antes da mudança: hoje a versão aguardando mostra os botões "Aprovar versão N" e "Recusar"](imagens/os-aguardando-aprovacao.jpg)
+
+> **Sobre as fotos desta seção.** Elas foram tiradas antes da mudança e ainda podem mostrar o botão antigo **Enviar versão ao cliente** e o formulário de "registrar decisão". Hoje os botões são **Aprovar orçamento** e **Deixar aguardando aprovação** (para quem orça) e **Aprovar versão N** / **Recusar** (para a versão aguardando).
 
 E uma OS já **Autorizado**, pronta para o mecânico iniciar:
 
 ![OS autorizada, com a seção Execução e o botão Iniciar execução](imagens/os-autorizado.jpg)
 
-### 8.3 Aprovações de desconto
+### 8.3 Desconto sem aprovação
 
-Menu **Aprovações de desconto** (aparece para quem pode aprovar: o dono e quem recebeu essa permissão).
+Dono, gerente e supervisor podem **vender abaixo do preço de tabela sem pedir aprovação a ninguém**. Exemplo: um serviço de tabela R$ 500,00 pode ser vendido por R$ 400,00.
 
-![Tela Aprovações de desconto](imagens/aprovacoes.jpg)
+O sistema guarda o **preço de tabela** e o **desconto** de cada item. Na versão do orçamento aparece, por exemplo, *"(tabela R$ 500,00 · −20%)"*. Assim o dono acompanha os descontos dados, sem travar o atendimento.
 
-Cada pedido pendente mostra a ordem, quem pediu e o motivo. Escreva a **Justificativa** (obrigatória, de 5 a 500 caracteres) e clique em **Aprovar desconto** ou **Recusar**. **Quem pediu não decide o próprio pedido** (exceto o proprietário). Se o orçamento for alterado depois do pedido, o pedido é cancelado.
+O menu **Aprovações de desconto** **não aparece mais**. A regra antiga (desconto acima de um limite precisava de aprovação interna) está desligada e **só volta se o suporte religar**. Nesse caso, a tela volta a aparecer assim:
+
+![Tela Aprovações de desconto, que só aparece se o suporte religar a regra de aprovação](imagens/aprovacoes.jpg)
 
 ### 8.4 Prazo de entrega, mecânico e vendedor
 
@@ -632,7 +715,9 @@ Menu **Catálogo de serviços**. É a tabela de preços usada nos orçamentos.
 
 ![Catálogo de serviços e produtos com busca e formulário de novo item](imagens/catalogo.jpg)
 
-- **Novo item:** nome, categoria, unidade de venda, preço padrão e **desconto máximo sem aprovação (%)**. Em branco, vale a regra geral. Clique em **Incluir no catálogo**.
+- **Novo item:** nome, categoria, unidade de venda, **Tipo (define a nota fiscal)**, **NCM (só peça/produto)** e preço padrão. Clique em **Incluir no catálogo**.
+  - **Tipo:** **Serviço** sai na nota de serviço (NFS-e); **Peça/produto** sai na nota de venda de peças (NF-e).
+  - **NCM:** código fiscal da peça (ex.: 8708.70.90). Em branco, vale o NCM padrão de **Dados fiscais**. Peça ao contador se tiver dúvida.
 - **Importar tabela (CSV):** um item por linha, separado por ponto e vírgula. O sistema mostra um relatório das linhas recusadas.
 - Clique em um item para editar:
 
@@ -640,7 +725,7 @@ Menu **Catálogo de serviços**. É a tabela de preços usada nos orçamentos.
 
 Na edição há **Preço por unidade** (opcional; só aparecem as unidades em que você atua), **Adicionais sugeridos** (aparecem como sugestão no orçamento) e o **Histórico de preço**.
 
-O **desconto máximo** só pode ser alterado pelo dono ou por quem aprova descontos.
+O campo **desconto máximo sem aprovação** só tem efeito se o suporte religar a regra de aprovação de desconto. Hoje, quem orça pode dar desconto livremente.
 
 ### 8.12 Auditoria (histórico de ações)
 
@@ -651,6 +736,25 @@ Menu **Auditoria**. Registros permanentes: **não podem ser editados nem apagado
 Filtre por **Unidade**, **Ação** e período (**De/Até**). Cada linha mostra quando, quem, unidade, ação, registro, motivo e o "antes/depois" da alteração. O botão de exportação baixa os registros filtrados.
 
 Até ações simples ficam registradas, como imprimir uma OS ou trocar a versão do painel.
+
+### 8.13 Planilha Excel
+
+Você pode baixar os números da loja em uma planilha Excel, para abrir no computador ou mandar ao contador.
+
+- **No painel completo:** clique em **Exportar Excel**. A planilha usa o período e a loja escolhidos no painel.
+- **No painel versão simples:** use o quadro **Baixar planilha Excel** (veja [10.2](#102-painel-versão-simples)).
+
+A planilha tem estas abas:
+
+| Aba | O que mostra |
+|---|---|
+| **Resumo por unidade** | Os totais de cada loja no período. |
+| **Por dia** | Os números de cada dia. |
+| **Dia da semana** | Os números somados por dia da semana. |
+| **Ordens** | Uma linha por OS: número, loja, entrada, cliente, veículo, situação, aprovado, recebido e saldo. |
+| **Recebimentos** | Cada recebimento: data, loja, OS, cliente, forma e valor. Devoluções aparecem com valor negativo. |
+
+O gerente baixa só os dados da(s) própria(s) loja(s). O dono pode baixar todas.
 
 ---
 
@@ -702,6 +806,7 @@ Clique em **Versão simples** no painel. É um resumo de hoje em linguagem diret
 - **Quantos carros estão na oficina? Quantos estão prontos? Quanto entrou de dinheiro hoje? Quanto falta receber?**
 - **O que precisa ser feito:** lista de tarefas, com as urgentes marcadas.
 - **Como está cada loja:** carros na loja, prontos, atrasados, esperando aprovação e recebido hoje.
+- **Baixar planilha Excel:** escolha a **Loja** (ou **Todas as lojas juntas**, quando você vê mais de uma), o período **De** / **Até** e clique em **Baixar Excel**. O conteúdo da planilha está em [8.13](#813-planilha-excel).
 
 Para voltar, clique em **Painel completo**. A escolha fica salva na sua conta. A versão simples existe para quem vê indicadores (gerente, supervisor e dono).
 
@@ -742,7 +847,7 @@ Filtre por unidade. Clique em um usuário para editar ou em **Novo usuário**:
 1. **Nome completo** e **E-mail de acesso**.
 2. **Papel** e **Unidade** (obrigatória para gerente, recepção e mecânico; para o supervisor é a unidade principal).
 3. **Unidades supervisionadas:** só para o papel Supervisor.
-4. **Permissões financeiras adicionais:** aplicar descontos, cancelar ordens, registrar devoluções, liberar veículo sem quitação, combinar pagamento do saldo, WhatsApp (triagem do número central / atender conversas da unidade) e aprovar desconto acima do limite. Gerente e dono já têm as financeiras; conceda à recepção só se necessário. O mecânico nunca recebe acesso a valores, contato do cliente nem WhatsApp.
+4. **Permissões financeiras adicionais:** aplicar descontos, cancelar ordens, registrar devoluções, liberar veículo sem quitação, combinar pagamento do saldo, WhatsApp (triagem do número central / atender conversas da unidade) e aprovar desconto acima do limite (essa última só tem efeito se o suporte religar a regra de aprovação de desconto). Gerente e dono já têm as financeiras; conceda à recepção só se necessário. O mecânico nunca recebe acesso a valores, contato do cliente nem WhatsApp.
 5. **Senha inicial:** mínimo de 10 caracteres, com letras e números.
 6. Clique em **Criar conta**.
 
@@ -808,6 +913,23 @@ Menu **Minha conta e segurança** (vale para todo mundo).
 - **Aparência:** tema só para você.
 - **Alterar senha:** senha atual, nova senha e confirmação (mínimo de 10 caracteres, com letras e números). Ao salvar, suas outras sessões abertas são encerradas.
 
+### 10.13 Dados fiscais
+
+Menu **Dados fiscais** (só o dono). Aqui ficam os códigos usados nas duas notas fiscais da oficina:
+
+- **NFS-e (nota de serviço):** para os serviços. Vai para a Fazenda do DF.
+- **NF-e (nota de venda de peças):** para as peças e produtos.
+
+A tela **já vem preenchida com o que o sistema antigo usava** nas notas emitidas:
+
+- Regime: **Simples Nacional**.
+- Serviço: item **14.01** (manutenção e conservação de veículos), código **140101**, **ISS 2%**.
+- Peças: **CFOP 5102** (venda dentro do DF) e **6102** (fora do DF), **CSOSN 102** e **NCM padrão 8708.70.90**.
+
+**Peça ao contador para conferir** todos os campos. Depois clique em **Salvar dados fiscais**. Enquanto não for salva, a tela mostra o aviso *"Valores preenchidos com o que o sistema antigo usava nas notas emitidas. Peça ao contador para conferir e salve."*
+
+> **Importante:** a emissão real das notas **ainda não está ligada**. Ela depende do **certificado digital da empresa** e da **homologação com a Fazenda do DF**. Até lá, no sistema real as notas aparecem como **indisponíveis**. Veja [15](#15-o-que-ainda-não-é-real).
+
 ---
 
 ## 11. A ordem de serviço por dentro (todas as abas)
@@ -846,7 +968,7 @@ Mostra o diagnóstico e as fotos. Quem pode diagnosticar edita o texto. Quem pod
 
 ![Aba Orçamento e execução de uma OS pronta para entrega](imagens/os-orcamento.jpg)
 
-Mostra as **versões** do orçamento (com preço de tabela e desconto de cada item, quando vem do catálogo), a decisão do cliente e a seção **Execução** com os serviços aprovados. Veja [8.2](#82-montar-e-enviar-um-orçamento) e [7.4](#74-executar-os-serviços).
+Mostra as **versões** do orçamento (com preço de tabela e desconto de cada item, quando vem do catálogo), quem aprovou ou recusou e quando, e a seção **Execução** com os serviços aprovados. Na versão que está aguardando aparecem os botões **Aprovar versão N** e **Recusar**. Veja [8.2](#82-montar-e-aprovar-um-orçamento), [6.4](#64-aprovar-o-orçamento-na-oficina) e [7.4](#74-executar-os-serviços).
 
 Execução em andamento, vista pelo gerente:
 
@@ -867,11 +989,26 @@ Resumo das regras de dinheiro:
 
 ### 11.5 Aba Documentos e mensagens
 
-![Aba Documentos e mensagens com documentos fiscais simulados e mensagens ao cliente](imagens/os-documentos.jpg)
+![Aba Documentos e mensagens com documentos fiscais simulados e mensagens ao cliente. A foto é de antes da divisão em dois tipos de nota: hoje o botão é "Emitir as 2 notas fiscais" (ou só a nota que couber)](imagens/os-documentos.jpg)
 
-**Documento fiscal.** Com orçamento aprovado, quem cobra (recepção, gerente, dono) pode clicar em **Emitir documento fiscal**. O resultado aparece em instantes. Situações possíveis: enviando, autorizado (com protocolo), rejeitado (com o motivo; botão **Tentar de novo**) e cancelado. Só existe um documento ativo por ordem. **Cancelar este documento** exige permissão de cancelamento e justificativa.
+**Notas fiscais: serviços e peças em notas separadas.** Cada item do orçamento é **Serviço** ou **Peça/produto**. Os serviços saem na **NFS-e (serviços)** e as peças na **NF-e (peças/produtos)**.
 
-Hoje, os documentos são **simulados** e trazem *"SEM VALIDADE FISCAL"*. Ao abrir um documento, ele aparece assim:
+Com orçamento aprovado, quem cobra (recepção, gerente, dono) vê nesta aba quanto falta emitir. Exemplo: *"A emitir: NFS-e (serviços) de R$ 300,00 e NF-e (peças/produtos) de R$ 900,00."*
+
+1. Confira os valores.
+2. Clique em **Emitir as 2 notas fiscais**. Se o orçamento tiver só serviços (ou só peças), o botão emite só a nota que couber (por exemplo, **Emitir NFS-e (serviços)**).
+3. O resultado aparece em instantes.
+
+Como os valores são divididos:
+
+- O **desconto geral** do orçamento é dividido entre as duas notas, na proporção do valor de cada uma.
+- A **soma das duas notas é igual ao total aprovado**.
+
+Cada nota tem **situação própria**: enviando, autorizada (com protocolo), rejeitada (com o motivo; botão **Tentar de novo**) ou cancelada. Cada uma também tem o **cancelamento próprio**, que exige permissão de cancelamento e justificativa.
+
+> **Ainda não é real.** A emissão real depende do certificado digital da empresa e da homologação com a Fazenda do DF. No sistema real, as notas aparecem como **indisponíveis**. Nos testes e na demonstração, elas são **simuladas** e trazem *"SEM VALIDADE FISCAL"*. Os códigos usados ficam em **Dados fiscais** (veja [10.13](#1013-dados-fiscais)).
+
+Ao abrir um documento simulado, ele aparece assim:
 
 ![Documento fiscal simulado, marcado sem validade fiscal](imagens/fiscal.jpg)
 
@@ -904,8 +1041,8 @@ Exemplo: a cliente chega com o carro fazendo barulho no freio.
 | 1 | Recepção | **Nova entrada** | Telefone, placa, nome, o que a cliente relatou. **Registrar entrada.** A OS nasce em "Aguardando diagnóstico". |
 | 2 | Recepção ou gerente | OS › Resumo › **Mecânico responsável** | Escolher o mecânico (opcional: ele também pode assumir pela fila). |
 | 3 | Mecânico | **Minha fila** › OS | **Iniciar diagnóstico**, escrever o que encontrou, enviar fotos. |
-| 4 | Gerente | OS › **Orçamento e execução** | Incluir itens do catálogo, conferir total, **Salvar rascunho**, informar prazo e **Enviar ao cliente**. OS vai para "Aguardando aprovação". |
-| 5 | Cliente | Link recebido | Ver o orçamento e **Aprovar** ou **Recusar**. Se responder no balcão, a recepção registra a decisão. |
+| 4 | Gerente | OS › **Orçamento e execução** | Incluir itens do catálogo, conferir total, **Salvar rascunho** e informar prazo. Se a cliente já concordou, **Aprovar orçamento**. Se não, **Deixar aguardando aprovação**. |
+| 5 | Recepção ou gerente | OS › **Orçamento e execução** | Se ficou aguardando: falar com a cliente (balcão, telefone ou WhatsApp) e clicar em **Aprovar versão N** ou **Recusar**. O link do cliente, se enviado, serve só para ela ver o orçamento. |
 | 6 | Mecânico | OS › **Serviços e execução** | **Iniciar execução**, **Marcar como concluído** cada serviço, **Liberar para entrega**. |
 | 7 | Recepção | OS › **Pagamentos e entrega** | Escolher a forma e receber. Pix: aguardar a confirmação do banco. |
 | 8 | Recepção | OS › **Entrega** | Com o saldo zerado, conferir o carro com a cliente e **Registrar entrega**. |
@@ -914,8 +1051,9 @@ Exemplo: a cliente chega com o carro fazendo barulho no freio.
 
 Desvios comuns:
 
-- **Cliente recusa:** a OS volta para "Em diagnóstico"; o gerente pode enviar nova versão.
-- **Serviço extra no meio:** gerente envia nova versão com o extra; o mecânico só faz depois da nova aprovação.
+- **Cliente recusa:** a equipe clica em **Recusar**; a OS volta para "Em diagnóstico" e o gerente pode montar nova versão.
+- **Serviço extra no meio:** o gerente monta nova versão com o extra; o mecânico só faz depois da nova aprovação.
+- **Cliente que já veio antes:** na Nova entrada, use **Cliente já cadastrado? Buscar pelo nome** para não duplicar o cadastro.
 - **Cliente vai pagar depois:** o gerente registra um **combinado** (parcelas com data) e a entrega fica sem exceção.
 - **Cliente precisa levar o carro sem pagar:** só o gerente libera, com motivo; vira alerta.
 - **Carro esquecido no pátio sem OS:** aparece na conferência como divergência.
@@ -931,7 +1069,7 @@ O cliente **não precisa de conta nem senha**. Ele recebe um endereço (link) qu
 - **Andamento:** a etapa atual e a data de entrada;
 - **Documentos:** documentos fiscais, se houver (na simulação, com a marca "SEM VALIDADE FISCAL");
 - **Pagamento via Pix:** se houver cobrança aberta, o valor, o código "copia e cola" e a validade, com o aviso *"Não pague para outra chave Pix informada por mensagem ou pessoalmente"*;
-- **Orçamento para sua aprovação:** o diagnóstico, a tabela de serviços e peças (itens extras marcados como "novo"), subtotal, desconto e total, a observação da oficina e a frase *"Nenhum serviço fora desta lista será feito sem uma nova aprovação sua."* O cliente pode deixar um **comentário** e clicar em **Aprovar R$ ...** ou **Recusar este orçamento**;
+- **Orçamento em análise:** quando há uma versão aguardando aprovação, o diagnóstico, a tabela de serviços e peças (itens extras marcados como "novo"), subtotal, desconto e total, a observação da oficina e o aviso *"Este orçamento está em análise na oficina. Dúvidas? Fale com a loja."* **O cliente não aprova nem recusa pelo link.** A aprovação é feita pela equipe da oficina (veja [6.4](#64-aprovar-o-orçamento-na-oficina));
 - depois de aprovado, a lista do **Orçamento aprovado** com o total.
 
 Se o link estiver errado, vencido (30 dias) ou revogado, a página mostra "não encontrada", sem dizer o motivo.
@@ -966,7 +1104,8 @@ Hoje, **Pix, mensagens/WhatsApp e nota fiscal existem só como simuladores**:
 
 - **Pix:** as cobranças são fictícias. Na demonstração há um botão "Simular pagamento (sem dinheiro real)". Nenhum dinheiro entra ou sai.
 - **Mensagens e WhatsApp:** nada é enviado nem recebido de verdade. As telas mostram "canal simulado (ninguém foi contatado)".
-- **Nota fiscal:** os documentos são simulados, marcados **SEM VALIDADE FISCAL**. A emissão real depende da validação do contador e da contratação do emissor.
+- **Nota fiscal (NFS-e e NF-e):** nos testes e na demonstração, as notas são simuladas, marcadas **SEM VALIDADE FISCAL**. A emissão real **ainda não está ligada**: depende do **certificado digital da empresa**, da **homologação com a Fazenda do DF** e da conferência dos **Dados fiscais** pelo contador. No sistema real, as notas aparecem como **indisponíveis**.
+- **Consulta da placa na Nova entrada:** nos testes e na demonstração, os dados do carro podem vir de um simulador, com o aviso *"SIMULAÇÃO: dados fictícios, não vêm do DETRAN."* Confira sempre com o carro.
 
 **Em produção**, enquanto não houver provedor contratado e homologado, essas funções **aparecem como indisponíveis**. A tela **Integrações** (só para o dono) lista o que falta para cada uma.
 
@@ -987,10 +1126,34 @@ Para evitar comprovantes falsos. Pix só é confirmado pelo banco.
 Há saldo em aberto. Receba o pagamento, peça ao gerente para combinar as datas do restante, ou para liberar sem quitação (com motivo).
 
 **Por que não consigo dar desconto?**
-Desconto é do gerente. Se o desconto passar do limite do catálogo, precisa de aprovação interna antes do envio.
+Desconto é de quem orça (gerente, supervisor ou dono), ou de quem recebeu essa permissão do dono. Não é preciso pedir aprovação: o preço de tabela e o desconto ficam registrados.
+
+**O cliente pode aprovar o orçamento pelo link?**
+Não. O link serve só para o cliente ver o orçamento. A aprovação é feita na oficina: quem orça clica em **Aprovar orçamento**, ou dono, gerente ou recepção clicam em **Aprovar versão N** na OS.
+
+**Sumiu o menu Aprovações de desconto. É erro?**
+Não. Desconto não precisa mais de aprovação. O menu só volta se o suporte religar essa regra.
+
+**O cliente já veio antes, mas não lembro o telefone. Como acho?**
+Na Nova entrada, digite pelo menos 3 letras do nome em **Cliente já cadastrado? Buscar pelo nome**. A busca aceita erros de digitação e nome sem acento.
+
+**O cliente veio do sistema antigo e está sem telefone. O que faço?**
+Peça o telefone na visita, abra a ficha do cliente e complete em **Dados de contato**. Clique em **Salvar dados**.
+
+**As OS do sistema antigo entram no caixa ou nos relatórios?**
+Não. Elas são só para consulta, no menu **OS do sistema antigo** e na ficha do cliente.
+
+**Achei dois cadastros da mesma pessoa. Perco alguma coisa ao unificar?**
+Não. Unificar traz tudo para a ficha principal (atendimentos, veículos, conversas, histórico antigo e dados que faltavam). Nada é apagado.
+
+**Por que a OS gera duas notas fiscais?**
+Serviços saem na nota de serviço (NFS-e) e peças na nota de venda de peças (NF-e). A soma das duas é o total aprovado. Hoje a emissão real ainda não está ligada.
+
+**Como mando os números do mês para o contador?**
+No painel, use **Exportar Excel** (painel completo) ou **Baixar planilha Excel** (versão simples). Veja [8.13](#813-planilha-excel).
 
 **O mecânico pode fazer um serviço que não está no orçamento?**
-Não. Peça ao gerente uma nova versão; o serviço extra só é liberado depois que o cliente aprovar.
+Não. Peça ao gerente uma nova versão; o serviço extra só é liberado depois que essa versão for aprovada.
 
 **Por que não vejo a OS de outra unidade?**
 Cada pessoa vê só as unidades em que trabalha. O supervisor vê as que supervisiona e o dono vê todas.
@@ -1024,10 +1187,10 @@ Não. Alertas indicam algo para revisar, não provam irregularidade.
 | **Unidade** | Cada oficina da rede (ex.: Asa Norte, Taguatinga, Águas Claras). |
 | **Entrada** | O registro da chegada do veículo, que cria a OS. |
 | **Diagnóstico** | O que o mecânico encontrou no veículo. |
-| **Orçamento / versão** | A lista de serviços e peças com preços. Cada envio ao cliente cria uma nova versão. |
-| **Rascunho** | Orçamento ainda não enviado; só a equipe vê. |
+| **Orçamento / versão** | A lista de serviços e peças com preços. Cada orçamento concluído é uma versão. |
+| **Rascunho** | Orçamento ainda não concluído; só a equipe vê. |
 | **Extra** | Serviço incluído durante a execução, que precisa de nova aprovação. |
-| **Aprovado** | Valor que o cliente aceitou. Ainda não é dinheiro recebido. |
+| **Aprovado** | Valor do orçamento aprovado pela oficina, depois de combinado com o cliente. Ainda não é dinheiro recebido. |
 | **Recebido** | Dinheiro que entrou de fato (Pix confirmado, dinheiro ou cartão registrados). |
 | **Saldo a receber** | Aprovado menos recebido. |
 | **Pagamento combinado** | Acordo de pagar o saldo em datas futuras (até 3), registrado pelo gerente. |
@@ -1038,10 +1201,16 @@ Não. Alertas indicam algo para revisar, não provam irregularidade.
 | **Conferência física** | Verificação dos carros no pátio contra as ordens abertas. |
 | **Divergência** | Diferença encontrada na conferência (carro ausente ou sem ordem). |
 | **Pendência** | Situação que precisa de revisão do gerente. |
-| **Catálogo** | Tabela de serviços e produtos com preço e desconto máximo. |
-| **Aprovação interna** | Autorização de desconto acima do limite, antes do envio ao cliente. |
+| **Catálogo** | Tabela de serviços e produtos com preço, tipo (serviço ou peça) e NCM. |
+| **Preço de tabela** | Preço do item no catálogo. Quando o item é vendido por menos, o desconto fica registrado. |
+| **Aprovação interna** | Regra antiga de aprovar desconto acima de um limite. Hoje está desligada; só volta se o suporte religar. |
+| **NFS-e** | Nota fiscal de serviço (para os serviços). |
+| **NF-e** | Nota fiscal de venda de peças e produtos. |
+| **NCM** | Código fiscal de uma peça, usado na NF-e. |
+| **Sistema antigo** | O sistema que a empresa usava antes. Seus clientes, veículos e OS foram trazidos só para consulta. |
+| **Unificar cadastros** | Juntar dois cadastros da mesma pessoa em um só, sem apagar nada. |
 | **Dias úteis** | Segunda a sexta, sem feriados nacionais e locais cadastrados. |
-| **Link do cliente** | Endereço que o cliente abre para ver e aprovar o orçamento, sem senha. Vale 30 dias. |
+| **Link do cliente** | Endereço que o cliente abre para acompanhar o atendimento e ver o orçamento, sem senha. Ele não aprova por ali. Vale 30 dias. |
 | **Verificação em duas etapas** | Código de 6 dígitos do celular, pedido ao dono depois da senha. |
 | **Auditoria** | Histórico permanente de todas as ações. |
 | **Triagem** | Encaminhar conversas do WhatsApp central para a unidade certa. |
