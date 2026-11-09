@@ -177,6 +177,7 @@ class FiscalRealTest extends TestCase
         $this->assertSame('https://sefin.producaorestrita.nfse.gov.br/SefinNacional/nfse', $post->url());
         $dps = gzdecode(base64_decode($post['dpsXmlGZipB64']));
         $this->assertTrue(Signer::isSigned($dps, 'infDPS'), 'assinatura XMLDSig válida');
+        $this->assertStringStartsWith('<?xml version="1.0" encoding="UTF-8"?>', $dps, 'E1229 da Sefin sem a declaração');
         $this->assertStringContainsString('rsa-sha256', $dps);
         $id = NfseNacional::idDps('5300108', self::CNPJ, '3', 1);
         $this->assertSame(45, strlen($id));
@@ -357,6 +358,7 @@ class FiscalRealTest extends TestCase
         $this->assertSame('https://sefin.producaorestrita.nfse.gov.br/SefinNacional/nfse/'.$d->chave_acesso.'/eventos', $ev->url());
         $xml = gzdecode(base64_decode($ev['pedidoRegistroEventoXmlGZipB64']));
         $this->assertTrue(Signer::isSigned($xml, 'infPedReg'));
+        $this->assertStringStartsWith('<?xml version="1.0" encoding="UTF-8"?>', $xml);
         $this->assertStringContainsString('Id="PRE'.$d->chave_acesso.'101101"', $xml);
         $this->assertStringContainsString('<xMotivo>Valor lançado errado na ordem de serviço</xMotivo>', $xml);
     }

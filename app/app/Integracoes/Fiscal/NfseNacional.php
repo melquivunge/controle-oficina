@@ -71,7 +71,7 @@ class NfseNacional
     {
         $cert = $this->cert();
         $dps = Signer::sign($cert, $this->dps($dados), 'infDPS', 'Id', OPENSSL_ALGO_SHA256, [true, false, null, null], 'DPS');
-        $r = $this->http($cert)->post($this->base().'/nfse', ['dpsXmlGZipB64' => base64_encode(gzencode($dps))]);
+        $r = $this->http($cert)->post($this->base().'/nfse', ['dpsXmlGZipB64' => self::compactar($dps)]);
         if ($r->successful() && $r->json('chaveAcesso')) {
             return $this->autorizado($cert, $r->json('chaveAcesso'), gzdecode(base64_decode((string) $r->json('nfseXmlGZipB64'))));
         }
@@ -102,10 +102,16 @@ class NfseNacional
             $e->appendChild($dom->createElement($k))->appendChild($dom->createTextNode($v));
         }
         $xml = Signer::sign($cert, $dom->saveXML(), 'infPedReg', 'Id', OPENSSL_ALGO_SHA256, [true, false, null, null], 'pedRegEvento');
-        $r = $this->http($cert)->post($this->base().'/nfse/'.$chave.'/eventos', ['pedidoRegistroEventoXmlGZipB64' => base64_encode(gzencode($xml))]);
+        $r = $this->http($cert)->post($this->base().'/nfse/'.$chave.'/eventos', ['pedidoRegistroEventoXmlGZipB64' => self::compactar($xml)]);
         if (! $r->successful()) {
             throw new RuntimeException('A Fazenda recusou o cancelamento: '.$this->erros($r));
         }
+    }
+
+    /** O Signer devolve o XML sem a declaração; sem ela a Sefin rejeita com E1229. Fica fora do trecho assinado. */
+    private static function compactar(string $xml): string
+    {
+        return base64_encode(gzencode('<?xml version="1.0" encoding="UTF-8"?>'.preg_replace('/^<\?xml[^>]*\?>\s*/', '', $xml)));
     }
 
     /** Monta a DPS (sem assinatura). */
