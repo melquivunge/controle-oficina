@@ -25,6 +25,7 @@
         <p class="hint">Tentativas: {{ $d->tentativas }}</p>
         <div class="fiscal-doc__acoes">
             @if ($d->arquivo)<a class="button" href="{{ route('fiscal.baixar', [$ordem, $d]) }}" target="_blank" rel="noopener">{{ $d->status === 'cancelado' ? 'Abrir documento cancelado' : 'Abrir documento' }}</a>@endif
+            @if (! $d->arquivo && $d->xml && $d->tipo === 'nfse' && $d->status === 'autorizado')<a class="button" href="{{ route('fiscal.baixar', [$ordem, $d, 'pdf' => 1]) }}">Baixar PDF</a>@endif
             @if ($d->xml)<a class="button" href="{{ route('fiscal.baixar', [$ordem, $d, 'xml' => 1]) }}">Baixar XML</a>@endif
             @can('cobrar')
                 @if ($d->status === 'rejeitado' || ($d->status === 'pendente' && $d->mensagem))

@@ -413,6 +413,30 @@ class FiscalRealTest extends TestCase
         }
     }
 
+    public function test_pdf_da_nfse_pode_ser_buscado_depois_e_voltar_nao_cai_no_logo(): void
+    {
+        config(['oficina.fiscal.modo' => 'homologacao']);
+        $this->guardarCertificado();
+        $this->sefinAutoriza();
+        Http::swap(new \Illuminate\Http\Client\Factory);
+        Http::preventStrayRequests();
+        $chave = str_repeat('5', 50);
+        Http::fake(['*/dps/*' => Http::response('', 404), '*/nfse' => Http::response(['chaveAcesso' => $chave, 'nfseXmlGZipB64' => base64_encode(gzencode('<NFSe><nNFSe>9</nNFSe></NFSe>'))], 201),
+            '*/danfse/*' => Http::sequence()->push('', 404)->push('', 404)->push('%PDF-1.4 ok', 200)]);
+        $o = $this->aprovada();
+        $rec = $this->usuario(Papel::Recepcao, $this->unidade);
+        app(Fiscal::class)->solicitar($o, $rec);
+        $d = FiscalDocument::where('ordem_id', $o->id)->sole();
+        $this->assertSame('autorizado', $d->status);
+        $this->assertNull($d->arquivo);
+
+        $pag = "/ordens/{$o->numero}?aba=documentos";
+        $this->entrarComo($rec)->get($pag)->assertSee('Baixar PDF')->assertHeader('Referrer-Policy', 'same-origin');
+        $this->entrarComo($rec)->from($pag)->get(route('fiscal.baixar', [$o, $d, 'pdf' => 1]))->assertRedirect($pag)->assertSessionHasErrors('fiscal');
+        $this->entrarComo($rec)->get(route('fiscal.baixar', [$o, $d, 'pdf' => 1]))->assertOk()->assertHeader('Content-Type', 'application/pdf');
+        $this->assertNotNull($d->fresh()->arquivo);
+    }
+
     /** XSDs oficiais de cada ambiente (produção: v1.01; produção restrita: leiaute de 20/10/2026). */
     private function errosXsd(string $xml, string $ambiente, string $xsd): array
     {

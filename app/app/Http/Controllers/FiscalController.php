@@ -74,7 +74,10 @@ class FiscalController extends Controller
         abort_unless($documento->ordem_id === $ordem->id && ($documento->arquivo || $documento->xml), 404);
         $this->authorize('view', $ordem);
         abort_unless($request->user()->pode('cobrar'), 403);
-        if ($request->boolean('xml') || ! $documento->arquivo) { // XML autorizado (etapa 2), para o contador
+        if ($request->boolean('pdf') && ! $documento->arquivo && ! app(Fiscal::class)->buscarPdf($documento)) {
+            return back()->withErrors(['fiscal' => 'A Sefin ainda não disponibilizou o PDF desta nota. A nota está autorizada; tente de novo mais tarde.']);
+        }
+        if ($request->boolean('xml') || ! $documento->fresh()->arquivo) { // XML autorizado (etapa 2), para o contador
             abort_unless($documento->xml, 404);
 
             return response(Storage::disk('local')->get($documento->xml), 200, ['Content-Type' => 'application/xml',
@@ -82,7 +85,7 @@ class FiscalController extends Controller
                 'Content-Disposition' => 'attachment; filename="'.($documento->chave_acesso ?: 'nota-'.$documento->id).'.xml"']);
         }
 
-        return DocumentoFiscalHtml::resposta($documento, 'private, no-store');
+        return DocumentoFiscalHtml::resposta($documento->fresh(), 'private, no-store');
     }
 
     private function voltar(FiscalDocument $documento): string

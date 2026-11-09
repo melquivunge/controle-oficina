@@ -228,15 +228,27 @@ class NfseNacional
             throw new RuntimeException('Sefin Nacional devolveu chave de acesso em formato inválido.');
         }
         preg_match('/<nNFSe>(\d+)<\/nNFSe>/', $xml, $m);
-        $pdf = null;
-        try { // DANFSe oficial do ADN; se falhar a nota continua autorizada e o XML fica guardado
-            $p = $this->http($cert)->timeout(30)->get($this->adn().'/danfse/'.$chave);
-            $pdf = $p->successful() && str_starts_with($p->body(), '%PDF') ? $p->body() : null;
-        } catch (\Throwable) {
-        }
+        $pdf = $this->baixarDanfse($cert, $chave); // se falhar a nota continua autorizada; "Baixar PDF" tenta de novo depois
 
         return ['status' => 'autorizado', 'numero' => $m[1] ?? null, 'protocolo' => $chave, 'chave_acesso' => $chave, 'mensagem' => null,
             'xml' => $xml, 'documento' => $pdf, 'extensao' => 'pdf'];
+    }
+
+    /** DANFSe oficial do ADN, ou null enquanto não estiver disponível. */
+    public function danfse(string $chave): ?string
+    {
+        return $this->baixarDanfse($this->cert(), $chave);
+    }
+
+    private function baixarDanfse(Certificate $cert, string $chave): ?string
+    {
+        try {
+            $p = $this->http($cert)->timeout(30)->withHeaders(['Accept' => 'application/pdf'])->get($this->adn().'/danfse/'.$chave);
+
+            return $p->successful() && str_starts_with($p->body(), '%PDF') ? $p->body() : null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     private function erros(Response $r): string

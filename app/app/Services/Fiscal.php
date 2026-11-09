@@ -136,6 +136,23 @@ class Fiscal
         return true;
     }
 
+    /** Busca de novo o PDF oficial da NFS-e autorizada que veio sem ele. */
+    public function buscarPdf(FiscalDocument $doc): bool
+    {
+        if ($doc->tipo !== 'nfse' || $doc->status !== 'autorizado' || ! $doc->chave_acesso || ! $this->emissor instanceof EmissorReal) {
+            return false;
+        }
+        $pdf = (new \App\Integracoes\Fiscal\NfseNacional((int) $doc->ambiente))->danfse($doc->chave_acesso);
+        if (! $pdf) {
+            return false;
+        }
+        $arquivo = "fiscal/{$doc->unidade_id}/{$doc->id}-".preg_replace('/\W/', '', (string) $doc->numero).'.pdf';
+        Storage::disk('local')->put($arquivo, $pdf);
+        $doc->update(['arquivo' => $arquivo]);
+
+        return true;
+    }
+
     private function dados(FiscalDocument $doc, Ordem $ordem, array $fiscal): array
     {
         return [
