@@ -359,6 +359,7 @@ class FiscalRealTest extends TestCase
         $this->assertSame('https://sefin.producaorestrita.nfse.gov.br/SefinNacional/nfse/'.$d->chave_acesso.'/eventos', $ev->url());
         $xml = gzdecode(base64_decode($ev['pedidoRegistroEventoXmlGZipB64']));
         $this->assertTrue(Signer::isSigned($xml, 'infPedReg'));
+        $this->assertSame([], $this->errosXsd($xml, 'homologacao', 'pedRegEvento_v1.01.xsd'));
         $this->assertStringStartsWith('<?xml version="1.0" encoding="UTF-8"?>', $xml);
         $this->assertStringContainsString('Id="PRE'.$d->chave_acesso.'101101"', $xml);
         $this->assertStringContainsString('<xMotivo>Valor lançado errado na ordem de serviço</xMotivo>', $xml);
@@ -409,6 +410,32 @@ class FiscalRealTest extends TestCase
         $this->assertStringContainsString('Id="NFe'.$chave.'"', $assinado);
         foreach (['<vDesc>10.00</vDesc>', '<vNF>390.00</vNF>', '<CSOSN>102</CSOSN>', '<enderDest>', '<nro>SN</nro>', '<cMun>5300108</cMun>', '<CFOP>5102</CFOP>', '<tpAmb>2</tpAmb>', 'SEM VALOR FISCAL'] as $t) {
             $this->assertStringContainsString($t, $assinado);
+        }
+    }
+
+    /** XSDs oficiais de cada ambiente (produção: v1.01; produção restrita: leiaute de 20/10/2026). */
+    private function errosXsd(string $xml, string $ambiente, string $xsd): array
+    {
+        libxml_use_internal_errors(true);
+        libxml_clear_errors();
+        $dom = new \DOMDocument;
+        $dom->loadXML($xml);
+        $dom->schemaValidate(base_path("tests/fixtures/xsd-nfse/{$ambiente}/{$xsd}"));
+        $erros = array_map(fn ($e) => trim($e->message), libxml_get_errors());
+        libxml_use_internal_errors(false);
+
+        return $erros;
+    }
+
+    public function test_dps_assinada_passa_no_schema_oficial_dos_dois_ambientes(): void
+    {
+        $this->guardarCertificado();
+        $cert = CertificadoDigital::sole()->certificado();
+        $d = ['fiscal' => \App\Support\DadosFiscais::atuais(), 'serie' => '3', 'numero_dps' => 1, 'valor_centavos' => 3000, 'ordem' => 'A-1', 'cliente' => 'Mariana Costa',
+            'cliente_documento' => '52998224725', 'cliente_email' => 'm@exemplo.test', 'itens' => [['descricao' => 'Alinhamento', 'quantidade' => '1']]];
+        foreach ([1 => 'producao', 2 => 'homologacao'] as $amb => $nome) {
+            $xml = Signer::sign($cert, (new NfseNacional($amb))->dps($d), 'infDPS', 'Id', OPENSSL_ALGO_SHA256, [true, false, null, null], 'DPS');
+            $this->assertSame([], $this->errosXsd($xml, $nome, 'DPS_v1.01.xsd'), $nome);
         }
     }
 

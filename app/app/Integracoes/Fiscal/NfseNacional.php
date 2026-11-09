@@ -175,8 +175,12 @@ class NfseNacional
         $x->endElement();
         $x->startElement('cServ');
         $el('cTribNac', $f['nfse_c_trib_nac']);
+        $novoLeiaute = $this->ambiente === 2; // leiaute de 20/10/2026: cNBS vem antes de xDescServ
+        if ($novoLeiaute && $f['nfse_c_nbs'] !== '') {
+            $el('cNBS', $f['nfse_c_nbs']);
+        }
         $el('xDescServ', self::texto(self::descricao($d), 2000));
-        if ($f['nfse_c_nbs'] !== '') {
+        if (! $novoLeiaute && $f['nfse_c_nbs'] !== '') {
             $el('cNBS', $f['nfse_c_nbs']);
         }
         $x->endElement();
