@@ -62,6 +62,12 @@ class HistoricoAntigoController extends Controller
         return view('historico.index', ['lista' => $q->paginate(30)->withQueryString(), 'total' => self::total(), 'f' => $f]);
     }
 
+    /** Versão para imprimir, em linguagem simples (09/11/2026). */
+    public function imprimir(int $id)
+    {
+        return view('historico.imprimir', $this->show($id)->getData() + ['id' => $id]);
+    }
+
     public function show(int $id)
     {
         $os = DB::table('legado_registros')->where('id', $id)->where('tabela', 'TBL_OS')->firstOrFail();

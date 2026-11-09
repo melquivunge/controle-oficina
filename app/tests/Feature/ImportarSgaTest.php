@@ -86,6 +86,10 @@ class ImportarSgaTest extends TestCase
         $this->get(route('historico.index', ['situacao' => 'finalizada', 'de' => '2024-05-01', 'ate' => '2024-05-31']))->assertSee('1 OS encontrada');
         $this->get(route('historico.show', $os->id))->assertOk()->assertSee('TROCA DE BIELETA')->assertSee('Barulho na suspensão')->assertSee('JOSÉ DA SILVA');
         $this->get(route('clientes.show', $jose))->assertSee('Abrir OS completa');
+        $this->get(route('historico.show', $os->id))->assertSee('Imprimir (versão simples)');
+        $this->get(route('historico.imprimir', $os->id))->assertOk()->assertSee('Ordem de serviço nº 500')->assertSee('Concluída')
+            ->assertSee('Chegou na oficina')->assertSee('10/05/2024')->assertSee('TROCA DE BIELETA')->assertSee('(serviço)')
+            ->assertSee('R$ 350,00')->assertSee('Pago')->assertSee('85.000 km')->assertSee('Não é nota fiscal')->assertDontSee('CHSERVICOP');
         $this->entrarComo($this->usuario(Papel::Mecanico))->get(route('historico.index'))->assertForbidden();
     }
 
