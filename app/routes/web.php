@@ -177,6 +177,11 @@ Route::middleware(['auth', 'dois-fatores'])->group(function () {
         Route::put('/', 'update')->name('empresa.update');
         Route::put('/unidades/{unidade}', 'unidade')->name('empresa.unidade.update');
     });
+    // Dados fiscais (09/11/2026): NFS-e (serviços) e NF-e (peças); padrões vindos do sistema antigo, conferidos pelo contador.
+    Route::middleware(['can:configurar', 'password.confirm'])->prefix('configuracoes/fiscal')->controller(\App\Http\Controllers\DadosFiscaisController::class)->group(function () {
+        Route::get('/', 'edit')->name('fiscal.config.edit');
+        Route::put('/', 'update')->name('fiscal.config.update');
+    });
     // Aparência (31/10/2026): temas personalizados só pelo proprietário; cada usuário escolhe o próprio tema.
     Route::middleware(['can:configurar', 'password.confirm', 'throttle:30,1'])->prefix('configuracoes/temas')->controller(\App\Http\Controllers\TemaController::class)->group(function () {
         Route::post('/', 'store')->name('temas.store');

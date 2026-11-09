@@ -9,6 +9,8 @@
                 @include('partials.campo', ['nome' => 'nome', 'rotulo' => 'Nome', 'valorAtual' => $item->nome, 'obrigatorio' => true, 'atributos' => ['maxlength' => 150]])
                 @include('partials.campo', ['nome' => 'categoria', 'rotulo' => 'Categoria', 'valorAtual' => $item->categoria, 'obrigatorio' => true, 'atributos' => ['maxlength' => 60]])
                 @include('partials.campo', ['nome' => 'unidade_venda', 'rotulo' => 'Unidade de venda', 'tipo' => 'select', 'opcoes' => \App\Models\CatalogoItem::UNIDADES_VENDA, 'valorAtual' => $item->unidade_venda])
+                @include('partials.campo', ['nome' => 'tipo', 'rotulo' => 'Tipo (define a nota fiscal)', 'tipo' => 'select', 'opcoes' => \App\Support\DadosFiscais::TIPOS_ITEM, 'valorAtual' => $item->tipo, 'ajuda' => 'Serviço sai na NFS-e; peça/produto sai na NF-e.'])
+                @include('partials.campo', ['nome' => 'ncm', 'rotulo' => 'NCM (só peça/produto)', 'valorAtual' => $item->ncm, 'atributos' => ['inputmode' => 'numeric', 'maxlength' => 10, 'placeholder' => '8708.70.90']])
                 @include('partials.campo', ['nome' => 'preco', 'rotulo' => 'Preço padrão (R$)', 'valorAtual' => \App\Support\Dinheiro::paraCampo($item->preco_centavos), 'obrigatorio' => true, 'atributos' => ['inputmode' => 'decimal']])
                 @if ($podeLimite)
                     @include('partials.campo', ['nome' => 'desconto_max', 'rotulo' => 'Desconto máximo sem aprovação (%)', 'valorAtual' => $item->desconto_max_percentual === null ? '' : str_replace('.', ',', $item->desconto_max_percentual), 'ajuda' => 'Em branco: regra geral de '.str_replace('.', ',', \App\Services\AprovacoesInternas::regraGeral()).'%.', 'atributos' => ['inputmode' => 'decimal']])

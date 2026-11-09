@@ -7,7 +7,7 @@
     @php($emAndamento = in_array($d->status, ['pendente', 'processando'], true))
     <article class="fiscal-doc fiscal-doc--{{ $d->status }}" id="fiscal-{{ $d->id }}">
         <header class="fiscal-doc__topo">
-            <strong>{{ $d->numero ? 'Nº '.$d->numero : 'Documento #'.$d->id }} · {{ \App\Support\Dinheiro::formatar($d->valor_centavos) }}</strong>
+            <strong>{{ \App\Support\DadosFiscais::NOTAS[$d->tipo] ?? 'Nota' }} · {{ $d->numero ? 'Nº '.$d->numero : 'Documento #'.$d->id }} · {{ \App\Support\Dinheiro::formatar($d->valor_centavos) }}</strong>
             <span class="fiscal-estado fiscal-estado--{{ $d->status }}">@if ($emAndamento)<span class="fiscal-giro" aria-hidden="true"></span>@endif{{ $rotulos[$d->status] }}</span>
         </header>
         @if ($emAndamento && ! $d->mensagem)
@@ -52,7 +52,13 @@
     <p class="muted">Nenhum documento emitido.</p>
 @endforelse
 @can('cobrar')
-    @if ($ordem->orcamentoAprovado && $ordem->status !== \App\Enums\StatusOrdem::Cancelado && ! $docs->whereIn('status', ['pendente', 'processando', 'autorizado'])->count())
-        <form method="POST" action="{{ route('fiscal.solicitar', $ordem) }}">@csrf<button class="button primary" type="submit">{{ $docs->isEmpty() ? 'Emitir documento fiscal' : 'Emitir novo documento' }}</button></form>
+    @if ($ordem->orcamentoAprovado && $ordem->status !== \App\Enums\StatusOrdem::Cancelado)
+        {{-- 09/11/2026: serviços → NFS-e; peças/produtos → NF-e. Mostra o que falta emitir. --}}
+        @php($partes = array_filter(\App\Support\DadosFiscais::partes($ordem->orcamentoAprovado->itens, (int) $ordem->orcamentoAprovado->desconto_centavos), fn ($v) => $v > 0))
+        @php($faltam = array_diff_key($partes, array_flip($docs->whereIn('status', ['pendente', 'processando', 'autorizado'])->pluck('tipo')->all())))
+        @if ($faltam)
+            <p class="hint">A emitir: @foreach ($faltam as $t => $v){{ \App\Support\DadosFiscais::NOTAS[$t] }} de {{ \App\Support\Dinheiro::formatar($v) }}@if (! $loop->last) e @endif @endforeach.</p>
+            <form method="POST" action="{{ route('fiscal.solicitar', $ordem) }}">@csrf<button class="button primary" type="submit">{{ count($faltam) > 1 ? 'Emitir as 2 notas fiscais' : 'Emitir '.\App\Support\DadosFiscais::NOTAS[array_key_first($faltam)] }}</button></form>
+        @endif
     @endif
 @endcan

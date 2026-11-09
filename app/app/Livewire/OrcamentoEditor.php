@@ -31,7 +31,7 @@ class OrcamentoEditor extends Component
         $base = Orcamento::where('ordem_id', $ordem->id)->where('status', 'rascunho')->first()
             ?? Orcamento::where('ordem_id', $ordem->id)->whereIn('status', ['enviado', 'aprovado'])->orderByDesc('versao')->first();
         $this->itens = $base?->itens->map(fn ($i) => ['descricao' => $i->descricao, 'quantidade' => Dinheiro::quantidadeExibicao($i->quantidade), 'preco' => Dinheiro::paraCampo($i->preco_unitario_centavos),
-            'catalogo_item_id' => $i->catalogo_item_id, 'desconto' => ''])->all() ?? [];
+            'catalogo_item_id' => $i->catalogo_item_id, 'desconto' => '', 'tipo' => $i->tipo ?? 'servico'])->all() ?? [];
         if ($base?->status === 'rascunho') {
             $this->desconto = $base->desconto_centavos ? Dinheiro::paraCampo($base->desconto_centavos) : '';
             $this->desconto_motivo = (string) $base->desconto_motivo;
@@ -44,7 +44,7 @@ class OrcamentoEditor extends Component
 
     public function adicionarLinha(): void
     {
-        $this->itens[] = ['descricao' => '', 'quantidade' => '1', 'preco' => '', 'catalogo_item_id' => null, 'desconto' => ''];
+        $this->itens[] = ['descricao' => '', 'quantidade' => '1', 'preco' => '', 'catalogo_item_id' => null, 'desconto' => '', 'tipo' => 'servico'];
     }
 
     /** Inclui item do catálogo (preço de tabela da unidade da ordem). Sem id, usa o escolhido na lista. */
@@ -57,7 +57,7 @@ class OrcamentoEditor extends Component
 
             return;
         }
-        $linha = ['descricao' => $cat->nome, 'quantidade' => '1', 'preco' => Dinheiro::paraCampo($cat->precoNaUnidade($this->unidadeId())), 'catalogo_item_id' => $cat->id, 'desconto' => ''];
+        $linha = ['descricao' => $cat->nome, 'quantidade' => '1', 'preco' => Dinheiro::paraCampo($cat->precoNaUnidade($this->unidadeId())), 'catalogo_item_id' => $cat->id, 'desconto' => '', 'tipo' => $cat->tipo ?? 'servico'];
         $ultima = end($this->itens);
         if ($ultima && trim($ultima['descricao'] ?? '') === '' && trim($ultima['preco'] ?? '') === '' && empty($ultima['catalogo_item_id'])) {
             $this->itens[array_key_last($this->itens)] = $linha;

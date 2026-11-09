@@ -37,7 +37,7 @@
             @foreach ($itens as $c)
                 <tr>
                     <td data-label="Item"><strong>{{ $c->nome }}</strong>@if ($c->adicionais_count)<span class="muted"> · {{ $c->adicionais_count }} adicional(is)</span>@endif</td>
-                    <td data-label="Categoria">{{ $c->categoria }}</td>
+                    <td data-label="Categoria">{{ $c->categoria }} <span class="tag">{{ \App\Support\DadosFiscais::TIPOS_ITEM[$c->tipo] ?? 'Serviço' }}</span></td>
                     <td data-label="Unidade">{{ $c->rotuloUnidade() }}</td>
                     <td data-label="Preço padrão" class="num">{{ \App\Support\Dinheiro::formatar($c->preco_centavos) }}</td>
                     <td data-label="Desc. máx." class="num">{{ $c->desconto_max_percentual === null ? 'regra geral' : str_replace('.', ',', rtrim(rtrim($c->desconto_max_percentual, '0'), '.')).'%' }}</td>
@@ -60,6 +60,8 @@
                         @include('partials.campo', ['nome' => 'nome', 'rotulo' => 'Nome (ex.: Reforma geral aro 17)', 'obrigatorio' => true, 'atributos' => ['maxlength' => 150]])
                         @include('partials.campo', ['nome' => 'categoria', 'id' => 'categoria-novo', 'rotulo' => 'Categoria (ex.: Rodas, Baterias, Mecânica)', 'obrigatorio' => true, 'atributos' => ['maxlength' => 60, 'list' => 'categorias-lista']])
                         @include('partials.campo', ['nome' => 'unidade_venda', 'rotulo' => 'Unidade de venda', 'tipo' => 'select', 'opcoes' => \App\Models\CatalogoItem::UNIDADES_VENDA])
+                        @include('partials.campo', ['nome' => 'tipo', 'id' => 'tipo-novo', 'rotulo' => 'Tipo (define a nota fiscal)', 'tipo' => 'select', 'opcoes' => \App\Support\DadosFiscais::TIPOS_ITEM])
+                        @include('partials.campo', ['nome' => 'ncm', 'id' => 'ncm-novo', 'rotulo' => 'NCM (só peça/produto)', 'atributos' => ['inputmode' => 'numeric', 'maxlength' => 10, 'placeholder' => '8708.70.90']])
                         @include('partials.campo', ['nome' => 'preco', 'rotulo' => 'Preço padrão (R$)', 'obrigatorio' => true, 'atributos' => ['inputmode' => 'decimal', 'placeholder' => '0,00']])
                         @if ($podeLimite)
                             @include('partials.campo', ['nome' => 'desconto_max', 'rotulo' => 'Desconto máximo sem aprovação (%)', 'ajuda' => 'Em branco: regra geral.', 'atributos' => ['inputmode' => 'decimal', 'placeholder' => 'regra geral']])

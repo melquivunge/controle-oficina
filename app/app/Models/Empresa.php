@@ -14,6 +14,11 @@ class Empresa extends Model
 
     protected $fillable = ['razao_social', 'nome_fantasia', 'cnpj', 'telefone', 'email', 'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf', 'cor_principal', 'nome_sistema', 'descricao', 'tema_padrao'];
 
+    protected function casts(): array
+    {
+        return ['fiscal' => 'array'];
+    }
+
     public static function atual(): self
     {
         return self::query()->orderBy('id')->first() ?? new self;

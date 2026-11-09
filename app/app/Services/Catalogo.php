@@ -70,6 +70,15 @@ class Catalogo
         } catch (\InvalidArgumentException) {
             $erros['preco'] = 'Preço inválido. Exemplo: 180,00';
         }
+        // Tipo fiscal (09/11/2026): serviço vai na NFS-e; peça/produto na NF-e (com NCM).
+        $tipo = (string) ($dados['tipo'] ?? ($item->tipo ?? 'servico'));
+        if (! array_key_exists($tipo, \App\Support\DadosFiscais::TIPOS_ITEM)) {
+            $erros['tipo'] = 'Escolha Serviço ou Peça/produto.';
+        }
+        $ncm = preg_replace('/\D/', '', (string) ($dados['ncm'] ?? ($item->ncm ?? '')));
+        if ($ncm !== '' && strlen($ncm) !== 8) {
+            $erros['ncm'] = 'NCM tem 8 dígitos (ex.: 8708.70.90).';
+        }
         $limiteInformado = array_key_exists('desconto_max', $dados);
         $limite = null;
         if ($limiteInformado) {
@@ -117,13 +126,13 @@ class Catalogo
             }
         }
 
-        return DB::transaction(function () use ($ator, $item, $nome, $categoria, $unidadeVenda, $preco, $limiteInformado, $limite, $limiteAtual, $adicionais, $precosUnidade, $dados) {
+        return DB::transaction(function () use ($ator, $item, $nome, $categoria, $unidadeVenda, $preco, $limiteInformado, $limite, $limiteAtual, $adicionais, $precosUnidade, $dados, $tipo, $ncm) {
             $novo = ! $item;
             $item = $item ? CatalogoItem::lockForUpdate()->findOrFail($item->id) : new CatalogoItem(['criado_por' => $ator->id]);
             $antes = $novo ? null : $item->only('nome', 'categoria', 'unidade_venda', 'preco_centavos', 'desconto_max_percentual', 'ativo');
             $precoAnterior = $novo ? null : (int) $item->preco_centavos;
             $item->fill([
-                'nome' => $nome, 'categoria' => $categoria, 'unidade_venda' => $unidadeVenda, 'preco_centavos' => $preco,
+                'nome' => $nome, 'categoria' => $categoria, 'unidade_venda' => $unidadeVenda, 'preco_centavos' => $preco, 'tipo' => $tipo, 'ncm' => $tipo === 'produto' && $ncm !== '' ? $ncm : null,
                 'ativo' => (bool) ($dados['ativo'] ?? ($item->ativo ?? true)),
             ]);
             if ($limiteInformado) {
@@ -141,7 +150,7 @@ class Catalogo
                 $this->definirPrecoUnidade($item, $unidadeId, $valor, $ator);
             }
             Auditoria::registrar($novo ? 'catalogo_item_criado' : 'catalogo_item_alterado', $item, $antes,
-                $item->only('nome', 'categoria', 'unidade_venda', 'preco_centavos', 'desconto_max_percentual', 'ativo') + ['adicionais' => $adicionais],
+                $item->only('nome', 'categoria', 'unidade_venda', 'preco_centavos', 'desconto_max_percentual', 'ativo', 'tipo', 'ncm') + ['adicionais' => $adicionais],
                 unidadeId: $ator->unidade_id, ator: $ator);
 
             return $item->fresh(['adicionais', 'precosUnidade']);

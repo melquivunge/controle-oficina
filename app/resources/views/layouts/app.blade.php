@@ -60,6 +60,7 @@
         ],
         'Configurações' => [
             ['empresa.edit', 'Identidade da empresa', 'unidade', $usuario->can('configurar')],
+            ['fiscal.config.edit', 'Dados fiscais', 'orcamento', $usuario->can('configurar')],
             ['usuarios.index', 'Usuários e permissões', 'usuarios', $usuario->can('configurar')],
             ['unidades.index', 'Unidades', 'unidade', $usuario->can('configurar')],
             ['recebedores.index', 'Contas de recebimento', 'conta', $usuario->can('configurar')],

@@ -88,9 +88,10 @@ tbody tr:nth-child(even) td { background: #f6f7f9; }
             </div>
         </div>
         <div class="titulo">
-            <b>Documento de serviço — simulação</b>
+            @php($ehNfe = ($d['tipo'] ?? 'nfse') === 'nfe')
+            <b>{{ $ehNfe ? 'Nota de venda de peças (NF-e)' : 'Nota de serviço (NFS-e)' }} — simulação</b>
             <span class="num">Nº {{ $numero }}</span>
-            <span>Modelo de demonstração inspirado no DANFSe</span>
+            <span>Modelo de demonstração inspirado no {{ $ehNfe ? 'DANFE' : 'DANFSe' }}</span>
         </div>
     </header>
 

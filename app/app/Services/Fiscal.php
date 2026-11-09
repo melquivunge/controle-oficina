@@ -19,29 +19,46 @@ class Fiscal
 {
     public function __construct(private EmissorFiscal $emissor) {}
 
-    public function solicitar(Ordem $ordem, User $ator): FiscalDocument
+    /**
+     * Emite as notas que faltam (09/11/2026): NFS-e para os serviços e NF-e para as peças/produtos do orçamento aprovado.
+     * Com $tipo, só aquela. Cada tipo tem no máximo uma nota ativa por ordem (índice único no banco).
+     *
+     * @return \Illuminate\Support\Collection<int, FiscalDocument> notas criadas
+     */
+    public function solicitar(Ordem $ordem, User $ator, ?string $tipo = null): \Illuminate\Support\Collection
     {
         if (! $ator->pode('cobrar') || ! $ator->acessaUnidade($ordem->unidade_id)) {
             throw new AuthorizationException('Sem permissão para solicitar documento fiscal.');
         }
 
-        return DB::transaction(function () use ($ordem, $ator) {
+        return DB::transaction(function () use ($ordem, $ator, $tipo) {
             $o = Ordem::lockForUpdate()->findOrFail($ordem->id);
             $orc = Orcamento::where('ordem_id', $o->id)->where('status', 'aprovado')->first();
             if (! $orc || $o->status === StatusOrdem::Cancelado) {
                 throw ValidationException::withMessages(['fiscal' => 'É preciso um orçamento aprovado em ordem não cancelada.']);
             }
-            if (FiscalDocument::where('ordem_id', $o->id)->whereIn('status', ['pendente', 'processando', 'autorizado'])->exists()) {
-                throw ValidationException::withMessages(['fiscal' => 'Já existe documento fiscal ativo para esta ordem.']);
+            $ativos = FiscalDocument::where('ordem_id', $o->id)->whereIn('status', ['pendente', 'processando', 'autorizado'])->pluck('tipo')->all();
+            $partes = array_filter(\App\Support\DadosFiscais::partes($orc->itens, (int) $orc->desconto_centavos), fn ($v) => $v > 0);
+            $faltam = array_diff_key($partes, array_flip($ativos));
+            if ($tipo !== null) {
+                $faltam = array_intersect_key($faltam, [$tipo => true]);
             }
-            $tentativa = FiscalDocument::where('ordem_id', $o->id)->count() + 1;
-            $doc = FiscalDocument::create(['ordem_id' => $o->id, 'unidade_id' => $o->unidade_id, 'orcamento_id' => $orc->id, 'valor_centavos' => $orc->total_centavos,
-                'status' => 'pendente', 'provedor' => $this->emissor->nome(), 'solicitado_por' => $ator->id,
-                'chave_idempotencia' => hash('sha256', "{$o->id}|{$orc->id}|{$tentativa}")]);
-            Auditoria::registrar('fiscal_solicitado', $o, depois: ['documento_id' => $doc->id, 'valor_centavos' => $doc->valor_centavos], ator: $ator);
-            ProcessarDocumentoFiscal::dispatch($doc->id)->afterCommit();
+            if (! $faltam) {
+                throw ValidationException::withMessages(['fiscal' => 'As notas desta ordem já foram emitidas (ou estão em emissão).']);
+            }
+            $criados = collect();
+            foreach ($faltam as $t => $valor) {
+                $tentativa = FiscalDocument::where('ordem_id', $o->id)->where('tipo', $t)->count() + 1;
+                $doc = FiscalDocument::create(['ordem_id' => $o->id, 'unidade_id' => $o->unidade_id, 'orcamento_id' => $orc->id, 'tipo' => $t, 'valor_centavos' => $valor,
+                    'status' => 'pendente', 'provedor' => $this->emissor->nome(), 'solicitado_por' => $ator->id,
+                    // NFS-e mantém a chave anterior (compatível com notas já emitidas); NF-e tem a sua.
+                    'chave_idempotencia' => hash('sha256', $t === 'nfse' ? "{$o->id}|{$orc->id}|{$tentativa}" : "{$o->id}|{$orc->id}|nfe|{$tentativa}")]);
+                Auditoria::registrar('fiscal_solicitado', $o, depois: ['documento_id' => $doc->id, 'tipo' => $t, 'valor_centavos' => $doc->valor_centavos], ator: $ator);
+                ProcessarDocumentoFiscal::dispatch($doc->id)->afterCommit();
+                $criados->push($doc);
+            }
 
-            return $doc;
+            return $criados;
         });
     }
 
@@ -64,9 +81,11 @@ class Fiscal
         try {
             $r = $this->emissor->consultar($doc->chave_idempotencia)
                 ?? $this->emissor->emitir($doc->chave_idempotencia, [
+                    'tipo' => $doc->tipo, 'fiscal' => \App\Support\DadosFiscais::atuais(),
                     'valor_centavos' => $doc->valor_centavos, 'ordem' => $ordem->numero, 'unidade' => $ordem->unidade->nome, 'cliente' => $ordem->cliente->nome,
                     'cliente_endereco' => $ordem->cliente->enderecoTexto(), 'cliente_telefone' => $ordem->cliente->telefoneFormatado(), 'cliente_email' => $ordem->cliente->email,
-                    'itens' => Orcamento::findOrFail($doc->orcamento_id)->itens->map->only('descricao', 'quantidade', 'preco_unitario_centavos', 'total_centavos')->all(),
+                    'itens' => Orcamento::findOrFail($doc->orcamento_id)->itens->where('tipo', $doc->tipo === 'nfe' ? 'produto' : 'servico')
+                        ->map->only('descricao', 'quantidade', 'preco_unitario_centavos', 'total_centavos', 'tipo')->values()->all(),
                 ]);
         } catch (\Throwable $e) {
             $doc->update(['status' => 'pendente', 'mensagem' => mb_substr($e->getMessage(), 0, 300)]); // visível e recuperável
@@ -97,7 +116,7 @@ class Fiscal
             throw ValidationException::withMessages(['fiscal' => 'Somente documentos pendentes ou rejeitados podem ser reprocessados.']);
         }
 
-        return $this->solicitar(Ordem::findOrFail($doc->ordem_id), $ator);
+        return $this->solicitar(Ordem::findOrFail($doc->ordem_id), $ator, $doc->tipo)->first(); // rejeitada: refaz só a mesma nota
     }
 
     public function cancelar(FiscalDocument $doc, User $ator, string $motivo): void

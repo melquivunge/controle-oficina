@@ -15,9 +15,9 @@ class FiscalController extends Controller
 {
     public function solicitar(Request $request, Ordem $ordem, Fiscal $fiscal)
     {
-        $fiscal->solicitar($ordem, $request->user());
+        $notas = $fiscal->solicitar($ordem, $request->user());
 
-        return back()->with('sucesso', 'Documento fiscal solicitado. O resultado aparece aqui em instantes.');
+        return back()->with('sucesso', $notas->map(fn ($d) => \App\Support\DadosFiscais::NOTAS[$d->tipo])->join(' e ').' solicitada'.($notas->count() > 1 ? 's' : '').'. O resultado aparece aqui em instantes.');
     }
 
     public function reprocessar(Request $request, Ordem $ordem, FiscalDocument $documento, Fiscal $fiscal)

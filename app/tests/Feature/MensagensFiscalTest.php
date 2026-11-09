@@ -116,7 +116,7 @@ class MensagensFiscalTest extends TestCase
     public function test_emissao_fiscal_simulada_autorizada_preserva_numero_e_documento_sem_validade(): void
     {
         $o = $this->aprovada();
-        $doc = app(Fiscal::class)->solicitar($o, $this->recepcao)->fresh();
+        $doc = app(Fiscal::class)->solicitar($o, $this->recepcao)->first()->fresh();
         $this->assertSame('autorizado', $doc->status);
         $this->assertStringStartsWith('SIM-', $doc->numero);
         Storage::disk('local')->assertExists($doc->arquivo);
@@ -144,7 +144,7 @@ class MensagensFiscalTest extends TestCase
     public function test_rejeicao_preservada_e_nova_tentativa_gera_novo_registro(): void
     {
         $o = $this->aprovada('480,13');
-        $doc = app(Fiscal::class)->solicitar($o, $this->recepcao)->fresh();
+        $doc = app(Fiscal::class)->solicitar($o, $this->recepcao)->first()->fresh();
         $this->assertSame('rejeitado', $doc->status);
         $this->assertStringContainsString('rejeição de teste', $doc->mensagem);
         $novo = app(Fiscal::class)->reprocessar($doc, $this->recepcao);
@@ -158,7 +158,7 @@ class MensagensFiscalTest extends TestCase
         $o = $this->aprovada();
         config(['oficina.fiscal.simular_indisponivel' => true]);
         Queue::fake();
-        $doc = app(Fiscal::class)->solicitar($o, $this->recepcao);
+        $doc = app(Fiscal::class)->solicitar($o, $this->recepcao)->first();
         try {
             app(Fiscal::class)->processar($doc->id);
             $this->fail();
@@ -179,7 +179,7 @@ class MensagensFiscalTest extends TestCase
     public function test_cancelamento_fiscal_exige_gerente_e_justificativa(): void
     {
         $o = $this->aprovada();
-        $doc = app(Fiscal::class)->solicitar($o, $this->recepcao)->fresh();
+        $doc = app(Fiscal::class)->solicitar($o, $this->recepcao)->first()->fresh();
         $this->entrarComo($this->recepcao)->post("/ordens/{$o->numero}/fiscal/{$doc->id}/cancelar", ['motivo' => 'Erro de digitação no serviço'])->assertForbidden();
         $this->entrarComo($this->gerente)->post("/ordens/{$o->numero}/fiscal/{$doc->id}/cancelar", ['motivo' => 'curto'])->assertSessionHasErrorsIn('fiscal_cancelar', 'motivo');
         $this->entrarComo($this->gerente)->post("/ordens/{$o->numero}/fiscal/{$doc->id}/cancelar", ['motivo' => 'Erro de digitação no serviço'])->assertRedirect();
@@ -191,7 +191,7 @@ class MensagensFiscalTest extends TestCase
     public function test_cancelamento_com_justificativa_curta_mostra_erro_visivel_e_mantem_formulario_aberto(): void
     {
         $o = $this->aprovada();
-        $doc = app(Fiscal::class)->solicitar($o, $this->recepcao)->fresh();
+        $doc = app(Fiscal::class)->solicitar($o, $this->recepcao)->first()->fresh();
         $show = "/ordens/{$o->numero}?aba=documentos";
         $r = $this->entrarComo($this->gerente)->from($show)->post("/ordens/{$o->numero}/fiscal/{$doc->id}/cancelar", ['motivo' => 'curto']);
         $r->assertRedirect($show.'#fiscal-'.$doc->id);
@@ -214,20 +214,20 @@ class MensagensFiscalTest extends TestCase
     public function test_documento_cancelado_exibe_carimbo_de_cancelamento_e_tela_nao_oferece_emitir_como_cancelar(): void
     {
         $o = $this->aprovada();
-        $doc = app(Fiscal::class)->solicitar($o, $this->recepcao)->fresh();
+        $doc = app(Fiscal::class)->solicitar($o, $this->recepcao)->first()->fresh();
         $this->entrarComo($this->gerente)->post("/ordens/{$o->numero}/fiscal/{$doc->id}/cancelar", ['motivo' => 'Erro de digitação no serviço'])->assertRedirect();
         $conteudo = $this->entrarComo($this->recepcao)->get("/ordens/{$o->numero}/fiscal/{$doc->id}")->assertOk()->streamedContent();
         $this->assertStringContainsString('CANCELADO', $conteudo);
         $this->assertStringContainsString('Erro de digitação no serviço', $conteudo);
         $html = $this->entrarComo($this->gerente)->get("/ordens/{$o->numero}?aba=documentos")->getContent();
-        $this->assertStringContainsString('Emitir novo documento', $html);
+        $this->assertStringContainsString('Emitir NFS-e (serviços)', $html);
         $this->assertStringNotContainsString('>Emitir documento fiscal<', $html);
     }
 
     public function test_documento_simulado_e_a4_com_identidade_tomador_itens_e_tarja(): void
     {
         $o = $this->aprovada();
-        $doc = app(Fiscal::class)->solicitar($o, $this->recepcao)->fresh();
+        $doc = app(Fiscal::class)->solicitar($o, $this->recepcao)->first()->fresh();
         $c = Storage::disk('local')->get($doc->arquivo);
         foreach (['size: A4', 'SEM VALIDADE FISCAL — SIMULAÇÃO', 'Tomador', 'Prestador', 'Código de verificação', 'Valor unitário', $o->cliente->nome, $doc->numero, $o->numero] as $t) {
             $this->assertStringContainsString($t, $c);
@@ -239,7 +239,7 @@ class MensagensFiscalTest extends TestCase
     {
         Queue::fake();
         $o = $this->aprovada();
-        $doc = app(Fiscal::class)->solicitar($o, $this->recepcao)->fresh();
+        $doc = app(Fiscal::class)->solicitar($o, $this->recepcao)->first()->fresh();
         $url = "/ordens/{$o->numero}/fiscal-status";
         $r = $this->entrarComo($this->recepcao)->getJson($url)->assertOk()->assertJson(['acompanhar' => true]);
         $this->assertStringContainsString('Processando', $r->json('html'));
@@ -256,7 +256,7 @@ class MensagensFiscalTest extends TestCase
     public function test_portal_lista_documento_e_link_de_outra_ordem_nao_baixa(): void
     {
         $o = $this->aprovada();
-        $doc = app(Fiscal::class)->solicitar($o, $this->recepcao)->fresh();
+        $doc = app(Fiscal::class)->solicitar($o, $this->recepcao)->first()->fresh();
         $token = app(Orcamentos::class)->novoLink($o, $this->recepcao);
         $this->get("/c/{$token}")->assertOk()->assertSee($doc->numero)->assertSee('SEM VALIDADE FISCAL');
         $this->get("/c/{$token}/documentos/{$doc->id}")->assertOk();

@@ -95,6 +95,7 @@ class Acoes
         'pos_venda_contato' => 'Contato de pós-venda registrado',
         'pos_venda_exportado' => 'Lista de pós-venda exportada',
         'importacao_sga_arquivo' => 'Importação do arquivo completo do sistema antigo (SGA)',
+        'dados_fiscais_alterados' => 'Dados fiscais alterados',
         'importacao_sga' => 'Importação de clientes e veículos do sistema antigo (SGA)',
         'aviso_colaborador_enfileirado' => 'Aviso de serviço ao colaborador enviado à fila',
     ];

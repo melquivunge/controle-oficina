@@ -35,7 +35,8 @@ class SimuladorFiscal implements EmissorFiscal
             return $anterior;
         }
         $rejeita = $dados['valor_centavos'] % 100 === 13;
-        $numero = $rejeita ? null : 'SIM-'.str_pad((string) (DB::table('simulador_fiscal')->count() + 1), 6, '0', STR_PAD_LEFT);
+        $prefixo = ($dados['tipo'] ?? 'nfse') === 'nfe' ? 'SIM-NFE-' : 'SIM-';
+        $numero = $rejeita ? null : $prefixo.str_pad((string) (DB::table('simulador_fiscal')->count() + 1), 6, '0', STR_PAD_LEFT);
         $r = ['status' => $rejeita ? 'rejeitado' : 'autorizado', 'numero' => $numero, 'protocolo' => $rejeita ? null : 'PROT-SIM-'.Str::upper(Str::random(10)),
             'mensagem' => $rejeita ? 'Simulação: rejeição de teste (valor terminado em 13 centavos).' : null];
         DB::table('simulador_fiscal')->insert(['chave' => $chave] + array_diff_key($r, ['documento' => 1]) + ['criado_em' => now()]);

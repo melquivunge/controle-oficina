@@ -230,7 +230,8 @@ class Orcamentos
                 $erros["itens.$n.descricao"] = 'Descreva o serviço ou peça (até 300 caracteres).';
             }
             if (! isset($erros["itens.$n.quantidade"], $erros["itens.$n.preco"]) && isset($q, $p)) {
-                $linhas[] = ['descricao' => $descricao, 'quantidade' => $q, 'preco_unitario_centavos' => $p, 'total_centavos' => Dinheiro::totalItem($q, $p),
+                $tipoItem = $cat?->tipo ?? (($item['tipo'] ?? 'servico') === 'produto' ? 'produto' : 'servico'); // catálogo manda; item livre: escolha de quem orça
+                $linhas[] = ['descricao' => $descricao, 'quantidade' => $q, 'preco_unitario_centavos' => $p, 'total_centavos' => Dinheiro::totalItem($q, $p), 'tipo' => $tipoItem,
                     'catalogo_item_id' => $cat?->id, 'preco_tabela_centavos' => $cat?->precoNaUnidade($unidadeId), 'desconto_max_percentual' => $cat?->limiteDesconto()];
             }
             unset($q, $p);

@@ -29,6 +29,14 @@
                         <label class="rotulo-celular" for="item-{{ $i }}-descricao">Descrição do item {{ $i + 1 }}</label>
                         <input id="item-{{ $i }}-descricao" wire:model.blur="itens.{{ $i }}.descricao" @error("itens.$i.descricao") aria-invalid="true" aria-describedby="item-{{ $i }}-descricao-erro" @enderror>
                         @error("itens.$i.descricao")<span class="field-error" id="item-{{ $i }}-descricao-erro">{{ $message }}</span>@enderror
+                        {{-- Tipo fiscal: catálogo define; item livre escolhe (serviço → NFS-e; peça → NF-e). --}}
+                        @if ($info[$i]['cat'])
+                            <span class="tag">{{ \App\Support\DadosFiscais::TIPOS_ITEM[$info[$i]['cat']->tipo] ?? 'Serviço' }}</span>
+                        @else
+                            <label class="tipo-item" for="item-{{ $i }}-tipo">Tipo
+                                <select id="item-{{ $i }}-tipo" wire:model="itens.{{ $i }}.tipo">@foreach (\App\Support\DadosFiscais::TIPOS_ITEM as $valor => $rotulo)<option value="{{ $valor }}">{{ $rotulo }}</option>@endforeach</select>
+                            </label>
+                        @endif
                         @if ($info[$i]['cat'])
                             <p class="item-catalogo">
                                 <span class="tag">Catálogo</span>
