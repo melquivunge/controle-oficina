@@ -5,12 +5,14 @@ namespace App\Services;
 use App\Enums\StatusOrdem;
 use App\Integracoes\Fiscal\EmissorFiscal;
 use App\Integracoes\Fiscal\EmissorReal;
+use App\Integracoes\Fiscal\NfseNacional;
 use App\Jobs\ProcessarDocumentoFiscal;
 use App\Models\FiscalDocument;
 use App\Models\Orcamento;
 use App\Models\Ordem;
 use App\Models\User;
 use App\Support\DadosFiscais;
+use App\Support\Danfse;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -142,7 +144,8 @@ class Fiscal
         if ($doc->tipo !== 'nfse' || $doc->status !== 'autorizado' || ! $doc->chave_acesso || ! $this->emissor instanceof EmissorReal) {
             return false;
         }
-        $pdf = (new \App\Integracoes\Fiscal\NfseNacional((int) $doc->ambiente))->danfse($doc->chave_acesso);
+        $pdf = (new NfseNacional((int) $doc->ambiente))->danfse($doc->chave_acesso)
+            ?? ($doc->xml ? Danfse::gerar((string) Storage::disk('local')->get($doc->xml)) : null);
         if (! $pdf) {
             return false;
         }

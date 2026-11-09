@@ -17,6 +17,7 @@ use App\Services\Fiscal;
 use App\Services\Orcamentos;
 use App\Services\Ordens;
 use App\Support\DadosFiscais;
+use App\Support\Danfse;
 use App\Support\Municipios;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory;
@@ -436,6 +437,23 @@ class FiscalRealTest extends TestCase
         $this->entrarComo($rec)->from($pag)->get(route('fiscal.baixar', [$o, $d, 'pdf' => 1]))->assertRedirect($pag)->assertSessionHasErrors('fiscal');
         $this->entrarComo($rec)->get(route('fiscal.baixar', [$o, $d, 'pdf' => 1]))->assertOk()->assertHeader('Content-Type', 'application/pdf');
         $this->assertNotNull($d->fresh()->arquivo);
+    }
+
+    public function test_danfse_e_gerado_do_xml_quando_a_sefin_nao_entrega(): void
+    {
+        $xml = file_get_contents(base_path('tests/fixtures/nfse-autorizada.xml'));
+        $this->assertStringStartsWith('%PDF', Danfse::gerar($xml));
+        $this->assertNull(Danfse::gerar('<NFSe/>'));
+
+        config(['oficina.fiscal.modo' => 'homologacao']);
+        $this->guardarCertificado();
+        Http::fake(['*/danfse/*' => Http::response('', 404)]);
+        $o = $this->aprovada();
+        $d = FiscalDocument::create(['ordem_id' => $o->id, 'unidade_id' => $o->unidade_id, 'orcamento_id' => $o->orcamentoAprovado->id, 'tipo' => 'nfse', 'valor_centavos' => 3000, 'status' => 'autorizado',
+            'provedor' => 'homologacao', 'solicitado_por' => $this->usuario(Papel::Recepcao, $this->unidade)->id, 'chave_idempotencia' => bin2hex(random_bytes(16)), 'ambiente' => 2, 'numero' => '1',
+            'chave_acesso' => str_repeat('5', 50), 'xml' => 'fiscal/n.xml']);
+        Storage::disk('local')->put('fiscal/n.xml', $xml);
+        $this->entrarComo($this->usuario(Papel::Recepcao, $this->unidade))->get(route('fiscal.baixar', [$o, $d, 'pdf' => 1]))->assertOk()->assertHeader('Content-Type', 'application/pdf');
     }
 
     /** XSDs oficiais de cada ambiente (produção: v1.01; produção restrita: leiaute de 20/10/2026). */

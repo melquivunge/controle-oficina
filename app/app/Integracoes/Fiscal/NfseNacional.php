@@ -4,6 +4,7 @@ namespace App\Integracoes\Fiscal;
 
 use App\Models\CertificadoDigital;
 use App\Models\Empresa;
+use App\Support\Danfse;
 use DOMDocument;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
@@ -228,7 +229,7 @@ class NfseNacional
             throw new RuntimeException('Sefin Nacional devolveu chave de acesso em formato inválido.');
         }
         preg_match('/<nNFSe>(\d+)<\/nNFSe>/', $xml, $m);
-        $pdf = $this->baixarDanfse($cert, $chave); // se falhar a nota continua autorizada; "Baixar PDF" tenta de novo depois
+        $pdf = $this->baixarDanfse($cert, $chave) ?? Danfse::gerar($xml); // oficial da Sefin; sem ele, gerado do XML autorizado
 
         return ['status' => 'autorizado', 'numero' => $m[1] ?? null, 'protocolo' => $chave, 'chave_acesso' => $chave, 'mensagem' => null,
             'xml' => $xml, 'documento' => $pdf, 'extensao' => 'pdf'];
