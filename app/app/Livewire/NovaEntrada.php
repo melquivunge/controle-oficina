@@ -2,13 +2,17 @@
 
 namespace App\Livewire;
 
+use App\Integracoes\Placa\ConsultaPlaca;
+use App\Integracoes\Placa\ConsultaPlacaIndisponivel;
 use App\Models\Cliente;
 use App\Models\Unidade;
 use App\Models\Veiculo;
 use App\Services\Entradas;
+use App\Support\Endereco;
 use App\Support\Fuso;
 use App\Support\Normaliza;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -18,28 +22,52 @@ class NovaEntrada extends Component
     use WithFileUploads;
 
     public ?int $unidade_id = null;
+
     public ?int $cliente_id = null;
+
     public string $busca = ''; // 06/11/2026: achar cliente já cadastrado pelo nome (cadastro da rede; tolerante a erro de digitação)
+
     public string $nome = '';
+
     public string $telefone = '';
+
+    public string $documento = '';
+
     public string $placa = '';
+
     public string $motivo = '';
+
     public string $modelo = '';
+
     public string $marca = '';
+
     public string $ano = '';
+
     public string $cor = '';
+
     public ?string $avisoPlaca = null; // resultado da consulta externa sem dados
+
     public ?string $origemVeiculo = null; // 'sistema' | 'consulta' (06/11/2026: dados puxados pela placa)
+
     public string $quilometragem = '';
+
     public string $observacoes = '';
+
     public array $fotos = [];
+
     public bool $contingencia = false;
+
     public string $horario_original = '';
+
     public string $contingencia_nota = '';
+
     public bool $confirmar_transferencia = false;
+
     // Entrada sem veículo/placa (peças avulsas, ex.: jogo de rodas) e endereço opcional do cliente.
     public bool $sem_veiculo = false;
+
     public string $item_descricao = '';
+
     public array $endereco = ['cep' => '', 'logradouro' => '', 'numero' => '', 'complemento' => '', 'bairro' => '', 'cidade' => '', 'uf' => ''];
 
     public function mount(): void
@@ -63,6 +91,7 @@ class NovaEntrada extends Component
             'cliente_id' => ['nullable', 'integer', Rule::exists('clientes', 'id')->whereNull('mesclado_em_id')],
             'nome' => ['required', 'string', 'min:2', 'max:150'],
             'telefone' => ['required', 'regex:/^\d{10,11}$/'],
+            'documento' => ['nullable', 'regex:/^(\d{11}|\d{14})$/'],
             'sem_veiculo' => ['boolean'],
             'placa' => ['exclude_if:sem_veiculo,true', 'required', 'regex:'.Normaliza::REGEX_PLACA],
             'item_descricao' => ['exclude_unless:sem_veiculo,true', 'required', 'string', 'min:3', 'max:200'],
@@ -84,7 +113,7 @@ class NovaEntrada extends Component
             'endereco.complemento' => ['nullable', 'string', 'max:80'],
             'endereco.bairro' => ['nullable', 'string', 'max:80'],
             'endereco.cidade' => ['nullable', 'string', 'max:80'],
-            'endereco.uf' => ['nullable', Rule::in(\App\Support\Endereco::UFS)],
+            'endereco.uf' => ['nullable', Rule::in(Endereco::UFS)],
             'horario_original' => ['exclude_unless:contingencia,true', 'required', 'date'],
             'contingencia_nota' => ['exclude_unless:contingencia,true', 'required', 'string', 'min:5', 'max:500'],
         ];
@@ -102,6 +131,7 @@ class NovaEntrada extends Component
     {
         return [
             'telefone.regex' => 'Informe o telefone com DDD (10 ou 11 dígitos).',
+            'documento.regex' => 'CPF (11 dígitos) ou CNPJ (14 dígitos).',
             'placa.regex' => 'Placa inválida. Use o formato ABC1234 ou ABC1D23.',
             'unidade_id.in' => 'Escolha uma unidade ativa à qual você tem acesso.',
             'endereco.cep.regex' => 'Informe o CEP com 8 dígitos.',
@@ -156,13 +186,13 @@ class NovaEntrada extends Component
         if ($this->origemVeiculo === 'sistema') {
             return; // já cadastrada: dados do sistema
         }
-        if (! \Illuminate\Support\Facades\RateLimiter::attempt('consulta-placa:'.auth()->id(), 20, fn () => true)) {
+        if (! RateLimiter::attempt('consulta-placa:'.auth()->id(), 20, fn () => true)) {
             $this->avisoPlaca = 'Muitas consultas seguidas. Aguarde um minuto ou preencha os dados à mão.';
 
             return;
         }
         try {
-            $dados = app(\App\Integracoes\Placa\ConsultaPlaca::class)->consultar($this->placa);
+            $dados = app(ConsultaPlaca::class)->consultar($this->placa);
         } catch (\Throwable $e) {
             report($e);
             $dados = null;
@@ -196,6 +226,7 @@ class NovaEntrada extends Component
         $this->cliente_id = $cliente->id;
         $this->nome = $cliente->nome;
         $this->telefone = $cliente->telefone;
+        $this->documento = auth()->user()->can('ver_contato_cliente') ? (string) $cliente->documento : '';
         $this->busca = '';
         // Um só veículo e placa vazia: já preenche (dá para trocar se veio com outro carro).
         if (! $this->sem_veiculo && $this->placa === '' && $cliente->veiculos->count() === 1) {
@@ -216,7 +247,8 @@ class NovaEntrada extends Component
     {
         $this->telefone = Normaliza::telefone($this->telefone);
         $this->placa = $this->sem_veiculo ? '' : Normaliza::placa($this->placa);
-        $this->endereco = array_map(fn ($v) => (string) $v, \App\Support\Endereco::normalizar($this->endereco));
+        $this->documento = (string) preg_replace('/\D/', '', $this->documento);
+        $this->endereco = array_map(fn ($v) => (string) $v, Endereco::normalizar($this->endereco));
         if (! auth()->user()->can('ver_contato_cliente')) {
             $this->endereco = array_fill_keys(array_keys($this->endereco), '');
         }
@@ -260,7 +292,7 @@ class NovaEntrada extends Component
         return view('livewire.nova-entrada', [
             'unidades' => Unidade::visiveisPara($user)->where('ativa', true)->orderBy('nome')->get(),
             'sugestoes' => $sugestoes,
-            'consultaDisponivel' => ! app(\App\Integracoes\Placa\ConsultaPlaca::class) instanceof \App\Integracoes\Placa\ConsultaPlacaIndisponivel,
+            'consultaDisponivel' => ! app(ConsultaPlaca::class) instanceof ConsultaPlacaIndisponivel,
             'veiculoExistente' => ! $this->sem_veiculo && strlen($this->placa) === 7 ? Veiculo::with('cliente')->where('placa', $this->placa)->first() : null,
         ]);
     }

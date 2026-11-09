@@ -56,6 +56,9 @@
                     </div>
                 @endunless
                 @include('livewire.partials.campo', ['nome' => 'nome', 'rotulo' => 'Nome do cliente', 'atributos' => ['autocomplete' => 'off']])
+                @can('ver_contato_cliente')
+                    @include('livewire.partials.campo', ['nome' => 'documento', 'rotulo' => 'CPF ou CNPJ (necessário para a nota fiscal)', 'atributos' => ['inputmode' => 'numeric', 'autocomplete' => 'off']])
+                @endcan
                 @unless ($sem_veiculo)
                     @include('livewire.partials.campo', ['nome' => 'marca', 'rotulo' => 'Marca (opcional)', 'atributos' => ['autocomplete' => 'off']])
                     @include('livewire.partials.campo', ['nome' => 'modelo', 'rotulo' => 'Modelo do veículo (opcional)', 'atributos' => ['autocomplete' => 'off']])

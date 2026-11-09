@@ -9,11 +9,13 @@ use App\Models\Ordem;
 use App\Models\Unidade;
 use App\Models\User;
 use App\Models\Veiculo;
+use App\Support\Endereco;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class Entradas
 {
@@ -109,14 +111,20 @@ class Entradas
     private function cliente(array $dados, User $ator): Cliente
     {
         // Endereço opcional informado na entrada: só aceito de quem vê contato do cliente (mecânico nunca).
-        $endereco = $ator->pode('ver_contato_cliente') ? array_filter(\App\Support\Endereco::normalizar($dados['endereco'] ?? []), fn ($v) => $v !== null) : [];
+        $endereco = $ator->pode('ver_contato_cliente') ? array_filter(Endereco::normalizar($dados['endereco'] ?? []), fn ($v) => $v !== null) : [];
         $cliente = $this->clienteBase($dados);
+        $documento = $ator->pode('ver_contato_cliente') ? preg_replace('/\D/', '', (string) ($dados['documento'] ?? '')) : '';
+        if ($documento !== '' && $cliente->documento !== $documento) {
+            $cliente->documento = $documento; // fora do fillable; a auditoria não leva o número
+            $cliente->save();
+            Auditoria::registrar('cliente_alterado', $cliente, null, ['documento_informado' => true], 'CPF/CNPJ informado na entrada', unidadeId: $dados['unidade_id'], ator: $ator);
+        }
         if ($endereco) {
-            $antes = $cliente->only(\App\Support\Endereco::CAMPOS);
-            $cliente->fill($endereco + array_fill_keys(\App\Support\Endereco::CAMPOS, null));
+            $antes = $cliente->only(Endereco::CAMPOS);
+            $cliente->fill($endereco + array_fill_keys(Endereco::CAMPOS, null));
             if ($cliente->isDirty()) {
                 $cliente->save();
-                Auditoria::registrar('cliente_alterado', $cliente, $antes, $cliente->only(\App\Support\Endereco::CAMPOS), 'Endereço informado na entrada', unidadeId: $dados['unidade_id'], ator: $ator);
+                Auditoria::registrar('cliente_alterado', $cliente, $antes, $cliente->only(Endereco::CAMPOS), 'Endereço informado na entrada', unidadeId: $dados['unidade_id'], ator: $ator);
             }
         }
 
@@ -154,7 +162,7 @@ class Entradas
         }
         if ($veiculo->cliente_id !== $cliente->id) {
             if (empty($dados['confirmar_transferencia'])) {
-                throw \Illuminate\Validation\ValidationException::withMessages(['confirmar_transferencia' => 'Esta placa pertence a outro cliente. Confirme a transferência ou use o cadastro existente.']);
+                throw ValidationException::withMessages(['confirmar_transferencia' => 'Esta placa pertence a outro cliente. Confirme a transferência ou use o cadastro existente.']);
             }
             $antes = ['cliente_id' => $veiculo->cliente_id];
             $veiculo->cliente_id = $cliente->id;

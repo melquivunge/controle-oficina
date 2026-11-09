@@ -4,16 +4,22 @@ namespace Tests\Feature;
 
 use App\Enums\Papel;
 use App\Enums\StatusOrdem;
+use App\Integracoes\Placa\ConsultaPlaca;
+use App\Integracoes\Placa\IntegrasistPlaca;
+use App\Integracoes\Placa\SimuladorPlaca;
 use App\Livewire\NovaEntrada;
 use App\Models\AuditEvent;
 use App\Models\Cliente;
 use App\Models\Ordem;
 use App\Models\Unidade;
+use App\Models\User;
 use App\Models\Veiculo;
 use App\Services\Entradas;
 use App\Services\Ordens;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Http\UploadedFile;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
@@ -81,7 +87,7 @@ class EntradaOrdemTest extends TestCase
     {
         $a = Unidade::factory()->create(['codigo' => 'ASN']);
         $b = Unidade::factory()->create(['codigo' => 'TAG']);
-        $dono = \App\Models\User::factory()->proprietario()->create();
+        $dono = User::factory()->proprietario()->create();
         $s = app(Entradas::class);
 
         $o1 = $s->registrar($dono, $this->entrada($a));
@@ -96,7 +102,7 @@ class EntradaOrdemTest extends TestCase
     public function test_placa_existente_com_outro_cliente_transfere_veiculo_com_auditoria(): void
     {
         $unidade = Unidade::factory()->create();
-        $dono = \App\Models\User::factory()->proprietario()->create();
+        $dono = User::factory()->proprietario()->create();
         $s = app(Entradas::class);
         $s->registrar($dono, $this->entrada($unidade));
         try {
@@ -136,7 +142,7 @@ class EntradaOrdemTest extends TestCase
     {
         Storage::fake('local');
         [$a, $b] = Unidade::factory()->count(2)->create();
-        $dono = \App\Models\User::factory()->proprietario()->create();
+        $dono = User::factory()->proprietario()->create();
         $ordemB = app(Entradas::class)->registrar($dono, $this->entrada($b), [$this->foto()]);
         $gerenteA = $this->usuario(Papel::Gerente, $a);
 
@@ -153,7 +159,7 @@ class EntradaOrdemTest extends TestCase
     public function test_fila_do_mecanico_e_assuncao_do_diagnostico(): void
     {
         $unidade = Unidade::factory()->create();
-        $dono = \App\Models\User::factory()->proprietario()->create();
+        $dono = User::factory()->proprietario()->create();
         $ordem = app(Entradas::class)->registrar($dono, $this->entrada($unidade));
         $m1 = $this->usuario(Papel::Mecanico, $unidade);
         $m2 = $this->usuario(Papel::Mecanico, $unidade);
@@ -231,7 +237,7 @@ class EntradaOrdemTest extends TestCase
     public function test_edicao_de_cliente_e_uso_de_cadastro_limitados_a_quem_atende(): void
     {
         [$a, $b] = Unidade::factory()->count(2)->create();
-        $dono = \App\Models\User::factory()->proprietario()->create();
+        $dono = User::factory()->proprietario()->create();
         $ob = app(Entradas::class)->registrar($dono, $this->entrada($b));
         $recA = $this->usuario(Papel::Recepcao, $a);
         $this->entrarComo($recA)->put("/clientes/{$ob->cliente_id}", ['nome' => 'X', 'telefone' => '61900001111'])->assertForbidden();
@@ -246,7 +252,7 @@ class EntradaOrdemTest extends TestCase
     public function test_nova_entrada_busca_cliente_pelo_nome(): void
     {
         $a = Unidade::factory()->create();
-        $o = app(Entradas::class)->registrar(\App\Models\User::factory()->proprietario()->create(), $this->entrada($a));
+        $o = app(Entradas::class)->registrar(User::factory()->proprietario()->create(), $this->entrada($a));
         $rec = $this->usuario(Papel::Recepcao, $a);
         Livewire::actingAs($rec)->test(NovaEntrada::class)->set('busca', 'ma')->assertDontSee('Usar este cadastro') // menos de 3 letras
             ->set('busca', 'xyzw')->assertSee('Nenhum cliente encontrado')
@@ -273,14 +279,14 @@ class EntradaOrdemTest extends TestCase
     public function test_banco_rejeita_status_invalido_e_cancelamento_sem_motivo(): void
     {
         $ordem = Ordem::factory()->create();
-        $this->expectException(\Illuminate\Database\QueryException::class);
-        \Illuminate\Support\Facades\DB::table('ordens')->where('id', $ordem->id)->update(['status' => 'cancelado']);
+        $this->expectException(QueryException::class);
+        DB::table('ordens')->where('id', $ordem->id)->update(['status' => 'cancelado']);
     }
 
     public function test_painel_mostra_somente_ordens_abertas_da_unidade(): void
     {
         [$a, $b] = Unidade::factory()->count(2)->create();
-        $dono = \App\Models\User::factory()->proprietario()->create();
+        $dono = User::factory()->proprietario()->create();
         $oa = app(Entradas::class)->registrar($dono, $this->entrada($a));
         $ob = app(Entradas::class)->registrar($dono, $this->entrada($b, ['placa' => 'XYZ9876']));
         $this->entrarComo($this->usuario(Papel::Recepcao, $a))->get('/')->assertOk()->assertSee($oa->numero)->assertDontSee($ob->numero);
@@ -293,7 +299,7 @@ class EntradaOrdemTest extends TestCase
     {
         $a = Unidade::factory()->create();
         $rec = $this->usuario(Papel::Recepcao, $a);
-        $esperado = app(\App\Integracoes\Placa\SimuladorPlaca::class)->consultar('BRA2E19');
+        $esperado = app(SimuladorPlaca::class)->consultar('BRA2E19');
 
         // Placa nova: preenche pela consulta; o que for digitado é salvo no cadastro do veículo.
         Livewire::actingAs($rec)->test(NovaEntrada::class)->set('placa', 'bra-2e19')->assertSet('marca', '')->assertSee('Buscar dados do veículo'); // digitar não consulta fora
@@ -301,7 +307,7 @@ class EntradaOrdemTest extends TestCase
             ->assertSet('marca', $esperado['marca'])->assertSet('modelo', $esperado['modelo'])->assertSet('ano', (string) $esperado['ano'])
             ->assertSet('cor', $esperado['cor'])->assertSee('preenchidos pela consulta da placa')->assertSee('SIMULAÇÃO: dados fictícios');
         $c->set('cor', 'Azul')->set('nome', 'Paulo Reis')->set('telefone', '61977776666')->set('motivo', 'Revisão')->call('salvar')->assertHasNoErrors();
-        $v = \App\Models\Veiculo::where('placa', 'BRA2E19')->sole();
+        $v = Veiculo::where('placa', 'BRA2E19')->sole();
         $this->assertSame([$esperado['marca'], $esperado['modelo'], $esperado['ano'], 'Azul'], [$v->marca, $v->modelo, $v->ano, $v->cor]);
 
         // Placa já no sistema: puxa veículo e cliente (nada da consulta).
@@ -320,7 +326,7 @@ class EntradaOrdemTest extends TestCase
 
         // Produção sem provedor contratado: nada é consultado; a recepção digita.
         config(['oficina.integracoes' => 'real']);
-        $this->assertNull(app(\App\Integracoes\Placa\ConsultaPlaca::class)->consultar('BRA2E19'));
+        $this->assertNull(app(ConsultaPlaca::class)->consultar('BRA2E19'));
         Livewire::actingAs($rec)->test(NovaEntrada::class)->assertDontSee('Buscar dados do veículo'); // sem provedor: sem botão
     }
 
@@ -328,26 +334,26 @@ class EntradaOrdemTest extends TestCase
     public function test_consulta_placa_integrasist(): void
     {
         config(['oficina.placa.provedor' => 'integrasist']);
-        \Illuminate\Support\Facades\Http::fake([
-            '*/sinesp/placa/PWR8F45' => \Illuminate\Support\Facades\Http::response(['ano' => '2015', 'anoModelo' => '2015', 'chassi' => '***96462', 'codigoRetorno' => '0', 'cor' => 'PRATA',
+        Http::fake([
+            '*/sinesp/placa/PWR8F45' => Http::response(['ano' => '2015', 'anoModelo' => '2015', 'chassi' => '***96462', 'codigoRetorno' => '0', 'cor' => 'PRATA',
                 'marca' => 'M.BENZ', 'mensagemRetorno' => 'Consulta efetuada com sucesso', 'modelo' => 'C180', 'municipio' => 'BRASILIA', 'placa' => 'PWR8F45', 'uf' => 'DF']),
-            '*/sinesp/placa/JIK2116' => \Illuminate\Support\Facades\Http::response(['ano' => '2013', 'anoModelo' => '2014', 'codigoRetorno' => '0', 'cor' => 'PRETA',
+            '*/sinesp/placa/JIK2116' => Http::response(['ano' => '2013', 'anoModelo' => '2014', 'codigoRetorno' => '0', 'cor' => 'PRETA',
                 'marca' => 'HYUNDAI', 'modelo' => 'ELANTRA', 'placa' => 'JIK2B16']), // fonte devolve no formato Mercosul
-            '*/sinesp/placa/ERR1A23' => \Illuminate\Support\Facades\Http::response(['codigoRetorno' => '3', 'mensagemRetorno' => 'Veículo não encontrado']),
-            '*/sinesp/placa/OFF1A23' => \Illuminate\Support\Facades\Http::response('', 503),
+            '*/sinesp/placa/ERR1A23' => Http::response(['codigoRetorno' => '3', 'mensagemRetorno' => 'Veículo não encontrado']),
+            '*/sinesp/placa/OFF1A23' => Http::response('', 503),
         ]);
-        $c = app(\App\Integracoes\Placa\ConsultaPlaca::class);
-        $this->assertInstanceOf(\App\Integracoes\Placa\IntegrasistPlaca::class, $c);
+        $c = app(ConsultaPlaca::class);
+        $this->assertInstanceOf(IntegrasistPlaca::class, $c);
         $this->assertSame(['marca' => 'M.BENZ', 'modelo' => 'C180', 'ano' => 2015, 'cor' => 'Prata'], $c->consultar('PWR8F45'));
-        $this->assertSame(['TOYOTA', 'HILUX CDSRXA4FD'], \App\Integracoes\Placa\IntegrasistPlaca::marcaModelo('I/TOYOTA HILUX CDSRXA4FD', 'I/TOYOTA HILUX CDSRXA4FD'));
-        $this->assertSame(['VW', 'GOL 1.0'], \App\Integracoes\Placa\IntegrasistPlaca::marcaModelo('VW/GOL 1.0', 'VW/GOL 1.0'));
-        $this->assertSame(['M.BENZ', 'C180'], \App\Integracoes\Placa\IntegrasistPlaca::marcaModelo('M.BENZ', 'C180'));
+        $this->assertSame(['TOYOTA', 'HILUX CDSRXA4FD'], IntegrasistPlaca::marcaModelo('I/TOYOTA HILUX CDSRXA4FD', 'I/TOYOTA HILUX CDSRXA4FD'));
+        $this->assertSame(['VW', 'GOL 1.0'], IntegrasistPlaca::marcaModelo('VW/GOL 1.0', 'VW/GOL 1.0'));
+        $this->assertSame(['M.BENZ', 'C180'], IntegrasistPlaca::marcaModelo('M.BENZ', 'C180'));
         $this->assertSame(['marca' => 'HYUNDAI', 'modelo' => 'ELANTRA', 'ano' => 2014, 'cor' => 'Preta'], $c->consultar('JIK2116'));
         $this->assertNull($c->consultar('ERR1A23'));
         $this->assertNull($c->consultar('OFF1A23'));
         $this->assertNull($c->consultar('../x'));
         $c->consultar('PWR8F45'); // guardado: não consulta de novo
-        \Illuminate\Support\Facades\Http::assertSentCount(4);
+        Http::assertSentCount(4);
 
         $rec = $this->usuario(Papel::Recepcao, Unidade::factory()->create());
         Livewire::actingAs($rec)->test(NovaEntrada::class)->set('placa', 'pwr8f45')->call('consultarPlaca')->assertSet('modelo', 'C180')->assertSet('ano', '2015')
@@ -363,10 +369,10 @@ class EntradaOrdemTest extends TestCase
         $this->get(route('clientes.create'))->assertOk();
         $this->post(route('clientes.store'), ['nome' => 'Carla Nova', 'telefone' => '(61) 98888-1234', 'documento' => '123.456.789-09', 'placa' => 'abc-1d23', 'marca' => 'FIAT', 'ano' => '2019'])
             ->assertRedirect();
-        $c = \App\Models\Cliente::where('nome', 'Carla Nova')->sole();
+        $c = Cliente::where('nome', 'Carla Nova')->sole();
         $this->assertSame(['61988881234', '12345678909'], [$c->telefone, $c->documento]);
         $this->assertSame(['FIAT', 2019], [$c->veiculos->first()->marca, $c->veiculos->first()->ano]);
-        $this->assertSame(0, \App\Models\Ordem::count(), 'nenhuma OS criada');
+        $this->assertSame(0, Ordem::count(), 'nenhuma OS criada');
 
         // Telefone repetido pede confirmação; placa repetida nunca.
         $this->post(route('clientes.store'), ['nome' => 'Filho da Carla', 'telefone' => '61988881234'])->assertSessionHasErrors('telefone');
@@ -375,20 +381,32 @@ class EntradaOrdemTest extends TestCase
         $this->entrarComo($this->usuario(Papel::Mecanico, $u))->get(route('clientes.create'))->assertForbidden();
 
         // Lista sem busca mostra cadastros sem atendimento (ex.: importados); a loja pode completar o cadastro.
-        $importado = \App\Models\Cliente::create(['nome' => 'Importado Antigo', 'telefone' => '']);
+        $importado = Cliente::create(['nome' => 'Importado Antigo', 'telefone' => '']);
         $this->entrarComo($rec)->get(route('clientes.index'))->assertSee('Importado Antigo')->assertSee('Carla Nova');
         $this->put(route('clientes.update', $importado), ['nome' => 'Importado Antigo', 'telefone' => '61955554444'])->assertRedirect();
         $this->assertSame('61955554444', $importado->fresh()->telefone);
         $this->get(route('veiculos.index'))->assertOk()->assertSee('ABC1D23');
     }
 
+    public function test_nova_entrada_cadastra_cpf_do_cliente_novo_e_valida(): void
+    {
+        $u = Unidade::factory()->create();
+        $rec = $this->usuario(Papel::Recepcao, $u);
+        $base = fn () => Livewire::actingAs($rec)->test(NovaEntrada::class)->set('nome', 'Cliente Novo')->set('telefone', '61991110000')->set('placa', 'ABC1D23')->set('motivo', 'Teste');
+        $base()->set('documento', '123')->call('salvar')->assertHasErrors(['documento' => 'regex']);
+        $this->assertSame(0, Ordem::count());
+        $base()->assertSee('CPF ou CNPJ')->set('documento', '529.982.247-25')->call('salvar')->assertHasNoErrors();
+        $this->assertSame('52998224725', Ordem::sole()->cliente->documento);
+        $this->assertStringNotContainsString('52998224725', json_encode(AuditEvent::where('acao', 'like', 'cliente%')->get()->map->depois));
+    }
+
     public function test_proprietario_com_uma_so_unidade_registra_entrada(): void
     {
-        \App\Models\Unidade::query()->update(['ativa' => false]);
-        $u = \App\Models\Unidade::factory()->create();
-        \Livewire\Livewire::actingAs($this->usuario(\App\Enums\Papel::Proprietario))->test(\App\Livewire\NovaEntrada::class)
+        Unidade::query()->update(['ativa' => false]);
+        $u = Unidade::factory()->create();
+        Livewire::actingAs($this->usuario(Papel::Proprietario))->test(NovaEntrada::class)
             ->set('nome', 'Cliente Unico')->set('telefone', '6199157768')->set('placa', 'UBS2B09')->set('motivo', 'Teste')
             ->call('salvar')->assertHasNoErrors();
-        $this->assertSame(1, \App\Models\Ordem::where('unidade_id', $u->id)->count());
+        $this->assertSame(1, Ordem::where('unidade_id', $u->id)->count());
     }
 }
