@@ -15,12 +15,15 @@ use RuntimeException;
 /**
  * NFS-e Nacional pela API da Sefin Nacional (09/11/2026, etapa 2). Leiaute DPS 1.01 espelhando o que o sistema
  * antigo emitia com sucesso no DF (Simples Nacional, item 14.01, ISS não retido). Assinatura RSA-SHA256 e mTLS
- * com o certificado A1 em memória (blobs do cURL; nada é gravado em disco).
+ * com o certificado A1 (arquivos temporários em /dev/shm, na memória, apagados ao terminar).
  * Homologação = "produção restrita" da Sefin: notas sem validade fiscal.
  */
 class NfseNacional
 {
     public const NS = 'http://www.sped.fazenda.gov.br/nfse';
+
+    /** @var ?array{0:string,1:string} certificado e chave em arquivos temporários */
+    private ?array $pem = null;
 
     public function __construct(private int $ambiente) {}
 
@@ -247,9 +250,19 @@ class NfseNacional
 
     private function http(Certificate $cert): PendingRequest
     {
-        return Http::timeout(60)->connectTimeout(15)->acceptJson()->withOptions(['curl' => [
-            CURLOPT_SSLCERT_BLOB => (string) $cert->publicKey, CURLOPT_SSLCERTTYPE => 'PEM',
-            CURLOPT_SSLKEY_BLOB => (string) $cert->privateKey, CURLOPT_SSLKEYTYPE => 'PEM',
-        ]]);
+        // Guzzle 8 não aceita CURLOPT_*_BLOB: só caminho de arquivo. Em /dev/shm (memória), 0600, apagados no __destruct.
+        if (! $this->pem) {
+            $dir = is_writable('/dev/shm') ? '/dev/shm' : sys_get_temp_dir();
+            $this->pem = [tempnam($dir, 'oficina-'), tempnam($dir, 'oficina-')];
+            file_put_contents($this->pem[0], (string) $cert->publicKey);
+            file_put_contents($this->pem[1], (string) $cert->privateKey);
+        }
+
+        return Http::timeout(60)->connectTimeout(15)->acceptJson()->withOptions(['cert' => $this->pem[0], 'ssl_key' => $this->pem[1]]);
+    }
+
+    public function __destruct()
+    {
+        array_map(fn ($f) => @unlink($f), $this->pem ?? []);
     }
 }

@@ -271,6 +271,25 @@ class FiscalRealTest extends TestCase
         }
     }
 
+    /** Sem Http::fake: as opções de mTLS precisam passar pelo handler cURL real do Guzzle (erro visto na produção). */
+    public function test_mtls_passa_pelo_curl_real_e_nao_deixa_chave_em_arquivo(): void
+    {
+        $this->guardarCertificado();
+        Http::allowStrayRequests();
+        $antes = glob('/dev/shm/oficina-*') ?: [];
+        $n = new NfseNacional(2);
+        $m = new \ReflectionMethod($n, 'http');
+        try {
+            $m->invoke($n, CertificadoDigital::sole()->certificado())->connectTimeout(1)->timeout(2)->get('https://127.0.0.1:1/');
+            $this->fail('a porta 1 não deveria responder');
+        } catch (\Illuminate\Http\Client\ConnectionException) {
+            $this->addToAssertionCount(1); // chegou a tentar conectar: as opções foram aceitas
+        }
+        unset($n, $m);
+        gc_collect_cycles();
+        $this->assertSame($antes, glob('/dev/shm/oficina-*') ?: [], 'chave apagada ao terminar');
+    }
+
     public function test_nfse_cancelamento_envia_evento_assinado(): void
     {
         config(['oficina.fiscal.modo' => 'homologacao']);
