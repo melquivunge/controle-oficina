@@ -1,8 +1,8 @@
 @extends('layouts.app', ['titulo' => 'Clientes'])
 @section('conteudo')
     <div class="page-head">
-        <div><h1>Clientes</h1><p class="subtitle">{{ $busca === '' ? 'Atendidos nas suas unidades, do mais recente para o mais antigo.' : 'Resultado da busca no cadastro da rede.' }} Clientes são criados na entrada; o telefone evita duplicidade.</p></div>
-        @can('registrar_entrada')<div class="page-acoes"><a class="button primary" href="{{ route('entradas.nova') }}"><span class="plus">＋</span> Nova entrada</a></div>@endcan
+        <div><h1>Clientes</h1><p class="subtitle">{{ $busca === '' ? 'Atendidos nas suas unidades (mais recentes primeiro) e cadastros ainda sem atendimento.' : 'Resultado da busca no cadastro da rede.' }}</p></div>
+        @can('registrar_entrada')<div class="page-acoes"><a class="button" href="{{ route('clientes.create') }}"><span class="plus">＋</span> Novo cliente</a><a class="button primary" href="{{ route('entradas.nova') }}"><span class="plus">＋</span> Nova entrada</a></div>@endcan
     </div>
     <form method="GET" class="barra-busca" role="search">
         <label class="barra-busca-rotulo" for="busca">Buscar cliente</label>
@@ -13,8 +13,8 @@
     </form>
     <p class="contagem">{{ $clientes->total() }} {{ $clientes->total() === 1 ? 'cliente' : 'clientes' }}@if ($busca !== '') para “{{ $busca }}”@endif</p>
     @if ($clientes->isEmpty())
-        <div class="vazio-cartao">@include('partials.icone', ['i' => 'clientes'])<p>{{ $busca === '' ? 'Nenhum cliente atendido nas suas unidades ainda.' : 'Nenhum cliente encontrado. Confira a grafia ou busque pela placa.' }}</p>
-            @can('registrar_entrada')<a class="button" href="{{ route('entradas.nova') }}">Registrar nova entrada</a>@endcan</div>
+        <div class="vazio-cartao">@include('partials.icone', ['i' => 'clientes'])<p>{{ $busca === '' ? 'Nenhum cliente cadastrado ainda.' : 'Nenhum cliente encontrado. Confira a grafia ou busque pela placa.' }}</p>
+            @can('registrar_entrada')<a class="button" href="{{ route('clientes.create') }}">Cadastrar cliente</a>@endcan</div>
     @else
         <ul class="lista-fichas">
             @foreach ($clientes as $c)

@@ -93,7 +93,9 @@ Route::middleware('auth')->group(function () {
 
         Route::middleware('can:registrar_entrada')->group(function () {
             Route::get('/clientes', [ClienteController::class, 'index'])->name('clientes.index');
-            Route::get('/clientes/{cliente}', [ClienteController::class, 'show'])->name('clientes.show');
+            Route::get('/clientes/novo', [ClienteController::class, 'create'])->name('clientes.create');
+            Route::post('/clientes', [ClienteController::class, 'store'])->middleware('throttle:30,1')->name('clientes.store');
+            Route::get('/clientes/{cliente}', [ClienteController::class, 'show'])->whereNumber('cliente')->name('clientes.show');
             Route::put('/clientes/{cliente}', [ClienteController::class, 'update'])->name('clientes.update');
             Route::post('/clientes/{cliente}/mesclar', [ClienteController::class, 'mesclar'])->name('clientes.mesclar');
         });

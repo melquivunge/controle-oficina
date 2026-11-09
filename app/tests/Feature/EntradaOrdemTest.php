@@ -267,7 +267,7 @@ class EntradaOrdemTest extends TestCase
 
     public function test_pagina_de_clientes_abre_sem_busca(): void
     {
-        $this->entrarComo($this->usuario(Papel::Recepcao))->get('/clientes')->assertOk()->assertSee('Nenhum cliente atendido nas suas unidades ainda.');
+        $this->entrarComo($this->usuario(Papel::Recepcao))->get('/clientes')->assertOk()->assertSee('Nenhum cliente cadastrado ainda.');
     }
 
     public function test_banco_rejeita_status_invalido_e_cancelamento_sem_motivo(): void
@@ -352,5 +352,33 @@ class EntradaOrdemTest extends TestCase
         $rec = $this->usuario(Papel::Recepcao, Unidade::factory()->create());
         Livewire::actingAs($rec)->test(NovaEntrada::class)->set('placa', 'pwr8f45')->call('consultarPlaca')->assertSet('modelo', 'C180')->assertSet('ano', '2015')
             ->assertSee('preenchidos pela consulta da placa')->assertDontSee('SIMULAÇÃO');
+    }
+
+    /** 09/11/2026: cadastro só do cliente; importados/sem atendimento aparecem na lista e podem ser completados pela loja. */
+    public function test_novo_cliente_sem_os_e_lista_inclui_sem_atendimento(): void
+    {
+        $u = Unidade::factory()->create();
+        $rec = $this->usuario(Papel::Recepcao, $u);
+        $this->entrarComo($rec)->get(route('clientes.index'))->assertOk()->assertSee('Novo cliente');
+        $this->get(route('clientes.create'))->assertOk();
+        $this->post(route('clientes.store'), ['nome' => 'Carla Nova', 'telefone' => '(61) 98888-1234', 'documento' => '123.456.789-09', 'placa' => 'abc-1d23', 'marca' => 'FIAT', 'ano' => '2019'])
+            ->assertRedirect();
+        $c = \App\Models\Cliente::where('nome', 'Carla Nova')->sole();
+        $this->assertSame(['61988881234', '12345678909'], [$c->telefone, $c->documento]);
+        $this->assertSame(['FIAT', 2019], [$c->veiculos->first()->marca, $c->veiculos->first()->ano]);
+        $this->assertSame(0, \App\Models\Ordem::count(), 'nenhuma OS criada');
+
+        // Telefone repetido pede confirmação; placa repetida nunca.
+        $this->post(route('clientes.store'), ['nome' => 'Filho da Carla', 'telefone' => '61988881234'])->assertSessionHasErrors('telefone');
+        $this->post(route('clientes.store'), ['nome' => 'Filho da Carla', 'telefone' => '61988881234', 'confirmar_telefone' => '1'])->assertRedirect();
+        $this->post(route('clientes.store'), ['nome' => 'Outro', 'telefone' => '61977770000', 'placa' => 'ABC1D23'])->assertSessionHasErrors('placa');
+        $this->entrarComo($this->usuario(Papel::Mecanico, $u))->get(route('clientes.create'))->assertForbidden();
+
+        // Lista sem busca mostra cadastros sem atendimento (ex.: importados); a loja pode completar o cadastro.
+        $importado = \App\Models\Cliente::create(['nome' => 'Importado Antigo', 'telefone' => '']);
+        $this->entrarComo($rec)->get(route('clientes.index'))->assertSee('Importado Antigo')->assertSee('Carla Nova');
+        $this->put(route('clientes.update', $importado), ['nome' => 'Importado Antigo', 'telefone' => '61955554444'])->assertRedirect();
+        $this->assertSame('61955554444', $importado->fresh()->telefone);
+        $this->get(route('veiculos.index'))->assertOk()->assertSee('ABC1D23');
     }
 }

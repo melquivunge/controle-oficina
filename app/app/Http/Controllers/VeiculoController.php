@@ -17,7 +17,7 @@ class VeiculoController extends Controller
         $visiveis = fn ($q) => $q->visiveisPara($user);
 
         $veiculos = Veiculo::with('cliente')
-            ->whereHas('ordens', $visiveis)
+            ->where(fn ($q) => $q->whereHas('ordens', $visiveis)->orWhereDoesntHave('ordens')) // + sem atendimento (importados/cadastro direto)
             ->withCount(['ordens' => $visiveis])
             ->when($placa !== '', fn ($q) => $q->where('placa', 'like', '%'.$placa.'%'))
             ->orderBy('placa')->paginate(24)->withQueryString();
