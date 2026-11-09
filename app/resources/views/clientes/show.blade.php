@@ -93,10 +93,10 @@
                 @if ($possiveisDuplicados->isNotEmpty())
                     <section class="helper">
                         <h2>Possível cadastro duplicado</h2>
-                        <p>Mesmo telefone em outro cadastro. Unificar move atendimentos e veículos para esta ficha; nada é apagado.</p>
+                        <p>Mesmo telefone ou mesmo nome em outro cadastro. Unificar traz para esta ficha atendimentos, veículos, histórico antigo e os dados que faltam aqui; nada é apagado.</p>
                         <form method="POST" action="{{ route('clientes.mesclar', $cliente) }}">
                             @csrf
-                            @include('partials.campo', ['nome' => 'duplicado_id', 'rotulo' => 'Cadastro a unificar', 'tipo' => 'select', 'opcoes' => $possiveisDuplicados->mapWithKeys(fn ($d) => [$d->id => $d->nome.' (#'.$d->id.')'])->all()])
+                            @include('partials.campo', ['nome' => 'duplicado_id', 'rotulo' => 'Cadastro a unificar', 'tipo' => 'select', 'opcoes' => $possiveisDuplicados->mapWithKeys(fn ($d) => [$d->id => $d->nome.' (#'.$d->id.') · '.($d->telefoneFormatado() ?: 'sem telefone').($d->documentoFormatado() ? ' · '.$d->documentoFormatado() : '')])->all()])
                             @include('partials.campo', ['nome' => 'motivo', 'rotulo' => 'Motivo'])
                             <button class="button" type="submit">Unificar cadastros</button>
                         </form>

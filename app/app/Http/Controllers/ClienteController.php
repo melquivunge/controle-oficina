@@ -111,7 +111,10 @@ class ClienteController extends Controller
             'historicoAntigo' => self::historicoAntigo($cliente),
             'ordens' => Ordem::visiveisPara($request->user())->with('veiculo', 'unidade')->where('cliente_id', $cliente->id)->orderByDesc('entrada_em')->limit(100)->get(),
             // Sem telefone (importados do sistema antigo): não sugere todos os sem telefone como duplicados.
-            'possiveisDuplicados' => $cliente->telefone === '' ? collect() : Cliente::ativos()->whereKeyNot($cliente->id)->where('telefone', $cliente->telefone)->get(),
+            // Mesmo telefone ou mesmo nome (sem acento/maiúsculas/espaços extras); sem telefone, só pelo nome.
+            'possiveisDuplicados' => Cliente::ativos()->whereKeyNot($cliente->id)->where(fn ($q) => $q
+                ->when($cliente->telefone !== '', fn ($q) => $q->orWhere('telefone', $cliente->telefone))
+                ->orWhereRaw("oficina_chave_nome(regexp_replace(trim(nome), '\\s+', ' ', 'g')) = oficina_chave_nome(regexp_replace(trim(?), '\\s+', ' ', 'g'))", [$cliente->nome]))->limit(20)->get(),
         ]);
     }
 
@@ -148,20 +151,8 @@ class ClienteController extends Controller
     {
         $this->authorize('mesclar_clientes');
         $dados = $request->validate(['duplicado_id' => ['required', 'integer'], 'motivo' => ['required', 'string', 'min:5', 'max:500']], [], ['motivo' => 'motivo']);
-        DB::transaction(function () use ($cliente, $dados) {
-            [$destino, $origem] = [Cliente::lockForUpdate()->findOrFail($cliente->id), Cliente::lockForUpdate()->findOrFail($dados['duplicado_id'])];
-            if ($destino->is($origem) || $destino->mesclado_em_id || $origem->mesclado_em_id) {
-                throw ValidationException::withMessages(['duplicado_id' => 'Escolha outro cadastro ativo para unificar.']);
-            }
-            $ordens = Ordem::where('cliente_id', $origem->id)->pluck('id');
-            $veiculos = $origem->veiculos()->pluck('id');
-            Ordem::whereIn('id', $ordens)->update(['cliente_id' => $destino->id]);
-            $origem->veiculos()->update(['cliente_id' => $destino->id]);
-            $origem->mesclado_em_id = $destino->id;
-            $origem->save();
-            Auditoria::registrar('cliente_mesclado', $destino, ['cliente_origem' => $origem->id], ['ordens' => $ordens->all(), 'veiculos' => $veiculos->all()], $dados['motivo'], unidadeId: request()->user()->unidade_id);
-        });
+        app(\App\Services\UnificacaoClientes::class)->unificar($cliente, Cliente::findOrFail($dados['duplicado_id']), $request->user(), $dados['motivo']);
 
-        return back()->with('sucesso', 'Cadastros unificados. Atendimentos e veículos foram mantidos.');
+        return back()->with('sucesso', 'Cadastros unificados. Atendimentos, veículos, histórico antigo e dados do outro cadastro foram mantidos nesta ficha.');
     }
 }
