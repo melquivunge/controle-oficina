@@ -16,6 +16,10 @@ class DocumentoFiscalHtml
 
     public static function resposta(FiscalDocument $doc, string $cache)
     {
+        if (str_ends_with((string) $doc->arquivo, '.pdf')) { // nota real (etapa 2): PDF oficial (DANFSe/DANFE); o cancelamento consta na Fazenda
+            return response(Storage::disk('local')->get($doc->arquivo), 200, ['Content-Type' => 'application/pdf', 'Cache-Control' => $cache,
+                'X-Content-Type-Options' => 'nosniff', 'Content-Disposition' => 'inline; filename="nota-'.preg_replace('/[^A-Za-z0-9-]/', '', (string) $doc->numero).'.pdf"']);
+        }
         $html = self::conteudo($doc);
 
         return response()->stream(function () use ($html) {

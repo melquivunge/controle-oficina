@@ -35,6 +35,7 @@ x-laravel: &laravel
     SESSION_ENCRYPT: "true"
     MAIL_MAILER: log
     OFICINA_INTEGRACOES: ${OFICINA_INTEGRACOES:-simulado}
+    OFICINA_FISCAL: ${OFICINA_FISCAL:-} # vazio = sem emissão real; homologacao = Fazenda sem validade fiscal; producao = notas reais
     OFICINA_PLACA_PROVEDOR: ${OFICINA_PLACA_PROVEDOR:-} # 'integrasist' = consulta de placa não oficial (só leitura)
     OFICINA_DESCONTO_EXIGE_APROVACAO: ${OFICINA_DESCONTO_EXIGE_APROVACAO:-false}
     OFICINA_PIX_WEBHOOK_SEGREDO: ${OFICINA_PIX_WEBHOOK_SEGREDO:?Defina OFICINA_PIX_WEBHOOK_SEGREDO no arquivo .env}

@@ -10,6 +10,8 @@
         "laravel/framework": "^13.17",
         "laravel/tinker": "^3.0",
         "livewire/livewire": "^4.0",
+        "nfephp-org/sped-da": "^1.1",
+        "nfephp-org/sped-nfe": "^5.2",
         "openspout/openspout": "^4"
     },
     "require-dev": {

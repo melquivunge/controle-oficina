@@ -184,6 +184,12 @@ Route::middleware(['auth', 'dois-fatores'])->group(function () {
         Route::get('/', 'edit')->name('fiscal.config.edit');
         Route::put('/', 'update')->name('fiscal.config.update');
     });
+    // Certificado digital A1 (09/11/2026, etapa 2): guardado criptografado; nunca exibido.
+    Route::middleware(['can:configurar', 'password.confirm', 'throttle:10,1'])->prefix('configuracoes/certificado')->controller(\App\Http\Controllers\CertificadoController::class)->group(function () {
+        Route::get('/', 'edit')->name('certificado.edit');
+        Route::post('/', 'store')->name('certificado.store');
+        Route::delete('/', 'destroy')->name('certificado.destroy');
+    });
     // Aparência (31/10/2026): temas personalizados só pelo proprietário; cada usuário escolhe o próprio tema.
     Route::middleware(['can:configurar', 'password.confirm', 'throttle:30,1'])->prefix('configuracoes/temas')->controller(\App\Http\Controllers\TemaController::class)->group(function () {
         Route::post('/', 'store')->name('temas.store');

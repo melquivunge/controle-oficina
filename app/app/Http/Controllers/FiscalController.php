@@ -7,8 +7,10 @@ use App\Models\MessageDelivery;
 use App\Models\Ordem;
 use App\Services\Fiscal;
 use App\Services\Mensagens;
-use Illuminate\Http\Request;
+use App\Support\DadosFiscais;
 use App\Support\DocumentoFiscalHtml;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class FiscalController extends Controller
@@ -17,7 +19,7 @@ class FiscalController extends Controller
     {
         $notas = $fiscal->solicitar($ordem, $request->user());
 
-        return back()->with('sucesso', $notas->map(fn ($d) => \App\Support\DadosFiscais::NOTAS[$d->tipo])->join(' e ').' solicitada'.($notas->count() > 1 ? 's' : '').'. O resultado aparece aqui em instantes.');
+        return back()->with('sucesso', $notas->map(fn ($d) => DadosFiscais::NOTAS[$d->tipo])->join(' e ').' solicitada'.($notas->count() > 1 ? 's' : '').'. O resultado aparece aqui em instantes.');
     }
 
     public function reprocessar(Request $request, Ordem $ordem, FiscalDocument $documento, Fiscal $fiscal)
@@ -62,9 +64,16 @@ class FiscalController extends Controller
 
     public function baixar(Request $request, Ordem $ordem, FiscalDocument $documento)
     {
-        abort_unless($documento->ordem_id === $ordem->id && $documento->arquivo, 404);
+        abort_unless($documento->ordem_id === $ordem->id && ($documento->arquivo || $documento->xml), 404);
         $this->authorize('view', $ordem);
         abort_unless($request->user()->pode('cobrar'), 403);
+        if ($request->boolean('xml') || ! $documento->arquivo) { // XML autorizado (etapa 2), para o contador
+            abort_unless($documento->xml, 404);
+
+            return response(Storage::disk('local')->get($documento->xml), 200, ['Content-Type' => 'application/xml',
+                'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff',
+                'Content-Disposition' => 'attachment; filename="'.($documento->chave_acesso ?: 'nota-'.$documento->id).'.xml"']);
+        }
 
         return DocumentoFiscalHtml::resposta($documento, 'private, no-store');
     }

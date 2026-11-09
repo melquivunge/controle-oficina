@@ -6,7 +6,7 @@
     @unless ($salvo)
         <p class="alert aviso" role="status">Valores preenchidos com o que o sistema antigo usava nas notas emitidas. Peça ao contador para conferir e salve.</p>
     @endunless
-    <p class="notice">A emissão real ainda não está ligada: depende do certificado digital da empresa e da homologação com a Fazenda do DF. Até lá as notas aparecem como indisponíveis (produção) ou simuladas (testes).</p>
+    <p class="notice">A emissão real usa o <a href="{{ route('certificado.edit') }}">certificado digital</a> da empresa. Os campos "próximo número" valem só para produção: devem continuar a numeração do sistema antigo (o contador confirma). Em homologação a numeração começa em 1.</p>
     <form method="POST" action="{{ route('fiscal.config.update') }}" class="form-panel">
         @csrf @method('PUT')
         <section class="form-section"><h2>Empresa</h2><div class="fields">
@@ -17,13 +17,13 @@
         </div></section>
         <section class="form-section"><h2>Nota de serviço (NFS-e Nacional — Fazenda do DF)</h2>
             <p class="hint">Padrão do sistema antigo: item 14.01 (manutenção e conservação de veículos), ISS 2%.</p><div class="fields">
-            @foreach (['nfse_c_trib_nac', 'nfse_c_trib_mun', 'nfse_c_nbs', 'nfse_aliquota_iss'] as $c)
+            @foreach (['nfse_serie', 'nfse_proximo_numero', 'nfse_c_trib_nac', 'nfse_c_trib_mun', 'nfse_c_nbs', 'nfse_aliquota_iss'] as $c)
                 @include('partials.campo', ['nome' => $c, 'rotulo' => \App\Support\DadosFiscais::ROTULOS[$c], 'valorAtual' => $dados[$c], 'atributos' => ['inputmode' => 'decimal']])
             @endforeach
         </div></section>
         <section class="form-section"><h2>Nota de venda de peças (NF-e 4.00 — SEFAZ)</h2>
             <p class="hint">Padrão do sistema antigo: CFOP 5102 (dentro do DF) e 6102 (fora), CSOSN 102, NCM 8708.70.90 (rodas). O NCM de cada peça pode ser definido no catálogo.</p><div class="fields">
-            @foreach (['nfe_serie', 'nfe_cfop_dentro', 'nfe_cfop_fora', 'nfe_csosn', 'nfe_ncm_padrao', 'nfe_natureza'] as $c)
+            @foreach (['nfe_serie', 'nfe_proximo_numero', 'nfe_cfop_dentro', 'nfe_cfop_fora', 'nfe_csosn', 'nfe_ncm_padrao', 'nfe_natureza'] as $c)
                 @include('partials.campo', ['nome' => $c, 'rotulo' => \App\Support\DadosFiscais::ROTULOS[$c], 'valorAtual' => $dados[$c]])
             @endforeach
         </div></section>

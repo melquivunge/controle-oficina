@@ -27,6 +27,7 @@ class DadosFiscaisController extends Controller
             'municipio_ibge' => ['required', 'regex:/^\\d{7}$/'],
             'nfse_c_trib_nac' => ['required', 'regex:/^\\d{6}$/'], 'nfse_c_trib_mun' => $digitos(1, 6), 'nfse_c_nbs' => $digitos(9),
             'nfse_aliquota_iss' => ['required', 'numeric', 'min:0', 'max:5'],
+            'nfse_serie' => ['required', 'regex:/^\\d{1,5}$/'], 'nfse_proximo_numero' => $digitos(1, 15), 'nfe_proximo_numero' => $digitos(1, 9),
             'nfe_serie' => ['required', 'regex:/^\\d{1,3}$/'], 'nfe_cfop_dentro' => ['required', 'regex:/^5\\d{3}$/'], 'nfe_cfop_fora' => ['required', 'regex:/^6\\d{3}$/'],
             'nfe_csosn' => ['required', 'regex:/^\\d{3}$/'], 'nfe_ncm_padrao' => ['required', 'regex:/^\\d{8}$/'], 'nfe_natureza' => ['required', 'string', 'max:60'],
         ], ['regex' => 'Formato inválido.'], DadosFiscais::ROTULOS);

@@ -4,12 +4,15 @@ namespace App\Services;
 
 use App\Enums\StatusOrdem;
 use App\Integracoes\Fiscal\EmissorFiscal;
+use App\Integracoes\Fiscal\EmissorReal;
 use App\Jobs\ProcessarDocumentoFiscal;
 use App\Models\FiscalDocument;
 use App\Models\Orcamento;
 use App\Models\Ordem;
 use App\Models\User;
+use App\Support\DadosFiscais;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -23,9 +26,9 @@ class Fiscal
      * Emite as notas que faltam (09/11/2026): NFS-e para os serviços e NF-e para as peças/produtos do orçamento aprovado.
      * Com $tipo, só aquela. Cada tipo tem no máximo uma nota ativa por ordem (índice único no banco).
      *
-     * @return \Illuminate\Support\Collection<int, FiscalDocument> notas criadas
+     * @return Collection<int, FiscalDocument> notas criadas
      */
-    public function solicitar(Ordem $ordem, User $ator, ?string $tipo = null): \Illuminate\Support\Collection
+    public function solicitar(Ordem $ordem, User $ator, ?string $tipo = null): Collection
     {
         if (! $ator->pode('cobrar') || ! $ator->acessaUnidade($ordem->unidade_id)) {
             throw new AuthorizationException('Sem permissão para solicitar documento fiscal.');
@@ -38,7 +41,7 @@ class Fiscal
                 throw ValidationException::withMessages(['fiscal' => 'É preciso um orçamento aprovado em ordem não cancelada.']);
             }
             $ativos = FiscalDocument::where('ordem_id', $o->id)->whereIn('status', ['pendente', 'processando', 'autorizado'])->pluck('tipo')->all();
-            $partes = array_filter(\App\Support\DadosFiscais::partes($orc->itens, (int) $orc->desconto_centavos), fn ($v) => $v > 0);
+            $partes = array_filter(DadosFiscais::partes($orc->itens, (int) $orc->desconto_centavos), fn ($v) => $v > 0);
             $faltam = array_diff_key($partes, array_flip($ativos));
             if ($tipo !== null) {
                 $faltam = array_intersect_key($faltam, [$tipo => true]);
@@ -78,27 +81,74 @@ class Fiscal
             return;
         }
         $ordem = Ordem::with('cliente', 'unidade')->findOrFail($doc->ordem_id);
+        $fiscal = DadosFiscais::atuais();
         try {
-            $r = $this->emissor->consultar($doc->chave_idempotencia)
-                ?? $this->emissor->emitir($doc->chave_idempotencia, [
-                    'tipo' => $doc->tipo, 'fiscal' => \App\Support\DadosFiscais::atuais(),
-                    'valor_centavos' => $doc->valor_centavos, 'ordem' => $ordem->numero, 'unidade' => $ordem->unidade->nome, 'cliente' => $ordem->cliente->nome,
-                    'cliente_endereco' => $ordem->cliente->enderecoTexto(), 'cliente_telefone' => $ordem->cliente->telefoneFormatado(), 'cliente_email' => $ordem->cliente->email,
-                    'itens' => Orcamento::findOrFail($doc->orcamento_id)->itens->where('tipo', $doc->tipo === 'nfe' ? 'produto' : 'servico')
-                        ->map->only('descricao', 'quantidade', 'preco_unitario_centavos', 'total_centavos', 'tipo')->values()->all(),
-                ]);
+            if ($this->emissor instanceof EmissorReal) {
+                $doc = $this->numerar($doc, $this->emissor->ambiente(), $fiscal);
+            }
+            $dados = [
+                'tipo' => $doc->tipo, 'fiscal' => $fiscal, 'serie' => $doc->serie, 'numero_dps' => $doc->numero_dps, 'criado_em' => $doc->created_at,
+                'valor_centavos' => $doc->valor_centavos, 'ordem' => $ordem->numero, 'unidade' => $ordem->unidade->nome, 'cliente' => $ordem->cliente->nome,
+                'cliente_documento' => $ordem->cliente->documento,
+                'cliente_endereco' => $ordem->cliente->enderecoTexto(), 'cliente_telefone' => $ordem->cliente->telefoneFormatado(), 'cliente_email' => $ordem->cliente->email,
+                'itens' => Orcamento::findOrFail($doc->orcamento_id)->itens()->with('catalogoItem')->get()->where('tipo', $doc->tipo === 'nfe' ? 'produto' : 'servico')
+                    ->map(fn ($i) => $i->only('descricao', 'quantidade', 'preco_unitario_centavos', 'total_centavos', 'tipo')
+                        + ['ncm' => $i->catalogoItem?->ncm, 'codigo' => $i->catalogo_item_id])->values()->all(),
+            ];
+            $r = $this->emissor->consultar($doc->chave_idempotencia, $dados) ?? $this->emissor->emitir($doc->chave_idempotencia, $dados);
         } catch (\Throwable $e) {
             $doc->update(['status' => 'pendente', 'mensagem' => mb_substr($e->getMessage(), 0, 300)]); // visível e recuperável
             throw $e;
         }
         $arquivo = null;
+        $base = "fiscal/{$doc->unidade_id}/{$doc->id}-".preg_replace('/\W/', '', (string) ($r['numero'] ?? 'sem-numero'));
         if (! empty($r['documento'])) {
-            $arquivo = "fiscal/{$doc->unidade_id}/{$doc->id}-{$r['numero']}.html";
+            $arquivo = $base.'.'.($r['extensao'] ?? 'html');
             Storage::disk('local')->put($arquivo, $r['documento']);
         }
+        if (! empty($r['xml'])) {
+            Storage::disk('local')->put($base.'.xml', $r['xml']);
+        }
         $doc->update(['status' => $r['status'], 'numero' => $r['numero'] ?? $doc->numero, 'protocolo' => $r['protocolo'] ?? $doc->protocolo,
+            'chave_acesso' => $r['chave_acesso'] ?? $doc->chave_acesso, 'xml' => ! empty($r['xml']) ? $base.'.xml' : $doc->xml,
             'mensagem' => $r['mensagem'], 'arquivo' => $arquivo ?? $doc->arquivo, 'autorizado_em' => $r['status'] === 'autorizado' ? now() : null]);
         Auditoria::registrar('fiscal_'.$r['status'], $ordem, depois: ['documento_id' => $doc->id, 'numero' => $r['numero'] ?? null], motivo: $r['mensagem'], atorTipo: 'sistema');
+    }
+
+    /**
+     * Fixa série e número antes do envio (o mesmo número em toda nova tentativa = sem nota duplicada).
+     * Rejeitada não consome número: a nova tentativa da mesma ordem reaproveita o número da rejeitada.
+     * Produção começa no "próximo número" configurado (continua a numeração do sistema antigo).
+     */
+    private function numerar(FiscalDocument $doc, int $ambiente, array $fiscal): FiscalDocument
+    {
+        if ($doc->numero_dps) {
+            return $doc;
+        }
+        $serie = (string) (int) $fiscal[$doc->tipo === 'nfe' ? 'nfe_serie' : 'nfse_serie'];
+        $inicial = $ambiente !== 1 ? 1 : (int) $fiscal[$doc->tipo === 'nfe' ? 'nfe_proximo_numero' : 'nfse_proximo_numero'];
+        if ($ambiente === 1 && $inicial < 1) {
+            throw new \RuntimeException('Informe o próximo número da '.($doc->tipo === 'nfe' ? 'NF-e' : 'NFS-e').' em Configurações → Dados fiscais antes de emitir em produção.');
+        }
+
+        return DB::transaction(function () use ($doc, $ambiente, $serie, $inicial) {
+            $d = FiscalDocument::lockForUpdate()->findOrFail($doc->id);
+            $rejeitada = FiscalDocument::where('ordem_id', $d->ordem_id)->where('tipo', $d->tipo)->where('ambiente', $ambiente)->where('serie', $serie)
+                ->where('status', 'rejeitado')->whereNotNull('numero_dps')
+                ->whereRaw("coalesce(mensagem, '') !~ '^(110|205|301|302|303) '") // denegada consome o número na SEFAZ
+                ->lockForUpdate()->first();
+            if ($rejeitada) {
+                $numero = $rejeitada->numero_dps;
+                $rejeitada->update(['numero_dps' => null]);
+            } else {
+                $numero = DB::selectOne('INSERT INTO fiscal_numeracao (tipo, ambiente, serie, ultimo) VALUES (?, ?, ?, ?)
+                    ON CONFLICT (tipo, ambiente, serie) DO UPDATE SET ultimo = GREATEST(fiscal_numeracao.ultimo + 1, EXCLUDED.ultimo) RETURNING ultimo',
+                    [$d->tipo, $ambiente, $serie, max($inicial, 1)])->ultimo;
+            }
+            $d->update(['ambiente' => $ambiente, 'serie' => $serie, 'numero_dps' => $numero]);
+
+            return $d;
+        });
     }
 
     /** Rejeitado: nova tentativa cria novo registro (nova chave); o rejeitado é preservado. */
@@ -129,7 +179,7 @@ class Fiscal
             if ($d->status !== 'autorizado') {
                 throw ValidationException::withMessages(['fiscal' => 'Somente documento autorizado pode ser cancelado.']);
             }
-            $this->emissor->cancelar($d->chave_idempotencia, $motivo);
+            $this->emissor->cancelar($d->chave_idempotencia, $motivo, ['tipo' => $d->tipo, 'chave_acesso' => $d->chave_acesso, 'protocolo' => $d->protocolo]);
             $d->update(['status' => 'cancelado', 'cancelado_em' => now(), 'cancelamento_motivo' => $motivo]);
             Auditoria::registrar('fiscal_cancelado', Ordem::find($d->ordem_id), depois: ['documento_id' => $d->id, 'numero' => $d->numero], motivo: $motivo, ator: $ator);
         });

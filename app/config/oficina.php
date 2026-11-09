@@ -40,6 +40,9 @@ return [
     ],
     'fiscal' => [
         'simular_indisponivel' => (bool) env('OFICINA_FISCAL_SIMULAR_INDISPONIVEL', false),
+        // Etapa 2: vazio = simulado/indisponível (OFICINA_INTEGRACOES); homologacao = Fazenda sem validade fiscal; producao = notas reais.
+        // O banco de demonstração nunca fala com a Fazenda, qualquer que seja o interruptor.
+        'modo' => env('OFICINA_BANCO') !== 'demo' && in_array(env('OFICINA_FISCAL'), ['homologacao', 'producao'], true) ? env('OFICINA_FISCAL') : null,
     ],
     // Central de WhatsApp (RF23). Simulado: nada é enviado/recebido de verdade. Adaptador Meta: NÃO homologado com conta real.
     'whatsapp' => [

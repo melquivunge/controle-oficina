@@ -17,13 +17,15 @@
         @elseif ($d->status === 'rejeitado')
             <p class="fiscal-doc__texto fiscal-doc__texto--erro">Motivo da rejeição: {{ $d->mensagem ?: 'não informado pelo emissor' }}</p>
         @elseif ($d->status === 'autorizado')
-            <p class="fiscal-doc__texto">Autorizado em {{ \App\Support\Fuso::exibir($d->autorizado_em) }}{{ $d->protocolo ? ' · protocolo '.$d->protocolo : '' }}.</p>
+            <p class="fiscal-doc__texto">Autorizado em {{ \App\Support\Fuso::exibir($d->autorizado_em) }}{{ $d->protocolo && $d->protocolo !== $d->chave_acesso ? ' · protocolo '.$d->protocolo : '' }}.@if ($d->ambiente === 2) <strong>Homologação: sem validade fiscal.</strong>@endif</p>
+            @if ($d->chave_acesso)<p class="hint">Chave de acesso: <span class="mono">{{ $d->chave_acesso }}</span></p>@endif
         @elseif ($d->status === 'cancelado')
             <p class="fiscal-doc__texto">Cancelado em {{ \App\Support\Fuso::exibir($d->cancelado_em) }}. Justificativa: {{ $d->cancelamento_motivo }}</p>
         @endif
         <p class="hint">Tentativas: {{ $d->tentativas }}</p>
         <div class="fiscal-doc__acoes">
             @if ($d->arquivo)<a class="button" href="{{ route('fiscal.baixar', [$ordem, $d]) }}" target="_blank" rel="noopener">{{ $d->status === 'cancelado' ? 'Abrir documento cancelado' : 'Abrir documento' }}</a>@endif
+            @if ($d->xml)<a class="button" href="{{ route('fiscal.baixar', [$ordem, $d, 'xml' => 1]) }}">Baixar XML</a>@endif
             @can('cobrar')
                 @if ($d->status === 'rejeitado' || ($d->status === 'pendente' && $d->mensagem))
                     <form method="POST" action="{{ route('fiscal.reprocessar', [$ordem, $d]) }}">@csrf<button class="button" type="submit">Tentar de novo</button></form>

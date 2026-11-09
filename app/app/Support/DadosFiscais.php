@@ -18,6 +18,7 @@ final class DadosFiscais
         'regime' => 'simples', // Simples Nacional (NFS-e opSimpNac=3 ME/EPP; NF-e CRT=1)
         'inscricao_municipal' => '', 'inscricao_estadual' => '',
         'municipio_ibge' => '5300108', // Brasília/DF
+        'nfse_serie' => '3', 'nfse_proximo_numero' => '', 'nfe_proximo_numero' => '',
         'nfse_c_trib_nac' => '140101', 'nfse_c_trib_mun' => '1401', 'nfse_c_nbs' => '120013110', 'nfse_aliquota_iss' => '2.00',
         'nfe_serie' => '1', 'nfe_cfop_dentro' => '5102', 'nfe_cfop_fora' => '6102', 'nfe_csosn' => '102', 'nfe_ncm_padrao' => '87087090',
         'nfe_natureza' => 'VENDA DE MERCADORIA',
@@ -26,7 +27,8 @@ final class DadosFiscais
     public const ROTULOS = [
         'regime' => 'Regime tributário', 'inscricao_municipal' => 'Inscrição municipal (CF/DF)', 'inscricao_estadual' => 'Inscrição estadual (CF/DF)',
         'municipio_ibge' => 'Código IBGE do município', 'nfse_c_trib_nac' => 'Código de tributação nacional', 'nfse_c_trib_mun' => 'Código de tributação municipal',
-        'nfse_c_nbs' => 'Código NBS', 'nfse_aliquota_iss' => 'Alíquota do ISS (%)', 'nfe_serie' => 'Série da NF-e', 'nfe_cfop_dentro' => 'CFOP venda dentro do DF',
+        'nfse_c_nbs' => 'Código NBS',
+        'nfse_serie' => 'Série da DPS (NFS-e)', 'nfse_proximo_numero' => 'Próximo número da DPS em produção', 'nfe_proximo_numero' => 'Próximo número da NF-e em produção', 'nfse_aliquota_iss' => 'Alíquota do ISS (%)', 'nfe_serie' => 'Série da NF-e', 'nfe_cfop_dentro' => 'CFOP venda dentro do DF',
         'nfe_cfop_fora' => 'CFOP venda para fora do DF', 'nfe_csosn' => 'CSOSN (Simples Nacional)', 'nfe_ncm_padrao' => 'NCM padrão das peças', 'nfe_natureza' => 'Natureza da operação',
     ];
 

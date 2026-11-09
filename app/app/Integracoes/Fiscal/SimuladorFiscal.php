@@ -19,7 +19,7 @@ class SimuladorFiscal implements EmissorFiscal
         return 'simulado';
     }
 
-    public function consultar(string $chave): ?array
+    public function consultar(string $chave, array $dados = []): ?array
     {
         $l = DB::table('simulador_fiscal')->where('chave', $chave)->first();
 
@@ -45,7 +45,7 @@ class SimuladorFiscal implements EmissorFiscal
         return $r;
     }
 
-    public function cancelar(string $chave, string $motivo): void
+    public function cancelar(string $chave, string $motivo, array $dados = []): void
     {
         DB::table('simulador_fiscal')->where('chave', $chave)->update(['status' => 'cancelado', 'mensagem' => $motivo]);
     }

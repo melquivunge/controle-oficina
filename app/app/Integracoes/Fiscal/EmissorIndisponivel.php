@@ -11,7 +11,7 @@ class EmissorIndisponivel implements EmissorFiscal
         return 'indisponivel';
     }
 
-    public function consultar(string $chave): ?array
+    public function consultar(string $chave, array $dados = []): ?array
     {
         throw new RuntimeException('Emissão fiscal real não configurada: depende de validação contábil e provedor homologado.');
     }
@@ -21,7 +21,7 @@ class EmissorIndisponivel implements EmissorFiscal
         throw new RuntimeException('Emissão fiscal real não configurada: depende de validação contábil e provedor homologado.');
     }
 
-    public function cancelar(string $chave, string $motivo): void
+    public function cancelar(string $chave, string $motivo, array $dados = []): void
     {
         throw new RuntimeException('Emissão fiscal real não configurada.');
     }

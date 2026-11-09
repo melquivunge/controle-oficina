@@ -21,9 +21,12 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(\App\Integracoes\Mensagens\Mensageiro::class, fn () => config('oficina.integracoes') === 'simulado'
             ? new \App\Integracoes\Mensagens\SimuladorMensagens
             : new \App\Integracoes\Mensagens\MensageiroIndisponivel);
-        $this->app->bind(\App\Integracoes\Fiscal\EmissorFiscal::class, fn () => config('oficina.integracoes') === 'simulado'
-            ? new \App\Integracoes\Fiscal\SimuladorFiscal
-            : new \App\Integracoes\Fiscal\EmissorIndisponivel);
+        // Fiscal real (etapa 2) tem interruptor próprio: OFICINA_FISCAL=homologacao|producao; senão segue OFICINA_INTEGRACOES.
+        $this->app->bind(\App\Integracoes\Fiscal\EmissorFiscal::class, fn () => match (config('oficina.fiscal.modo')) {
+            'producao' => new \App\Integracoes\Fiscal\EmissorReal(1),
+            'homologacao' => new \App\Integracoes\Fiscal\EmissorReal(2),
+            default => config('oficina.integracoes') === 'simulado' ? new \App\Integracoes\Fiscal\SimuladorFiscal : new \App\Integracoes\Fiscal\EmissorIndisponivel,
+        });
         $this->app->bind(\App\Integracoes\Placa\ConsultaPlaca::class, fn () => match (true) {
             config('oficina.placa.provedor') === 'integrasist' => new \App\Integracoes\Placa\IntegrasistPlaca, // só leitura; ligado explicitamente
             config('oficina.integracoes') === 'simulado' || config('database.default') === 'demo' => new \App\Integracoes\Placa\SimuladorPlaca,
