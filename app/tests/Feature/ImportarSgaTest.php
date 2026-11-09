@@ -74,6 +74,25 @@ class ImportarSgaTest extends TestCase
             ->assertSee('Histórico no sistema antigo')->assertSee('OS 500')->assertSee('TROCA DE BIELETA')->assertSee('R$ 350,00')
             ->assertSee('Barulho na suspensão')->assertSee('Finalizada')->assertSee('85000');
         $this->get('/')->assertOk();
+
+        // Página "OS do sistema antigo": lista, busca, filtro, detalhe; fora de Ordens de serviço.
+        $this->get(route('ordens.index'))->assertOk()->assertSee('Ver as 1 OS do sistema antigo');
+        $this->get(route('historico.index'))->assertOk()->assertSee('OS do sistema antigo')->assertSee('JOSÉ DA SILVA')->assertSee('JIK-2116')->assertSee('R$ 350,00');
+        foreach (['500', 'jose silva', 'JIK2116', '98765'] as $busca) {
+            $this->get(route('historico.index', ['busca' => $busca]))->assertSee('1 OS encontrada');
+        }
+        $this->get(route('historico.index', ['busca' => 'ninguem']))->assertSee('Nenhuma OS antiga');
+        $this->get(route('historico.index', ['situacao' => 'cancelada']))->assertSee('Nenhuma OS antiga');
+        $this->get(route('historico.index', ['situacao' => 'finalizada', 'de' => '2024-05-01', 'ate' => '2024-05-31']))->assertSee('1 OS encontrada');
+        $this->get(route('historico.show', $os->id))->assertOk()->assertSee('TROCA DE BIELETA')->assertSee('Barulho na suspensão')->assertSee('JOSÉ DA SILVA');
+        $this->get(route('clientes.show', $jose))->assertSee('Abrir OS completa');
+        $this->entrarComo($this->usuario(Papel::Mecanico))->get(route('historico.index'))->assertForbidden();
+    }
+
+    public function test_empresa_sem_sistema_antigo_nao_ve_a_pagina(): void
+    {
+        $this->entrarComo($this->usuario(Papel::Proprietario))->get(route('ordens.index'))->assertOk()->assertDontSee('OS do sistema antigo');
+        $this->get(route('historico.index'))->assertNotFound();
     }
 
     public function test_simula_importa_sem_perder_nada_e_repete_sem_duplicar(): void

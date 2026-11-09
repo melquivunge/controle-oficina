@@ -23,6 +23,9 @@
             <a class="link" href="{{ route('ordens.index', request()->except('de', 'ate', 'data', 'responsavel', 'page')) }}">Limpar filtro de data</a>
         </p>
     @endif
+    @if (auth()->user()->can('registrar_entrada') && \App\Http\Controllers\HistoricoAntigoController::existe())
+        <p class="hint">Procurando OS de antes do sistema novo? <a class="link" href="{{ route('historico.index') }}">Ver as {{ number_format(\App\Http\Controllers\HistoricoAntigoController::total(), 0, ',', '.') }} OS do sistema antigo</a>.</p>
+    @endif
     @include('ordens._lista', ['vazio' => $filtroData ? 'Nenhuma ordem neste período para o filtro ativo. Use "Limpar filtro de data" para ver todas.' : 'Nenhuma ordem para estes filtros.'])
     {{ $ordens->links() }}
 @endsection

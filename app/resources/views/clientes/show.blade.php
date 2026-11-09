@@ -17,6 +17,7 @@
                 {{-- OS do sistema antigo (09/11/2026): só consulta; não entram em painel, caixa, numeração nem relatórios. --}}
                 @php($dinheiro = fn ($v) => 'R$ '.number_format((float) $v, 2, ',', '.'))
                 @php($data = fn ($d) => $d ? \Carbon\Carbon::parse($d)->format('d/m/Y') : '—')
+                @php($idsOs = \Illuminate\Support\Facades\DB::table('legado_registros')->where('cliente_id', $cliente->id)->where('tabela', 'TBL_OS')->pluck('id', 'codigo'))
                 <section class="legado historico-antigo" style="margin-top:28px">
                     <div class="section-head"><h2>Histórico no sistema antigo</h2><small>{{ $historicoAntigo->count() }} {{ $historicoAntigo->count() === 1 ? 'OS' : 'OS' }} · só consulta</small></div>
                     @foreach ($historicoAntigo as $h)
@@ -32,6 +33,7 @@
                                 @can('ver_valores')<dt>Pago</dt><dd>{{ ($o['PAG'] ?? '') === 'S' ? 'Sim'.(! empty($o['DATAPAG']) ? ' em '.$data($o['DATAPAG']) : '') : 'Não' }}</dd>@endcan
                                 @foreach (['DESCRICAO' => 'Descrição', 'OBS' => 'Observações'] as $k => $rot)@if (! empty($o[$k]))<dt>{{ $rot }}</dt><dd style="white-space:pre-line">{{ $o[$k] }}</dd>@endif @endforeach
                             </dl>
+                            @if (isset($idsOs[$o['CODIGO']]))<p><a class="link" href="{{ route('historico.show', $idsOs[$o['CODIGO']]) }}">Abrir OS completa →</a></p>@endif
                             @if ($h['itens'])
                                 <ul class="historico-itens">
                                     @foreach ($h['itens'] as $i)
