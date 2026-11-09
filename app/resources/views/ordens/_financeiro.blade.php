@@ -67,6 +67,7 @@
             @foreach ($pagamentos as $p)
                 <article class="versao">
                     <header><strong>{{ \App\Support\Dinheiro::formatar($p->valor_centavos) }} · {{ $p->rotuloMeio() }}</strong><span @class(['tag', 'extra' => $p->status !== 'confirmado'])>{{ $p->rotuloStatus() }}</span></header>
+                    @if ($p->comprovante_caminho)<p><a class="link" href="{{ route('pagamentos.comprovante', [$ordem, $p]) }}" target="_blank" rel="noopener">Ver comprovante</a></p>@endif
                     <p class="hint">{{ \App\Support\Fuso::exibir($p->recebido_em) }}{{ $p->registradoPor ? ' · registrado por '.$p->registradoPor->name : '' }}{{ $p->motivo_revisao ? ' · '.$p->motivo_revisao : '' }}</p>
                     @foreach ($p->devolucoes as $d)
                         <div class="inline-form">

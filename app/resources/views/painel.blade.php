@@ -109,7 +109,7 @@
             @if ($fin)
                 <section class="cartao">
                     <h2>Recebido por forma</h2>
-                    @php($meios = ['pix' => 'Pix integrado', 'dinheiro' => 'Dinheiro', 'cartao_externo' => 'Cartão (máquina externa)'])
+                    @php($meios = ['pix' => 'Pix integrado', 'dinheiro' => 'Dinheiro', 'cartao_externo' => 'Cartão (máquina externa)', 'pix_manual' => 'Pix com comprovante'])
                     @php($somaMeios = max(array_sum($serie['por_meio']), 1))
                     <ul class="meios">
                         @foreach ($meios as $m => $rot)

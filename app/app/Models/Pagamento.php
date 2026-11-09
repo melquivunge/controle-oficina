@@ -32,7 +32,7 @@ class Pagamento extends Model
 
     public function rotuloMeio(): string
     {
-        return ['pix' => 'Pix (confirmado pelo banco)', 'dinheiro' => 'Dinheiro (registro manual)', 'cartao_externo' => 'Cartão na maquininha (registro manual)'][$this->meio];
+        return ['pix' => 'Pix (confirmado pelo banco)', 'dinheiro' => 'Dinheiro (registro manual)', 'cartao_externo' => 'Cartão na maquininha (registro manual)', 'pix_manual' => 'Pix no app do banco (comprovante, conferido no extrato)'][$this->meio];
     }
 
     public function rotuloStatus(): string

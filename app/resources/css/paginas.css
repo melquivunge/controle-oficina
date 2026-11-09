@@ -263,3 +263,14 @@ label.check{display:flex;align-items:center;gap:8px;min-height:44px}
 .legado-campos dd{margin:0;overflow-wrap:anywhere}
 .historico-itens{margin:8px 0 4px;padding-left:18px;font-size:14px}
 .historico-antigo summary .tag{margin-left:4px}
+
+/* 09/11/2026: "Adicionar endereço" com seta de abrir; ações dentro do painel; comprovante no pagamento. */
+.endereco-entrada summary,.endereco-cliente summary{gap:8px;font-weight:600;color:var(--t-link,#1d4ed8)}
+.endereco-entrada summary::before,.endereco-cliente summary::before{content:"";width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);transition:transform .15s ease-out}
+.endereco-entrada[open] summary::before,.endereco-cliente[open] summary::before{transform:rotate(45deg)}
+.endereco-entrada summary::-webkit-details-marker,.endereco-cliente summary::-webkit-details-marker{display:none}
+.endereco-entrada summary:focus-visible,.endereco-cliente summary:focus-visible{outline:2px solid currentColor;outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){.endereco-entrada summary::before,.endereco-cliente summary::before{transition:none}}
+.form-acoes-fim{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.pg-comprovante{border:1px dashed var(--t-borda,#dfe2e6);border-radius:8px;padding:12px 14px;margin:12px 0}
+.pg-comprovante legend{font-weight:600;padding:0 6px}

@@ -17,16 +17,28 @@ use Illuminate\Validation\ValidationException;
  */
 class PagamentoGuiadoController extends Controller
 {
+    /** Comprovante anexado ao pagamento (privado): quem recebe pagamentos na unidade. */
+    public function comprovante(Request $request, Ordem $ordem, \App\Models\Pagamento $pagamento)
+    {
+        abort_unless($pagamento->ordem_id === $ordem->id && $pagamento->comprovante_caminho, 404);
+        abort_unless($request->user()->pode('receber_manual') && $request->user()->acessaUnidade($ordem->unidade_id), 403);
+
+        return \Illuminate\Support\Facades\Storage::disk('local')->response($pagamento->comprovante_caminho, null,
+            ['Content-Type' => $pagamento->comprovante_mime, 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff', 'Content-Security-Policy' => "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'"]);
+    }
+
     /** Tudo agora (valor livre, pode ser parcial): Pix gera cobrança; dinheiro/cartão registra. */
     public function agora(Request $request, Ordem $ordem, Financeiro $financeiro)
     {
-        $request->validate(['forma_agora' => ['required', 'in:pix,dinheiro,cartao_externo'], 'observacao' => ['nullable', 'string', 'max:300']],
-            ['forma_agora.required' => 'Escolha a forma de pagamento.', 'forma_agora.in' => 'Escolha Pix, dinheiro ou cartão.']);
+        $request->validate(['forma_agora' => ['required', 'in:pix,pix_manual,dinheiro,cartao_externo'], 'observacao' => ['nullable', 'string', 'max:300'],
+            'comprovante' => ['nullable', 'file', 'mimetypes:image/jpeg,image/png,image/webp,application/pdf', 'max:8192']],
+            ['forma_agora.required' => 'Escolha a forma de pagamento.', 'forma_agora.in' => 'Escolha Pix, dinheiro ou cartão.',
+                'comprovante.mimetypes' => 'Comprovante deve ser foto (JPG, PNG, WEBP) ou PDF.', 'comprovante.max' => 'Comprovante de até 8 MB.']);
         $valor = $this->valor($request, 'valor_agora');
         $forma = $request->input('forma_agora');
         $r = $this->remapear(fn () => $forma === 'pix'
             ? $financeiro->gerarCobranca($ordem, $request->user(), $valor)
-            : $financeiro->registrarManual($ordem, $request->user(), $forma, $valor, $request->input('observacao')));
+            : $financeiro->registrarManual($ordem, $request->user(), $forma, $valor, $request->input('observacao'), $request->file('comprovante'), $request->boolean('conferido_extrato')));
 
         return $this->resposta($r, 'Recebimento registrado. Ele será conferido no fechamento do caixa.');
     }

@@ -73,6 +73,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/ordens/{ordem}/pagamentos/{pagamento}/devolver', [PagamentoController::class, 'devolver'])->name('pagamentos.devolver');
         Route::post('/ordens/{ordem}/pagamentos/{pagamento}/aceitar', [PagamentoController::class, 'aceitar'])->name('pagamentos.aceitar');
         Route::post('/ordens/{ordem}/entrega', [PagamentoController::class, 'entregar'])->name('ordens.entregar');
+        Route::get('/ordens/{ordem}/pagamentos/{pagamento}/comprovante', [\App\Http\Controllers\PagamentoGuiadoController::class, 'comprovante'])->name('pagamentos.comprovante');
         Route::get('/caixa', [CaixaController::class, 'index'])->middleware('can:receber_manual')->name('caixa.index');
         Route::post('/caixa/fechar', [CaixaController::class, 'fechar'])->middleware('can:fechar_caixa')->name('caixa.fechar');
         // Bloco B: combinado de pagamento do saldo (permissão e unidade conferidas em App\Services\Combinados).

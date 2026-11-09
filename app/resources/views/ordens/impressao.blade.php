@@ -1,7 +1,7 @@
 @php
     $o = $ordem;
     $fmt = fn ($c) => \App\Support\Dinheiro::formatar((int) $c);
-    $meios = ['pix' => 'Pix', 'dinheiro' => 'Dinheiro', 'cartao_externo' => 'Cartão'];
+    $meios = ['pix' => 'Pix', 'pix_manual' => 'Pix', 'dinheiro' => 'Dinheiro', 'cartao_externo' => 'Cartão'];
 @endphp
 <!doctype html>
 <html lang="pt-BR">

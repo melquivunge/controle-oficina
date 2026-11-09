@@ -140,7 +140,7 @@ final class PainelExcel
         $daOrdem = fn ($q) => $q->whereHas('ordem', fn ($q) => $doResponsavel($q));
         $linhas = Pagamento::with('ordem:id,numero,cliente_id', 'ordem.cliente:id,nome')->whereIn('unidade_id', $ids)->whereIn('status', ['confirmado', 'registrado'])
             ->where('recebido_em', '>=', $inicio)->where('recebido_em', '<', $fim)->when($responsavelId, $daOrdem)->get()
-            ->map(fn ($p) => [$p->recebido_em, $nomes[$p->unidade_id], $p->ordem->numero, $p->ordem->cliente->nome, ['pix' => 'Pix', 'dinheiro' => 'Dinheiro', 'cartao_externo' => 'Cartão'][$p->meio] ?? $p->meio, $p->valor_centavos])
+            ->map(fn ($p) => [$p->recebido_em, $nomes[$p->unidade_id], $p->ordem->numero, $p->ordem->cliente->nome, ['pix' => 'Pix', 'pix_manual' => 'Pix (comprovante)', 'dinheiro' => 'Dinheiro', 'cartao_externo' => 'Cartão'][$p->meio] ?? $p->meio, $p->valor_centavos])
             ->concat(Devolucao::with('ordem:id,numero,cliente_id', 'ordem.cliente:id,nome')->whereIn('unidade_id', $ids)->where('status', 'concluida')
                 ->where('concluida_em', '>=', $inicio)->where('concluida_em', '<', $fim)->when($responsavelId, $daOrdem)->get()
                 ->map(fn ($d) => [$d->concluida_em, $nomes[$d->unidade_id], $d->ordem->numero, $d->ordem->cliente->nome, 'Devolução', -$d->valor_centavos]))

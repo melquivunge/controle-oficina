@@ -19,7 +19,7 @@
             @enderror
             @can('ver_contato_cliente')
                 <details class="endereco-cliente" @if ($errors->hasAny(\App\Support\Endereco::CAMPOS)) open @endif>
-                    <summary>Endereço (opcional)</summary>
+                    <summary>Adicionar endereço (opcional)</summary>
                     @include('partials.endereco-campos', ['valores' => null, 'idPrefixo' => 'novo'])
                 </details>
             @endcan
@@ -35,6 +35,6 @@
                 @include('partials.campo', ['nome' => 'cor', 'rotulo' => 'Cor'])
             </div>
         </section>
-        <div class="form-actions"><button class="button primary" type="submit">Cadastrar cliente</button> <a class="button" href="{{ route('clientes.index') }}">Cancelar</a></div>
+        <section class="form-section form-acoes-fim"><button class="button primary" type="submit">Cadastrar cliente</button><a class="button" href="{{ route('clientes.index') }}">Cancelar</a></section>
     </form>
 @endsection

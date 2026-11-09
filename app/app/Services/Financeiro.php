@@ -159,14 +159,25 @@ class Financeiro
     }
 
     /** Dinheiro ou cartão em maquininha externa: registro manual, nunca confirmação bancária. */
-    public function registrarManual(Ordem $ordem, User $ator, string $meio, int $valorCentavos, ?string $observacao = null): Pagamento
+    /**
+     * Dinheiro, cartão na maquininha (recibo opcional) ou Pix recebido no app do banco (09/11/2026: comprovante obrigatório
+     * e declaração de que o valor foi conferido no extrato — comprovante de Pix falso é golpe comum).
+     */
+    public function registrarManual(Ordem $ordem, User $ator, string $meio, int $valorCentavos, ?string $observacao = null,
+        ?\Illuminate\Http\UploadedFile $comprovante = null, bool $conferidoExtrato = false): Pagamento
     {
         $this->exigir($ator, 'receber_manual', $ordem);
-        if (! in_array($meio, ['dinheiro', 'cartao_externo'], true)) {
-            throw ValidationException::withMessages(['meio' => 'Pix só é confirmado automaticamente pelo banco. Comprovante não quita a ordem.']);
+        if (! in_array($meio, ['dinheiro', 'cartao_externo', 'pix_manual'], true)) {
+            throw ValidationException::withMessages(['meio' => 'Forma de pagamento inválida.']);
+        }
+        if ($meio === 'pix_manual' && (! $comprovante || ! $conferidoExtrato)) {
+            throw ValidationException::withMessages(['comprovante' => 'Para Pix recebido no aplicativo do banco, anexe o comprovante e confirme que conferiu o valor no extrato.']);
+        }
+        if ($comprovante && (! in_array($comprovante->getMimeType(), ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'], true) || $comprovante->getSize() > 8 * 1024 * 1024)) {
+            throw ValidationException::withMessages(['comprovante' => 'Comprovante deve ser foto (JPG, PNG, WEBP) ou PDF de até 8 MB.']);
         }
 
-        return DB::transaction(function () use ($ordem, $ator, $meio, $valorCentavos, $observacao) {
+        return DB::transaction(function () use ($ordem, $ator, $meio, $valorCentavos, $observacao, $comprovante) {
             $o = Ordem::lockForUpdate()->findOrFail($ordem->id);
             if (! in_array($o->status, StatusOrdem::recebiveis(), true) || ! Orcamento::where('ordem_id', $o->id)->where('status', 'aprovado')->exists()) {
                 throw ValidationException::withMessages(['valor' => 'Não há valor aprovado a receber nesta ordem.']);
@@ -178,8 +189,10 @@ class Financeiro
             if (FechamentoCaixa::where('unidade_id', $o->unidade_id)->where('data', Fuso::exibir(now(), 'Y-m-d'))->exists()) {
                 throw ValidationException::withMessages(['valor' => 'O caixa de hoje já foi fechado. Peça ao gerente para registrar o recebimento como exceção no dia seguinte.']);
             }
+            $arquivo = $comprovante?->storeAs("comprovantes/{$o->unidade_id}/{$o->id}", \Illuminate\Support\Str::uuid().'.'.$comprovante->extension(), 'local');
             $p = Pagamento::create(['ordem_id' => $o->id, 'unidade_id' => $o->unidade_id, 'meio' => $meio, 'valor_centavos' => $valorCentavos,
-                'status' => 'registrado', 'recebido_em' => now(), 'registrado_por' => $ator->id, 'motivo_revisao' => $observacao]);
+                'status' => 'registrado', 'recebido_em' => now(), 'registrado_por' => $ator->id, 'motivo_revisao' => $observacao,
+                'comprovante_caminho' => $arquivo ?: null, 'comprovante_mime' => $comprovante?->getMimeType()]);
             Auditoria::registrar('recebimento_manual', $o, depois: ['pagamento_id' => $p->id, 'meio' => $meio, 'valor_centavos' => $valorCentavos], motivo: $observacao, ator: $ator);
 
             return $p;
