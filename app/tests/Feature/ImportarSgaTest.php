@@ -37,6 +37,43 @@ class ImportarSgaTest extends TestCase
         $csv('TBL_COR', [['CODIGO', 'DESCRICAO'], ['1', 'PRETA']]);
         $csv('TBL_FABRICANTE_VEICULO', [['CODIGO', 'DESCRICAO'], ['1', 'HYUNDAI']]);
         $csv('TBL_MODELO_VEICULO', [['CODIGO', 'DESCRICAO'], ['1', 'ELANTRA']]);
+        // Arquivo completo: OS ligada a cliente/carro, serviço com nome do catálogo, tabela com senha, log sem vínculo.
+        $csv('TBL_OS', [['CODIGO', 'CHCLIENTE', 'CHVEICULO', 'DATAIN', 'DATAOUT', 'KM', 'TOTAL', 'STATUS', 'CANCELADA', 'PAG', 'OBS'],
+            ['500', '10', '1', '2024-05-10', '2024-05-11', '85000', '350.00', 'F', 'N', 'S', 'Barulho na suspensão']]);
+        $csv('TBL_SERVICO', [['CODIGO', 'CHOS', 'CHSERVICOP', 'QTD', 'PRECO', 'DESCRICAO'], ['900', '500', '7', '2.00', '175.00', '']]);
+        $csv('TBL_SERVICOP', [['CODIGO', 'NOME'], ['7', 'TROCA DE BIELETA']]);
+        $csv('TBL_CONFIG_EMAIL', [['CODIGO', 'CONTA', 'SENHA'], ['1', 'oficina@x.com', 'segredo123']]);
+        $csv('TBL_LOG', [['CODIGO', 'TEXTO'], ['1', 'login'], ['2', "texto RTF\0com nulo"]]);
+    }
+
+    public function test_arquivo_completo_ligado_ao_cliente_sem_poluir_a_operacao(): void
+    {
+        $this->artisan('oficina:importar-sga-arquivo', ['pasta' => $this->pasta])->assertFailed(); // clientes primeiro
+        $this->artisan('oficina:importar-sga', ['pasta' => $this->pasta, '--executar' => true])->assertSuccessful();
+        $this->artisan('oficina:importar-sga-arquivo', ['pasta' => $this->pasta])->assertSuccessful()->expectsOutputToContain('SIMULAÇÃO');
+        $this->assertSame(0, \Illuminate\Support\Facades\DB::table('legado_registros')->count(), 'simulação não grava');
+
+        $this->artisan('oficina:importar-sga-arquivo', ['pasta' => $this->pasta, '--executar' => true])->assertSuccessful();
+        $reg = \Illuminate\Support\Facades\DB::table('legado_registros');
+        $jose = Cliente::where('legado_codigo', 10)->sole();
+        $os = (clone $reg)->where('tabela', 'TBL_OS')->sole();
+        $this->assertSame([$jose->id, Veiculo::where('legado_codigo', 1)->value('id'), 'OS:500'], [$os->cliente_id, $os->veiculo_id, $os->grupo]);
+        $serv = (clone $reg)->where('tabela', 'TBL_SERVICO')->sole();
+        $this->assertSame([$jose->id, 'OS:500', 'TROCA DE BIELETA'], [$serv->cliente_id, $serv->grupo, json_decode($serv->dados, true)['_servico']]);
+        $this->assertSame('[removido]', json_decode((clone $reg)->where('tabela', 'TBL_CONFIG_EMAIL')->value('dados'), true)['SENHA']);
+        $this->assertSame(2, (clone $reg)->where('tabela', 'TBL_LOG')->whereNull('cliente_id')->count(), 'tabelas sem vínculo também entram');
+        $this->assertSame('texto RTF␀com nulo', json_decode((clone $reg)->where('tabela', 'TBL_LOG')->where('linha', 2)->value('dados'), true)['TEXTO']);
+        $total = (clone $reg)->count();
+
+        $this->artisan('oficina:importar-sga-arquivo', ['pasta' => $this->pasta, '--executar' => true])->assertSuccessful();
+        $this->assertSame($total, \Illuminate\Support\Facades\DB::table('legado_registros')->count(), 'repetir não duplica');
+
+        // Não polui: nenhuma OS/pagamento novo; a ficha mostra o histórico só para consulta.
+        $this->assertSame([0, 0], [\App\Models\Ordem::count(), \App\Models\Pagamento::count()]);
+        $this->entrarComo($this->usuario(Papel::Proprietario))->get(route('clientes.show', $jose))->assertOk()
+            ->assertSee('Histórico no sistema antigo')->assertSee('OS 500')->assertSee('TROCA DE BIELETA')->assertSee('R$ 350,00')
+            ->assertSee('Barulho na suspensão')->assertSee('Finalizada')->assertSee('85000');
+        $this->get('/')->assertOk();
     }
 
     public function test_simula_importa_sem_perder_nada_e_repete_sem_duplicar(): void

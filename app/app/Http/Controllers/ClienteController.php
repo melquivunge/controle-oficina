@@ -29,6 +29,25 @@ class ClienteController extends Controller
         return view('clientes.index', compact('clientes', 'busca'));
     }
 
+    /**
+     * OS do sistema antigo (só leitura, 09/11/2026) com serviços e peças, mais recentes primeiro.
+     *
+     * @return \Illuminate\Support\Collection<int, array{os: array, itens: list<array>, placa: ?string}>
+     */
+    private static function historicoAntigo(Cliente $cliente): \Illuminate\Support\Collection
+    {
+        $linhas = DB::table('legado_registros')->where('cliente_id', $cliente->id)->whereIn('tabela', ['TBL_OS', 'TBL_SERVICO', 'TBL_PECA'])
+            ->get(['tabela', 'grupo', 'veiculo_id', 'dados']);
+        $placas = \App\Models\Veiculo::whereIn('id', $linhas->pluck('veiculo_id')->filter()->unique())->get()->keyBy('id');
+        $itens = $linhas->where('tabela', '!=', 'TBL_OS')->groupBy('grupo');
+
+        return $linhas->where('tabela', 'TBL_OS')->map(fn ($l) => [
+            'os' => json_decode($l->dados, true),
+            'placa' => $placas[$l->veiculo_id] ?? null,
+            'itens' => ($itens[$l->grupo] ?? collect())->map(fn ($i) => ['tipo' => $i->tabela === 'TBL_PECA' ? 'Peça' : 'Serviço'] + json_decode($i->dados, true))->values()->all(),
+        ])->sortByDesc(fn ($h) => ($h['os']['DATAIN'] ?? '').str_pad((string) ($h['os']['CODIGO'] ?? ''), 10, '0', STR_PAD_LEFT))->values();
+    }
+
     public function create()
     {
         return view('clientes.novo');
@@ -89,6 +108,7 @@ class ClienteController extends Controller
 
         return view('clientes.show', [
             'cliente' => $cliente,
+            'historicoAntigo' => self::historicoAntigo($cliente),
             'ordens' => Ordem::visiveisPara($request->user())->with('veiculo', 'unidade')->where('cliente_id', $cliente->id)->orderByDesc('entrada_em')->limit(100)->get(),
             // Sem telefone (importados do sistema antigo): não sugere todos os sem telefone como duplicados.
             'possiveisDuplicados' => $cliente->telefone === '' ? collect() : Cliente::ativos()->whereKeyNot($cliente->id)->where('telefone', $cliente->telefone)->get(),

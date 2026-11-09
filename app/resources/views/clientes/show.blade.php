@@ -13,6 +13,38 @@
                     <p><span class="plate">{{ $v->placaFormatada() }}</span> {{ $v->descricao() }}</p>
                 @endforeach
             </section>
+            @if ($historicoAntigo->isNotEmpty())
+                {{-- OS do sistema antigo (09/11/2026): só consulta; não entram em painel, caixa, numeração nem relatórios. --}}
+                @php($dinheiro = fn ($v) => 'R$ '.number_format((float) $v, 2, ',', '.'))
+                @php($data = fn ($d) => $d ? \Carbon\Carbon::parse($d)->format('d/m/Y') : '—')
+                <section class="legado historico-antigo" style="margin-top:28px">
+                    <div class="section-head"><h2>Histórico no sistema antigo</h2><small>{{ $historicoAntigo->count() }} {{ $historicoAntigo->count() === 1 ? 'OS' : 'OS' }} · só consulta</small></div>
+                    @foreach ($historicoAntigo as $h)
+                        @php($o = $h['os'])
+                        @php($situacao = ($o['CANCELADA'] ?? '') === 'S' ? 'Cancelada' : (($o['STATUS'] ?? '') === 'F' ? 'Finalizada' : 'Aberta'))
+                        <details>
+                            <summary>OS {{ $o['CODIGO'] }} · {{ $data($o['DATAIN'] ?? null) }}@if ($h['placa']) · {{ $h['placa']->placaFormatada() }}@endif
+                                @can('ver_valores') · {{ $dinheiro($o['TOTAL'] ?? 0) }}@endcan · <span @class(['tag', 'off' => $situacao === 'Cancelada'])>{{ $situacao }}</span></summary>
+                            <dl class="legado-campos">
+                                @if ($h['placa'])<dt>Veículo</dt><dd>{{ $h['placa']->placaFormatada() }} {{ $h['placa']->descricao() }}</dd>@endif
+                                @if (! empty($o['KM']))<dt>KM</dt><dd>{{ $o['KM'] }}</dd>@endif
+                                <dt>Entrada / saída</dt><dd>{{ $data($o['DATAIN'] ?? null) }} / {{ $data($o['DATAOUT'] ?? null) }}</dd>
+                                @can('ver_valores')<dt>Pago</dt><dd>{{ ($o['PAG'] ?? '') === 'S' ? 'Sim'.(! empty($o['DATAPAG']) ? ' em '.$data($o['DATAPAG']) : '') : 'Não' }}</dd>@endcan
+                                @foreach (['DESCRICAO' => 'Descrição', 'OBS' => 'Observações'] as $k => $rot)@if (! empty($o[$k]))<dt>{{ $rot }}</dt><dd style="white-space:pre-line">{{ $o[$k] }}</dd>@endif @endforeach
+                            </dl>
+                            @if ($h['itens'])
+                                <ul class="historico-itens">
+                                    @foreach ($h['itens'] as $i)
+                                        <li>{{ $i['tipo'] }}: {{ trim($i['DESCRICAO'] ?? '') ?: ($i['_servico'] ?? $i['_produto'] ?? 'item '.($i['CODIGO'] ?? '')) }}
+                                            · {{ rtrim(rtrim((string) ($i['QTD'] ?? '1'), '0'), '.') ?: '1' }}×
+                                            @can('ver_valores') · {{ $dinheiro($i['PRECO'] ?? 0) }}@endcan</li>
+                                    @endforeach
+                                </ul>
+                            @endif
+                        </details>
+                    @endforeach
+                </section>
+            @endif
             @can('ver_contato_cliente')
                 @if ($cliente->legado)
                     {{-- Importação do sistema antigo (09/11/2026): registro original completo, só leitura. --}}
