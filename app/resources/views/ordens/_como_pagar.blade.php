@@ -6,7 +6,7 @@
 @php($podeCombinar = $u->pode('combinar_pagamento') && $u->papel !== \App\Enums\Papel::Mecanico)
 @php($formas = array_filter(['pix' => $u->pode('cobrar'), 'pix_manual' => $u->pode('receber_manual'), 'dinheiro' => $u->pode('receber_manual'), 'cartao_externo' => $u->pode('receber_manual')]))
 @php($rotulosForma = ['pix' => 'Pix (cobrança do sistema)', 'pix_manual' => 'Pix já recebido no app do banco', 'dinheiro' => 'Dinheiro', 'cartao_externo' => 'Cartão na maquininha'])
-@php($ajudaForma = ['pix' => 'Gera um Pix na conta oficial. Só conta como recebido quando o banco confirmar.', 'dinheiro' => 'Registra o valor recebido em mãos.', 'cartao_externo' => 'Registra o valor passado na maquininha. Anexe a foto do recibo, se tiver.', 'pix_manual' => 'O cliente já fez o Pix. Confira no app do banco que o valor entrou e anexe o comprovante.'])
+@php($ajudaForma = ['pix' => 'Gera um Pix na conta oficial. Só conta como recebido quando o banco confirmar.', 'dinheiro' => 'Registra o valor recebido em mãos.', 'cartao_externo' => 'Registra o valor passado na maquininha. Anexe a foto do recibo, se tiver.', 'pix_manual' => 'O cliente já fez o Pix. Confira no app do banco que o valor entrou e marque a conferência.'])
 @php($modos = ['agora' => 'Tudo agora', 'parte' => 'Parte agora, parte depois', 'depois' => 'Tudo depois'])
 @php($modo = old('modo', request('modo', 'agora')))
 @php($modo = array_key_exists($modo, $modos) && ($modo === 'agora' || $podeCombinar) ? $modo : 'agora')
@@ -47,9 +47,9 @@
             @include('partials.campo', ['nome' => 'observacao', 'rotulo' => 'Observação (opcional, ex.: NSU do cartão)', 'id' => 'pg-obs-agora'])
         </div>
         @if ($u->pode('receber_manual'))
-            {{-- 09/11/2026: comprovante do Pix (obrigatório) ou recibo da maquininha (opcional). Conferido no fechamento do caixa. --}}
+            {{-- 09/11/2026: comprovante do Pix ou recibo da maquininha (opcional). Conferido no fechamento do caixa. --}}
             <fieldset class="pg-comprovante">
-                <legend>Comprovante (Pix no app do banco: obrigatório · cartão: opcional)</legend>
+                <legend>Comprovante (opcional)</legend>
                 <div class="field">
                     <label for="pg-comprovante">Foto ou PDF do comprovante</label>
                     <input id="pg-comprovante" type="file" name="comprovante" accept="image/jpeg,image/png,image/webp,application/pdf" @error('comprovante') aria-invalid="true" aria-describedby="pg-comprovante-erro" @enderror>

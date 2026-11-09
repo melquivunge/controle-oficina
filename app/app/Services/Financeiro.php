@@ -160,7 +160,7 @@ class Financeiro
 
     /** Dinheiro ou cartão em maquininha externa: registro manual, nunca confirmação bancária. */
     /**
-     * Dinheiro, cartão na maquininha (recibo opcional) ou Pix recebido no app do banco (09/11/2026: comprovante obrigatório
+     * Dinheiro, cartão na maquininha (recibo opcional) ou Pix recebido no app do banco (09/11/2026: comprovante opcional
      * e declaração de que o valor foi conferido no extrato — comprovante de Pix falso é golpe comum).
      */
     public function registrarManual(Ordem $ordem, User $ator, string $meio, int $valorCentavos, ?string $observacao = null,
@@ -170,8 +170,8 @@ class Financeiro
         if (! in_array($meio, ['dinheiro', 'cartao_externo', 'pix_manual'], true)) {
             throw ValidationException::withMessages(['meio' => 'Forma de pagamento inválida.']);
         }
-        if ($meio === 'pix_manual' && (! $comprovante || ! $conferidoExtrato)) {
-            throw ValidationException::withMessages(['comprovante' => 'Para Pix recebido no aplicativo do banco, anexe o comprovante e confirme que conferiu o valor no extrato.']);
+        if ($meio === 'pix_manual' && ! $conferidoExtrato) { // arquivo opcional (decisão do usuário, 09/11/2026); a conferência no banco é a proteção
+            throw ValidationException::withMessages(['comprovante' => 'Para Pix recebido no aplicativo do banco, confirme que conferiu o valor no extrato.']);
         }
         if ($comprovante && (! in_array($comprovante->getMimeType(), ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'], true) || $comprovante->getSize() > 8 * 1024 * 1024)) {
             throw ValidationException::withMessages(['comprovante' => 'Comprovante deve ser foto (JPG, PNG, WEBP) ou PDF de até 8 MB.']);
