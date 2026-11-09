@@ -346,6 +346,25 @@ class FiscalRealTest extends TestCase
         $this->assertSame($antes, glob('/dev/shm/oficina-*') ?: [], 'chave apagada ao terminar');
     }
 
+    public function test_cancelamento_recusado_pela_fazenda_mostra_o_motivo_e_mantem_a_nota(): void
+    {
+        config(['oficina.fiscal.modo' => 'homologacao']);
+        $this->guardarCertificado();
+        $this->sefinAutoriza();
+        $o = $this->aprovada();
+        app(Fiscal::class)->solicitar($o, $this->usuario(Papel::Recepcao, $this->unidade));
+        $d = FiscalDocument::where('ordem_id', $o->id)->sole();
+        Http::swap(new \Illuminate\Http\Client\Factory);
+        Http::preventStrayRequests();
+        Http::fake(['*/eventos' => Http::response(['erros' => [['Codigo' => 'E0824', 'Descricao' => 'NFS-e sem identificação do tomador não pode ser cancelada']]], 400)]);
+        $this->withoutExceptionHandling([\Illuminate\Validation\ValidationException::class]);
+
+        $this->entrarComo($this->usuario(Papel::Gerente, $this->unidade))->from("/ordens/{$o->numero}?aba=documentos")
+            ->post(route('fiscal.cancelar', [$o, $d]), ['motivo' => 'Valor lançado errado na ordem de serviço'])->assertRedirect()->assertSessionHasErrors('fiscal');
+        $this->assertSame('autorizado', $d->fresh()->status);
+        $this->assertStringContainsString('E0824', session('errors')->first('fiscal'));
+    }
+
     public function test_nfse_cancelamento_envia_evento_assinado(): void
     {
         config(['oficina.fiscal.modo' => 'homologacao']);

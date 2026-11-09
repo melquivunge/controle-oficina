@@ -251,7 +251,11 @@ class Fiscal
             if ($d->status !== 'autorizado') {
                 throw ValidationException::withMessages(['fiscal' => 'Somente documento autorizado pode ser cancelado.']);
             }
-            $this->emissor->cancelar($d->chave_idempotencia, $motivo, ['tipo' => $d->tipo, 'chave_acesso' => $d->chave_acesso, 'protocolo' => $d->protocolo]);
+            try {
+                $this->emissor->cancelar($d->chave_idempotencia, $motivo, ['tipo' => $d->tipo, 'chave_acesso' => $d->chave_acesso, 'protocolo' => $d->protocolo]);
+            } catch (\RuntimeException $e) { // recusa ou Fazenda fora do ar: a nota segue autorizada e o motivo aparece na OS
+                throw ValidationException::withMessages(['fiscal' => mb_substr($e->getMessage(), 0, 300)]);
+            }
             $d->update(['status' => 'cancelado', 'cancelado_em' => now(), 'cancelamento_motivo' => $motivo]);
             Auditoria::registrar('fiscal_cancelado', Ordem::find($d->ordem_id), depois: ['documento_id' => $d->id, 'numero' => $d->numero], motivo: $motivo, ator: $ator);
         });
