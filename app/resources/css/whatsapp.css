@@ -142,3 +142,4 @@
 @media(max-width:850px){body.app .wa-oculto-celular{display:none}}
 @media(max-width:560px){body.app .wa-filtros .field{flex:0 0 auto}}
 .wa-entrada{width:100%;margin-top:12px}.wa-novo-cliente{margin-top:12px}
+.wa-novo-veiculo{border:0;padding:0;margin:12px 0 0;min-width:0}.wa-novo-veiculo legend{font-weight:600;font-size:.875rem;margin-bottom:6px;padding:0}

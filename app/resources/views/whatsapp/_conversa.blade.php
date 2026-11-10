@@ -86,7 +86,15 @@
                         @csrf
                         @include('partials.campo', ['nome' => 'nome', 'rotulo' => 'Nome do cliente', 'id' => 'wa-novo-nome', 'valorAtual' => $conversa->contato_nome, 'atributos' => ['autocomplete' => 'off', 'required' => 'required']])
                         <div class="field"><label for="wa-novo-tel">Telefone (da conversa)</label><input id="wa-novo-tel" type="text" value="{{ $conversa->telefonePara(auth()->user()) }}" disabled></div>
+                        @include('partials.campo', ['nome' => 'documento', 'rotulo' => 'CPF ou CNPJ (opcional)', 'id' => 'wa-novo-doc', 'atributos' => ['inputmode' => 'numeric', 'autocomplete' => 'off']])
                         @include('partials.campo', ['nome' => 'email', 'rotulo' => 'E-mail (opcional)', 'id' => 'wa-novo-email', 'tipo' => 'email'])
+                        <fieldset class="wa-novo-veiculo"><legend>Veículo (opcional)</legend>
+                            @include('partials.campo', ['nome' => 'placa', 'rotulo' => 'Placa', 'id' => 'wa-novo-placa', 'atributos' => ['style' => 'text-transform:uppercase', 'autocomplete' => 'off']])
+                            @include('partials.campo', ['nome' => 'marca', 'rotulo' => 'Marca', 'id' => 'wa-novo-marca'])
+                            @include('partials.campo', ['nome' => 'modelo', 'rotulo' => 'Modelo', 'id' => 'wa-novo-modelo'])
+                            @include('partials.campo', ['nome' => 'ano', 'rotulo' => 'Ano', 'id' => 'wa-novo-ano', 'atributos' => ['inputmode' => 'numeric', 'maxlength' => 4]])
+                            @include('partials.campo', ['nome' => 'cor', 'rotulo' => 'Cor', 'id' => 'wa-novo-cor'])
+                        </fieldset>
                         <div class="field"><label for="wa-novo-obs">Observações (opcional)</label>
                             <textarea id="wa-novo-obs" name="observacoes" rows="2" @error('observacoes') aria-invalid="true" aria-describedby="wa-novo-obs-erro" @enderror>{{ old('observacoes') }}</textarea>
                             @error('observacoes')<span class="field-error" id="wa-novo-obs-erro">{{ $message }}</span>@enderror</div>

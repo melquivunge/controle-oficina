@@ -172,6 +172,42 @@ if (fiscal && fiscal.dataset.acompanhar === '1') {
     window.addEventListener('pagehide', () => clearTimeout(tempo));
 }
 
+// Central de WhatsApp: a lista e o histórico se atualizam sozinhos (a cada 5 s com a aba visível), sem tocar no
+// que está sendo digitado. Busca a própria página (mesma autorização do servidor) e troca só os dois blocos.
+const waLista = document.querySelector('.wa-lista');
+if (waLista) {
+    const aviso = Object.assign(document.createElement('p'), { className: 'sr-only' });
+    aviso.setAttribute('aria-live', 'polite');
+    document.body.append(aviso);
+    let falhas = 0;
+    const atualizarWa = async () => {
+        if (!document.hidden) {
+            try {
+                const r = await fetch(location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin', cache: 'no-store' });
+                if (!r.ok || r.redirected) throw new Error(String(r.status));
+                const novo = new DOMParser().parseFromString(await r.text(), 'text/html');
+                falhas = 0;
+                const lista = novo.querySelector('.wa-lista');
+                if (lista && lista.innerHTML !== waLista.innerHTML) waLista.innerHTML = lista.innerHTML;
+                const atual = document.querySelector('.wa-mensagens');
+                const chegou = novo.querySelector('.wa-mensagens');
+                if (atual && chegou && chegou.innerHTML !== atual.innerHTML) {
+                    const noFim = atual.scrollHeight - atual.scrollTop - atual.clientHeight < 80;
+                    const antes = atual.querySelectorAll('.wa-msg.entrada').length;
+                    atual.innerHTML = chegou.innerHTML;
+                    if (noFim) atual.scrollTop = atual.scrollHeight;
+                    if (atual.querySelectorAll('.wa-msg.entrada').length > antes) aviso.textContent = 'Nova mensagem do cliente.';
+                }
+            } catch (e) {
+                falhas += 1; // sessão expirada ou sem conexão: para de tentar e a página continua funcionando com F5
+                if (falhas >= 5) return;
+            }
+        }
+        setTimeout(atualizarWa, 5000);
+    };
+    setTimeout(atualizarWa, 5000);
+}
+
 // Abas da OS no celular: a aba atual fica visível mesmo quando a barra rola na horizontal.
 document.querySelectorAll('nav.abas').forEach((nav) => {
     const atual = nav.querySelector('a[aria-current=page]');

@@ -571,9 +571,18 @@ class CentralWhatsAppTest extends TestCase
         $this->entrarComo($this->mec1)->post($url, ['nome' => 'Mecânico'])->assertForbidden();
         $this->entrarComo($this->rec1)->post($url, ['nome' => ''])->assertSessionHasErrors('nome');
 
-        $this->entrarComo($this->rec1)->post($url, ['nome' => 'Júlia Nova', 'email' => 'julia@exemplo.test'])->assertRedirect();
+        $this->entrarComo($this->rec1)->get(route('whatsapp.show', $c))->assertSee('CPF ou CNPJ')->assertSee('Placa');
+        $this->entrarComo($this->rec1)->post($url, ['nome' => 'Júlia Nova', 'documento' => '123'])->assertSessionHasErrors('documento');
+        $this->entrarComo($this->rec1)->post($url, ['nome' => 'Júlia Nova', 'placa' => 'XX'])->assertSessionHasErrors('placa');
+        $this->assertSame(0, \App\Models\Cliente::where('telefone', '61977776666')->count());
+
+        $this->entrarComo($this->rec1)->post($url, ['nome' => 'Júlia Nova', 'email' => 'julia@exemplo.test', 'documento' => '529.982.247-25',
+            'placa' => 'rda-1b23', 'marca' => 'Chevrolet', 'modelo' => 'Onix', 'ano' => '2020', 'cor' => 'Prata'])->assertRedirect()->assertSessionHasNoErrors();
         $cliente = \App\Models\Cliente::where('telefone', '61977776666')->sole();
-        $this->assertSame(['Júlia Nova', 'julia@exemplo.test'], [$cliente->nome, $cliente->email]);
+        $this->assertSame(['Júlia Nova', 'julia@exemplo.test', '52998224725'], [$cliente->nome, $cliente->email, $cliente->documento]);
+        $v = \App\Models\Veiculo::where('placa', 'RDA1B23')->sole();
+        $this->assertSame([$cliente->id, 'Chevrolet', 'Onix', 2020, 'Prata'], [$v->cliente_id, $v->marca, $v->modelo, (int) $v->ano, $v->cor]);
+        $this->assertDatabaseHas('audit_events', ['acao' => 'veiculo_criado', 'entidade_id' => $v->id]);
         $this->assertSame($cliente->id, $c->fresh()->cliente_id);
         $this->assertDatabaseHas('audit_events', ['acao' => 'cliente_criado', 'entidade_id' => $cliente->id]);
         $this->entrarComo($this->rec1)->post($url, ['nome' => 'De novo'])->assertSessionHasErrors('nome');

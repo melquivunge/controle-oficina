@@ -221,8 +221,17 @@ class Atendimento
             if ($existentes->isNotEmpty()) {
                 throw ValidationException::withMessages(['nome' => 'Já existe cadastro com este telefone ('.$existentes->pluck('nome')->implode(', ').'). Use "Vincular cliente" para ligar a conversa a ele.']);
             }
-            $c = Cliente::create(['nome' => $dados['nome'], 'telefone' => $conversa->contato_telefone, 'email' => $dados['email'] ?? null, 'observacoes' => $dados['observacoes'] ?? null]);
+            $c = new Cliente(['nome' => $dados['nome'], 'telefone' => $conversa->contato_telefone, 'email' => $dados['email'] ?? null, 'observacoes' => $dados['observacoes'] ?? null]);
+            $c->documento = ($dados['documento'] ?? null) ?: null;
+            $c->save();
             Auditoria::registrar('cliente_criado', $c, depois: $c->only('nome', 'telefone', 'email') + ['origem' => 'whatsapp', 'conversa_id' => $conversa->id], unidadeId: $conversa->unidade_id);
+            if (! empty($dados['placa'])) {
+                $v = new \App\Models\Veiculo(['placa' => $dados['placa'], 'marca' => $dados['marca'] ?? null, 'modelo' => $dados['modelo'] ?? null,
+                    'ano' => $dados['ano'] ?? null, 'cor' => $dados['cor'] ?? null]);
+                $v->cliente_id = $c->id;
+                $v->save();
+                Auditoria::registrar('veiculo_criado', $v, depois: ['placa' => $v->placa, 'cliente_id' => $c->id], unidadeId: $conversa->unidade_id);
+            }
 
             return $c;
         });
