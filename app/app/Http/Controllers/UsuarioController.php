@@ -16,7 +16,7 @@ use Illuminate\Validation\ValidationException;
 
 class UsuarioController extends Controller
 {
-    private const CAMPOS_AUDITADOS = ['name', 'email', 'papel', 'unidade_id', 'ativo', 'permissoes_extras'];
+    private const CAMPOS_AUDITADOS = ['name', 'email', 'papel', 'unidade_id', 'ativo', 'permissoes_extras', 'dois_fatores_dispensado'];
 
     public function index(Request $request)
     {
@@ -134,6 +134,7 @@ class UsuarioController extends Controller
             'permissoes_extras' => ['array'],
             'permissoes_extras.*' => [Rule::in(array_keys(Papel::PERMISSOES_CONCEDIVEIS))],
             'password' => [$usuario ? 'nullable' : 'required', 'confirmed', Password::min(10)->letters()->numbers()],
+            'dois_fatores_dispensado' => ['nullable', 'boolean'],
         ], [], ['name' => 'nome', 'email' => 'e-mail', 'unidade_id' => 'unidade', 'unidades' => 'unidades supervisionadas', 'password' => 'senha', 'permissoes_extras' => 'permissões']);
     }
 
@@ -172,5 +173,12 @@ class UsuarioController extends Controller
             default => $dados['unidade_id'],
         };
         $usuario->permissoes_extras = array_values(array_diff($dados['permissoes_extras'] ?? [], $papel->permissoes()));
+        // Ninguém dispensa a própria verificação; ao dispensar, a chave antiga é apagada (não fica um segundo fator órfão).
+        if (! $usuario->is(request()->user())) {
+            $usuario->dois_fatores_dispensado = (bool) ($dados['dois_fatores_dispensado'] ?? false);
+            if ($usuario->dois_fatores_dispensado) {
+                $usuario->forceFill(['two_factor_secret' => null, 'two_factor_confirmed_at' => null]);
+            }
+        }
     }
 }

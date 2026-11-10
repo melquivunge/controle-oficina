@@ -41,6 +41,13 @@
                 </div>
                 @error('permissoes_extras.*')<span class="field-error">{{ $message }}</span>@enderror
             </fieldset>
+            @unless ($usuario->exists && $usuario->is(auth()->user()))
+            <fieldset style="border:0;padding:0;margin-top:16px">
+                <legend>Verificação em duas etapas</legend>
+                <p class="hint">Obrigatória para proprietários. Dispense só para quem não consegue usar o aplicativo de códigos no celular: a conta fica protegida apenas pela senha.</p>
+                <label class="opcao-marcar"><input type="hidden" name="dois_fatores_dispensado" value="0"><input type="checkbox" name="dois_fatores_dispensado" value="1" @checked(old('dois_fatores_dispensado', $usuario->dois_fatores_dispensado))> <span>Dispensar a verificação em duas etapas para esta pessoa</span></label>
+            </fieldset>
+            @endunless
         </section>
         <section class="form-section">
             <h2>{{ $novo ? 'Senha inicial' : 'Redefinir senha (opcional)' }}</h2>

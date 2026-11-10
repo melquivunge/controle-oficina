@@ -27,6 +27,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'dois_fatores_dispensado' => 'boolean',
             'password' => 'hashed',
             'papel' => Papel::class,
             'ativo' => 'boolean',
@@ -130,9 +131,10 @@ class User extends Authenticatable
     }
 
     /** 2FA obrigatório para quem configura o sistema (proprietário/administrador). */
+    /** Proprietário/administrador exige duas etapas, salvo dispensa individual dada por outro proprietário (auditada). */
     public function exigeDoisFatores(): bool
     {
-        return $this->pode('configurar');
+        return $this->pode('configurar') && ! $this->dois_fatores_dispensado;
     }
 
     public function iniciais(): string

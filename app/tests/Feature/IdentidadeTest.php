@@ -119,6 +119,38 @@ class IdentidadeTest extends TestCase
         $this->assertStringNotContainsString($socia->two_factor_secret, json_encode(AuditEvent::all()->toArray()));
     }
 
+    public function test_dispensa_individual_de_2fa_dada_por_outro_proprietario_com_auditoria(): void
+    {
+        $dono = User::factory()->proprietario()->create();
+        $dono->forceFill(['two_factor_secret' => Totp::novoSegredo(), 'two_factor_confirmed_at' => now()])->save();
+        $this->entrarComo($dono)->get('/configuracoes/usuarios/novo')->assertSee('Dispensar a verificação em duas etapas');
+        $this->entrarComo($dono)->post('/configuracoes/usuarios', [
+            'name' => 'Seu Antônio', 'email' => 'antonio@oficina.test', 'papel' => 'proprietario', 'dois_fatores_dispensado' => '1',
+            'password' => 'senha12345', 'password_confirmation' => 'senha12345',
+        ])->assertRedirect('/configuracoes/usuarios')->assertSessionMissing('chave_2fa');
+        $antonio = User::where('email', 'antonio@oficina.test')->sole();
+        $this->assertTrue($antonio->dois_fatores_dispensado);
+        $this->assertNull($antonio->two_factor_secret);
+        $this->assertDatabaseHas('audit_events', ['acao' => 'usuario_criado', 'entidade_id' => $antonio->id]);
+        $this->assertStringContainsString('"dois_fatores_dispensado":true', json_encode(AuditEvent::where('acao', 'usuario_criado')->where('entidade_id', $antonio->id)->sole()->depois));
+
+        // Entra só com a senha e acessa configurações.
+        $this->flushSession();
+        $this->actingAs($antonio)->get('/auditoria')->assertOk();
+
+        // Não dispensa a própria verificação (campo ignorado) e o dono continua obrigado.
+        $this->flushSession();
+        $this->actingAs($antonio)->withSession(['auth.password_confirmed_at' => time()])->get('/configuracoes/usuarios/'.$antonio->id)->assertDontSee('Dispensar a verificação');
+        $this->flushSession();
+        $this->entrarComo($dono)->put('/configuracoes/usuarios/'.$dono->id, ['name' => $dono->name, 'email' => $dono->email, 'papel' => 'proprietario', 'dois_fatores_dispensado' => '1']);
+        $this->assertFalse($dono->fresh()->dois_fatores_dispensado);
+
+        // Voltar a exigir gera e entrega nova chave.
+        $this->entrarComo($dono)->put('/configuracoes/usuarios/'.$antonio->id, ['name' => 'Seu Antônio', 'email' => 'antonio@oficina.test', 'papel' => 'proprietario', 'dois_fatores_dispensado' => '0'])
+            ->assertSessionHas('chave_2fa');
+        $this->assertNotNull($antonio->fresh()->two_factor_secret);
+    }
+
     public function test_codigo_2fa_nao_pode_ser_reutilizado(): void
     {
         $segredo = Totp::novoSegredo();
