@@ -1,5 +1,8 @@
 <div class="form-grid">
     <form class="form-panel" wire:submit="salvar" novalidate>
+        @if ($avulsoNumero)
+            <p class="notice" role="status">Entrada do orçamento <strong>{{ $avulsoNumero }}</strong>, aprovado pelo cliente. A OS terá o mesmo número e os itens do orçamento entram como rascunho para conferência depois do diagnóstico.</p>
+        @endif
         @if ($unidades->isEmpty())
             <p class="notice" role="alert">Nenhuma unidade cadastrada: a entrada precisa de uma unidade.
                 @can('configurar')<a href="{{ route('unidades.index') }}">Cadastrar unidade</a>@else Peça ao proprietário para cadastrar a unidade.@endcan</p>

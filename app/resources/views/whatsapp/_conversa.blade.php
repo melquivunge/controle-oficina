@@ -108,6 +108,9 @@
             @can('registrar_entrada')
                 <a class="button wa-entrada" href="{{ route('entradas.nova', ['telefone' => $conversa->cliente->telefone, 'nome' => $conversa->cliente->nome]) }}">Registrar entrada de veículo</a>
             @endcan
+            @can('orcar')
+                <a class="button wa-entrada" href="{{ route('orcamentos-avulsos.create', ['conversa' => $conversa->id]) }}">Fazer orçamento (sem o carro)</a>
+            @endcan
         @endif
         <details @if ($buscaCliente !== '') open @endif>
             <summary>{{ $conversa->cliente ? 'Trocar cliente' : 'Vincular cliente' }}</summary>

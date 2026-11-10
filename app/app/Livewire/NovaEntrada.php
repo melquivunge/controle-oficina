@@ -68,6 +68,13 @@ class NovaEntrada extends Component
     // Entrada sem veículo/placa (peças avulsas, ex.: jogo de rodas) e endereço opcional do cliente.
     public bool $sem_veiculo = false;
 
+    /** Entrada de um orçamento sem entrada aprovado (?orcamento=NUMERO): a OS recebe o mesmo número e os itens. */
+    #[\Livewire\Attributes\Locked]
+    public ?int $avulsoId = null;
+
+    #[\Livewire\Attributes\Locked]
+    public ?string $avulsoNumero = null;
+
     public string $item_descricao = '';
 
     public array $endereco = ['cep' => '', 'logradouro' => '', 'numero' => '', 'complemento' => '', 'bairro' => '', 'cidade' => '', 'uf' => ''];
@@ -82,6 +89,18 @@ class NovaEntrada extends Component
         // Pré-preenchimento vindo de outra tela (ex.: Central de WhatsApp); o cadastro existente é sugerido pela busca normal.
         $this->telefone = Normaliza::telefone((string) request()->query('telefone', ''));
         $this->nome = mb_substr(trim((string) request()->query('nome', '')), 0, 150);
+        if ($numero = request()->query('orcamento')) {
+            $a = \App\Models\OrcamentoAvulso::visiveisPara($user)->with('cliente')->where('numero', (string) $numero)->where('status', 'aprovado')->first();
+            if ($a) {
+                [$this->avulsoId, $this->avulsoNumero, $this->unidade_id] = [$a->id, $a->numero, $a->unidade_id];
+                [$this->cliente_id, $this->telefone, $this->nome] = [$a->cliente_id, (string) $a->cliente->telefone, $a->cliente->nome];
+                $this->motivo = "Orçamento {$a->numero} aprovado pelo cliente.";
+                if ($a->placa) {
+                    $this->placa = $a->placa;
+                    $this->updatedPlaca();
+                }
+            }
+        }
     }
 
     protected function rules(): array
@@ -261,6 +280,7 @@ class NovaEntrada extends Component
         }
         $dados = $this->validate();
         $dados['sem_veiculo'] = $this->sem_veiculo;
+        $dados['orcamento_avulso_id'] = $this->avulsoId;
         $dados['ano'] = $this->sem_veiculo || $this->ano === '' ? null : (int) $this->ano;
         $dados['endereco'] = $this->endereco;
 

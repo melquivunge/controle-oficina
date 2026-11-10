@@ -39,7 +39,12 @@ class Entradas
                 // Sem veículo/placa: o cliente trouxe só o item (ex.: jogo de rodas); a OS é identificada pela descrição.
                 $semVeiculo = ! empty($dados['sem_veiculo']);
                 $veiculo = $semVeiculo ? null : $this->veiculo($dados, $cliente);
-                $sequencia = $this->proximoNumero($unidade->id);
+                // Orçamento sem entrada aprovado: a OS usa o mesmo número dele (já reservado na sequência da unidade).
+                $avulso = ! empty($dados['orcamento_avulso_id']) ? app(OrcamentosAvulsos::class)->travarParaEntrada((int) $dados['orcamento_avulso_id'], $unidade->id) : null;
+                if ($avulso && $avulso->cliente_id !== $cliente->id) {
+                    throw ValidationException::withMessages(['telefone' => "O orçamento {$avulso->numero} é de outro cliente. Use o cliente do orçamento."]);
+                }
+                $sequencia = $avulso?->sequencia ?? $this->proximoNumero($unidade->id);
 
                 $ordem = new Ordem([
                     'motivo' => $dados['motivo'],
@@ -68,6 +73,9 @@ class Entradas
                     'numero' => $ordem->numero, 'cliente_id' => $cliente->id, 'veiculo_id' => $veiculo?->id,
                     'placa' => $veiculo?->placa, 'item_descricao' => $ordem->item_descricao, 'entrada_em' => $ordem->entrada_em->toIso8601String(), 'anexos' => count($fotos),
                 ], motivo: $ordem->contingencia_nota, ator: $ator);
+                if ($avulso) {
+                    app(OrcamentosAvulsos::class)->concluirEntrada($avulso, $ordem, $ator);
+                }
                 app(Mensagens::class)->enfileirar($ordem, 'entrada', app(Orcamentos::class)->novoLink($ordem, $ator));
 
                 return $ordem;

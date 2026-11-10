@@ -91,9 +91,13 @@
             @include('livewire.partials.campo', ['nome' => 'desconto', 'rotulo' => 'Desconto (R$, opcional)', 'live' => true, 'atributos' => ['inputmode' => 'decimal', 'placeholder' => '0,00']])
             @include('livewire.partials.campo', ['nome' => 'desconto_motivo', 'rotulo' => 'Motivo do desconto'])
         @endif
+        @if ($avulsoId)
+            @include('livewire.partials.campo', ['nome' => 'validade', 'rotulo' => 'Válido até', 'tipo' => 'date', 'atributos' => ['min' => now()->toDateString(), 'max' => now()->addDays(90)->toDateString()]])
+        @endif
         @include('livewire.partials.campo', ['nome' => 'observacao', 'rotulo' => 'Observação para o cliente (opcional)', 'tipo' => 'textarea', 'classe' => 'full'])
     </div>
-    @if (! $podeDesconto)<p class="hint">Descontos exigem permissão de gerente.</p>@endif
+    @if ($avulsoId)<p class="hint">Desconto só na OS, depois da entrada do veículo. Aqui o preço não fica abaixo da tabela.</p>
+    @elseif (! $podeDesconto)<p class="hint">Descontos exigem permissão de gerente.</p>@endif
     @if ($acimaDoLimite)
         <p class="alert aviso" role="status">Desconto acima do limite sem aprovação (item do catálogo ou regra geral de {{ str_replace('.', ',', rtrim(rtrim($regraGeral, '0'), '.')) }}%). Ao salvar, o pedido vai para aprovação interna; o orçamento só poderá ser concluído depois de aprovado.</p>
     @endif
@@ -104,5 +108,5 @@
         <dt>Total</dt><dd><strong>{{ \App\Support\Dinheiro::formatar(max(0, $subtotal - $descontoCentavos)) }}</strong></dd>
     </dl>
     <p class="hint">Totais calculados por item: quantidade × preço, arredondado ao centavo (meio centavo para cima). O valor final é conferido pelo sistema ao salvar.</p>
-    <button class="button primary" type="submit" wire:loading.attr="disabled" wire:target="salvar">Salvar rascunho</button>
+    <button class="button primary" type="submit" wire:loading.attr="disabled" wire:target="salvar">{{ $avulsoId ? 'Salvar orçamento' : 'Salvar rascunho' }}</button>
 </form>

@@ -197,7 +197,7 @@ class Orcamentos
      *
      * @return list<array{descricao:string, quantidade:string, preco_unitario_centavos:int, total_centavos:int, catalogo_item_id:?int, preco_tabela_centavos:?int, desconto_max_percentual:?string}>
      */
-    private function normalizarItens(array $itens, ?int $unidadeId = null): array
+    public function normalizarItens(array $itens, ?int $unidadeId = null): array
     {
         $erros = [];
         $linhas = [];

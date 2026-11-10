@@ -15,7 +15,13 @@ use Livewire\Component;
 class OrcamentoEditor extends Component
 {
     #[Locked]
-    public int $ordemId;
+    public ?int $ordemId = null;
+
+    /** Orçamento sem entrada (10/11/2026): mesmo editor, sem desconto (desconto só na OS). */
+    #[Locked]
+    public ?int $avulsoId = null;
+
+    public string $validade = '';
 
     public array $itens = [];
     public string $desconto = '';
@@ -23,8 +29,21 @@ class OrcamentoEditor extends Component
     public string $observacao = '';
     public string $catalogoEscolhido = '';
 
-    public function mount(Ordem $ordem): void
+    public function mount(?Ordem $ordem = null, ?\App\Models\OrcamentoAvulso $avulso = null): void
     {
+        if ($avulso?->exists) {
+            app(\App\Services\OrcamentosAvulsos::class)->autorizar(auth()->user(), $avulso);
+            $this->avulsoId = $avulso->id;
+            $this->itens = array_map(fn ($i) => ['descricao' => $i['descricao'], 'quantidade' => Dinheiro::quantidadeExibicao((string) $i['quantidade']),
+                'preco' => Dinheiro::paraCampo((int) $i['preco_unitario_centavos']), 'catalogo_item_id' => $i['catalogo_item_id'] ?? null, 'desconto' => '', 'tipo' => $i['tipo'] ?? 'servico'], $avulso->itens ?? []);
+            $this->observacao = (string) $avulso->observacao;
+            $this->validade = $avulso->validade->toDateString();
+            if (! $this->itens) {
+                $this->adicionarLinha();
+            }
+
+            return;
+        }
         $this->authorize('orcar', $ordem);
         $this->ordemId = $ordem->id;
         // Começa do rascunho; senão, da versão mais recente (para ajustes/extras); senão, em branco.
@@ -95,6 +114,10 @@ class OrcamentoEditor extends Component
 
     private function unidadeId(): int
     {
+        if ($this->avulsoId) {
+            return (int) \App\Models\OrcamentoAvulso::whereKey($this->avulsoId)->value('unidade_id');
+        }
+
         return (int) Ordem::whereKey($this->ordemId)->value('unidade_id');
     }
 
@@ -110,6 +133,13 @@ class OrcamentoEditor extends Component
     public function salvar(Orcamentos $orcamentos)
     {
         $this->resetErrorBag();
+        if ($this->avulsoId) {
+            $a = app(\App\Services\OrcamentosAvulsos::class)->salvarItens(\App\Models\OrcamentoAvulso::findOrFail($this->avulsoId), auth()->user(), $this->itens,
+                $this->observacao ?: null, $this->validade ?: null);
+            session()->flash('sucesso', 'Orçamento salvo. Confira e envie ao cliente.');
+
+            return $this->redirectRoute('orcamentos-avulsos.show', $a);
+        }
         try {
             $desconto = trim($this->desconto) === '' ? 0 : Dinheiro::deTexto($this->desconto);
         } catch (\InvalidArgumentException) {
@@ -166,7 +196,7 @@ class OrcamentoEditor extends Component
         $sugeridos = $usados->flatMap(fn ($c) => $c->adicionais)->unique('id')->reject(fn ($a) => in_array($a->id, $ids, true))->values();
         $opcoes = CatalogoItem::where('ativo', true)->with('precosUnidade')->orderBy('categoria')->orderBy('nome')->get()->groupBy('categoria');
 
-        return view('livewire.orcamento-editor', ['linhas' => $linhas, 'subtotal' => $subtotal, 'descontoCentavos' => $desc, 'podeDesconto' => auth()->user()->pode('aplicar_desconto'),
+        return view('livewire.orcamento-editor', ['linhas' => $linhas, 'subtotal' => $subtotal, 'descontoCentavos' => $desc, 'podeDesconto' => ! $this->avulsoId && auth()->user()->pode('aplicar_desconto'),
             'info' => $info, 'acimaDoLimite' => $acimaDoLimite, 'sugeridos' => $sugeridos, 'opcoesCatalogo' => $opcoes, 'unidadeId' => $unidadeId, 'regraGeral' => $regra]);
     }
 }

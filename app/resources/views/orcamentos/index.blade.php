@@ -1,6 +1,8 @@
 @extends('layouts.app', ['titulo' => 'Orçamentos'])
 @section('conteudo')
-    <div class="page-head"><div><h1>Orçamentos e versões</h1><p class="subtitle">Cada envio cria uma versão preservada. A aprovação vale apenas para a versão escolhida pelo cliente.</p></div></div>
+    <div class="page-head"><div><h1>Orçamentos e versões</h1><p class="subtitle">Cada envio cria uma versão preservada. A aprovação vale apenas para a versão escolhida pelo cliente.</p></div>
+        @can('orcar')<div class="page-acoes"><a class="button" href="{{ route('orcamentos-avulsos.index') }}">Orçamentos sem entrada</a>
+            <a class="button primary" href="{{ route('orcamentos-avulsos.create') }}">Novo orçamento sem entrada</a></div>@endcan</div>
     <form method="GET" class="filters">
         @include('partials.campo', ['nome' => 'status', 'rotulo' => 'Situação', 'tipo' => 'select', 'opcoes' => \App\Http\Controllers\OrcamentoController::FILTROS, 'valorAtual' => $status])
         @if ($unidades->count() > 1)

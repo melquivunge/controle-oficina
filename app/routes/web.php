@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Route;
 // Área do cliente: link com token, sem conta.
 Route::middleware('throttle:portal')->group(function () {
     Route::get('/c/{token}', [PortalController::class, 'show'])->name('portal.show');
+    Route::get('/q/{token}', [\App\Http\Controllers\OrcamentoAvulsoController::class, 'portal'])->name('orcamento-avulso.portal');
     Route::get('/c/{token}/documentos/{documento}', [PortalController::class, 'documento'])->name('portal.documento');
 });
 
@@ -111,6 +112,16 @@ Route::middleware('auth')->group(function () {
         // Páginas de consulta e operação: veículos, orçamentos, pendências/mensagens, integrações e exportação da auditoria.
         Route::get('/veiculos', [\App\Http\Controllers\VeiculoController::class, 'index'])->middleware('can:registrar_entrada')->name('veiculos.index');
         Route::get('/orcamentos', [OrcamentoController::class, 'index'])->middleware('can:ver_valores')->name('orcamentos.index');
+        // Orçamento sem entrada do veículo (10/11/2026): quem orça; unidade conferida no serviço.
+        Route::middleware('can:orcar')->prefix('orcamentos-sem-entrada')->name('orcamentos-avulsos.')->controller(\App\Http\Controllers\OrcamentoAvulsoController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/novo', 'create')->name('create');
+            Route::post('/', 'store')->middleware('throttle:30,1')->name('store');
+            Route::get('/{orcamento}', 'show')->name('show');
+            Route::post('/{orcamento}/enviar', 'enviar')->middleware('throttle:20,1')->name('enviar');
+            Route::post('/{orcamento}/decisao', 'decidir')->name('decidir');
+            Route::post('/{orcamento}/cancelar', 'cancelar')->name('cancelar');
+        });
         Route::middleware('can:resolver_divergencias')->group(function () {
             Route::get('/pendencias', [\App\Http\Controllers\PendenciaController::class, 'index'])->name('pendencias.index');
             Route::post('/pendencias/{tipo}/{id}/resolver', [\App\Http\Controllers\PendenciaController::class, 'resolver'])->whereNumber('id')->name('pendencias.resolver');

@@ -559,6 +559,33 @@ class CentralWhatsAppTest extends TestCase
         $this->assertStringNotContainsString('WhatsApp sem resposta', $mec);
     }
 
+    public function test_orcamento_sem_entrada_pela_conversa_fica_no_historico(): void
+    {
+        $this->recebeDireto($this->num1, '61977776666');
+        $c = $this->conversa($this->num1, '61977776666');
+        $this->entrarComo($this->ger1)->get(route('orcamentos-avulsos.create', ['conversa' => $c->id]))->assertOk()->assertSee('não tem cliente vinculado');
+        $this->entrarComo($this->ger1)->post(route('orcamentos-avulsos.store'), ['unidade_id' => $this->u1->id, 'conversa_id' => $c->id])->assertSessionHasErrors('cliente');
+
+        $this->entrarComo($this->rec1)->post(route('whatsapp.cliente.novo', $c), ['nome' => 'Júlia Nova'])->assertSessionHasNoErrors();
+        $this->entrarComo($this->rec1)->get(route('whatsapp.show', $c))->assertDontSee('Fazer orçamento'); // recepção não orça
+        $this->entrarComo($this->ger1)->get(route('whatsapp.show', $c))->assertSee('Fazer orçamento (sem o carro)');
+        $this->entrarComo($this->rec2)->get(route('orcamentos-avulsos.create', ['conversa' => $c->id]))->assertForbidden();
+
+        $dono = $this->dono; // vê as duas unidades: conversa da unidade 1 não vira orçamento da unidade 2
+        $this->entrarComo($dono)->post(route('orcamentos-avulsos.store'), ['unidade_id' => $this->u2->id, 'conversa_id' => $c->id])->assertSessionHasErrors('unidade_id');
+        $this->entrarComo($this->ger1)->post(route('orcamentos-avulsos.store'), ['unidade_id' => $this->u1->id, 'conversa_id' => $c->id, 'veiculo_descricao' => 'Onix 2020'])
+            ->assertSessionHasNoErrors();
+        $o = \App\Models\OrcamentoAvulso::sole();
+        $this->assertSame([$c->fresh()->cliente_id, $c->id], [$o->cliente_id, $o->conversa_id]);
+        $this->assertNotNull($o->cliente_id);
+        \Livewire\Livewire::actingAs($this->ger1)->test(\App\Livewire\OrcamentoEditor::class, ['avulso' => $o])
+            ->set('itens', [['descricao' => 'Alinhamento', 'quantidade' => '1', 'preco' => '120,00', 'catalogo_item_id' => null, 'desconto' => '', 'tipo' => 'servico']])->call('salvar')->assertHasNoErrors();
+        $this->entrarComo($this->ger1)->post(route('orcamentos-avulsos.enviar', $o), ['canal' => 'loja'])->assertSessionHasNoErrors();
+        $m = WhatsappMensagem::where('conversa_id', $c->id)->where('direcao', 'saida')->latest('id')->firstOrFail();
+        $this->assertStringContainsString($o->numero, $m->texto);
+        $this->assertStringContainsString('/q/', $m->texto);
+    }
+
     public function test_consulta_placa_no_cadastro_pela_conversa(): void
     {
         $this->recebeDireto($this->num1, '61977776666');
