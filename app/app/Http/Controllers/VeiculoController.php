@@ -19,7 +19,7 @@ class VeiculoController extends Controller
         $veiculos = Veiculo::with('cliente')
             ->where(fn ($q) => $q->whereHas('ordens', $visiveis)->orWhereDoesntHave('ordens')) // + sem atendimento (importados/cadastro direto)
             ->withCount(['ordens' => $visiveis])
-            ->when($placa !== '', fn ($q) => $q->where('placa', 'like', '%'.$placa.'%'))
+            ->when($placa !== '', fn ($q) => $q->where(fn ($w) => $w->where('placa', 'like', '%'.$placa.'%')->orWhere('chassi', 'like', '%'.$placa.'%')))
             ->orderBy('placa')->paginate(24)->withQueryString();
 
         // Últimas 3 ordens visíveis por veículo da página (uma consulta).
@@ -28,5 +28,23 @@ class VeiculoController extends Controller
             ->groupBy('veiculo_id')->map->take(3);
 
         return view('veiculos.index', compact('veiculos', 'ordens', 'placa'));
+    }
+
+    /** Chassi do veículo pela OS (quem registra entrada na unidade da OS). Auditado; vazio apaga. */
+    public function chassi(Request $request, \App\Models\Ordem $ordem)
+    {
+        $this->authorize('atribuir', $ordem);
+        abort_unless($ordem->veiculo_id, 404);
+        $veiculo = $ordem->veiculo;
+        $request->merge(['chassi' => Normaliza::chassi($request->input('chassi'))]);
+        $chassi = $request->validate(['chassi' => ['nullable', 'regex:'.Normaliza::REGEX_CHASSI, \Illuminate\Validation\Rule::unique('veiculos', 'chassi')->ignore($veiculo->id)]],
+            ['chassi.regex' => 'Chassi deve ter 17 letras e números (sem I, O ou Q).', 'chassi.unique' => 'Este chassi já está cadastrado em outro veículo.'])['chassi'] ?: null;
+        if ($chassi !== $veiculo->chassi) {
+            $antes = ['chassi' => $veiculo->chassi];
+            $veiculo->update(['chassi' => $chassi]);
+            \App\Services\Auditoria::registrar('veiculo_chassi_alterado', $veiculo, $antes, ['chassi' => $chassi, 'ordem' => $ordem->numero], unidadeId: $ordem->unidade_id);
+        }
+
+        return back()->with('sucesso', $chassi ? 'Chassi salvo no veículo.' : 'Chassi removido do veículo.');
     }
 }

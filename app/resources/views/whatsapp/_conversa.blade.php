@@ -94,6 +94,7 @@
                             @include('partials.campo', ['nome' => 'modelo', 'rotulo' => 'Modelo', 'id' => 'wa-novo-modelo'])
                             @include('partials.campo', ['nome' => 'ano', 'rotulo' => 'Ano', 'id' => 'wa-novo-ano', 'atributos' => ['inputmode' => 'numeric', 'maxlength' => 4]])
                             @include('partials.campo', ['nome' => 'cor', 'rotulo' => 'Cor', 'id' => 'wa-novo-cor'])
+                            @include('partials.campo', ['nome' => 'chassi', 'rotulo' => 'Chassi', 'id' => 'wa-novo-chassi', 'atributos' => ['autocomplete' => 'off', 'maxlength' => 20, 'style' => 'text-transform:uppercase']])
                         </fieldset>
                         <div class="field"><label for="wa-novo-obs">Observações (opcional)</label>
                             <textarea id="wa-novo-obs" name="observacoes" rows="2" @error('observacoes') aria-invalid="true" aria-describedby="wa-novo-obs-erro" @enderror>{{ old('observacoes') }}</textarea>

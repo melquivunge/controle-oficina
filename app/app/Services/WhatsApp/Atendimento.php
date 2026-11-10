@@ -227,7 +227,7 @@ class Atendimento
             Auditoria::registrar('cliente_criado', $c, depois: $c->only('nome', 'telefone', 'email') + ['origem' => 'whatsapp', 'conversa_id' => $conversa->id], unidadeId: $conversa->unidade_id);
             if (! empty($dados['placa'])) {
                 $v = new \App\Models\Veiculo(['placa' => $dados['placa'], 'marca' => $dados['marca'] ?? null, 'modelo' => $dados['modelo'] ?? null,
-                    'ano' => $dados['ano'] ?? null, 'cor' => $dados['cor'] ?? null]);
+                    'ano' => $dados['ano'] ?? null, 'cor' => $dados['cor'] ?? null, 'chassi' => ($dados['chassi'] ?? null) ?: null]);
                 $v->cliente_id = $c->id;
                 $v->save();
                 Auditoria::registrar('veiculo_criado', $v, depois: ['placa' => $v->placa, 'cliente_id' => $c->id], unidadeId: $conversa->unidade_id);

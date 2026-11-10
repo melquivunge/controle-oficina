@@ -198,7 +198,8 @@ class WhatsAppController extends Controller
     {
         $user = $this->exigirConversa($request, $conversa);
         // Mesmas regras do Novo cliente (ClienteController::store): CPF/CNPJ e veículo opcionais; placa nunca duplica.
-        $request->merge(['placa' => Normaliza::placa($request->input('placa')), 'documento' => preg_replace('/\D/', '', (string) $request->input('documento'))]);
+        $request->merge(['placa' => Normaliza::placa($request->input('placa')), 'documento' => preg_replace('/\D/', '', (string) $request->input('documento')),
+            'chassi' => Normaliza::chassi($request->input('chassi'))]);
         $dados = $request->validate([
             'nome' => ['required', 'string', 'min:2', 'max:150'],
             'email' => ['nullable', 'email', 'max:255'],
@@ -207,7 +208,8 @@ class WhatsAppController extends Controller
             'placa' => ['nullable', 'regex:'.Normaliza::REGEX_PLACA, Rule::unique('veiculos', 'placa')],
             'marca' => ['nullable', 'string', 'max:40'], 'modelo' => ['nullable', 'string', 'max:80'],
             'ano' => ['nullable', 'integer', 'min:1950', 'max:'.(now()->year + 1)], 'cor' => ['nullable', 'string', 'max:30'],
-        ], ['documento.regex' => 'CPF (11 dígitos) ou CNPJ (14 dígitos).', 'placa.regex' => 'Placa inválida (ex.: ABC1D23).',
+            'chassi' => ['nullable', 'regex:'.Normaliza::REGEX_CHASSI, Rule::unique('veiculos', 'chassi')],
+        ], ['chassi.regex' => 'Chassi deve ter 17 letras e números (sem I, O ou Q).', 'chassi.unique' => 'Este chassi já está cadastrado em outro veículo.', 'documento.regex' => 'CPF (11 dígitos) ou CNPJ (14 dígitos).', 'placa.regex' => 'Placa inválida (ex.: ABC1D23).',
             'placa.unique' => 'Esta placa já está cadastrada. Use "Vincular cliente" e busque pela placa.'],
             ['nome' => 'nome do cliente', 'email' => 'e-mail', 'observacoes' => 'observações', 'documento' => 'CPF ou CNPJ']);
         $cliente = $this->atendimento->cadastrarCliente($conversa, $user, $dados);

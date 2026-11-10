@@ -68,6 +68,16 @@
                         @if ($ordem->veiculo)
                         <dt>Placa</dt><dd><span class="plate">{{ $ordem->veiculo->placaFormatada() }}</span> {{ $ordem->veiculo->modelo }}</dd>
                         <dt>Cor</dt><dd>{{ $ordem->veiculo->cor ?: 'Não informada' }}</dd>
+                        <dt>Chassi</dt><dd>{{ $ordem->veiculo->chassi ?: 'Não informado' }}
+                            @can('atribuir', $ordem)
+                                <details class="chassi-editar" @if ($errors->has('chassi')) open @endif><summary>{{ $ordem->veiculo->chassi ? 'Alterar chassi' : 'Adicionar chassi' }}</summary>
+                                    <form method="POST" action="{{ route('ordens.chassi', $ordem) }}" class="inline-form">@csrf @method('PUT')
+                                        @include('partials.campo', ['nome' => 'chassi', 'rotulo' => 'Chassi (17 caracteres)', 'id' => 'os-chassi', 'valorAtual' => $ordem->veiculo->chassi, 'atributos' => ['autocomplete' => 'off', 'maxlength' => 20, 'style' => 'text-transform:uppercase']])
+                                        <button class="button" type="submit">Salvar chassi</button>
+                                    </form>
+                                </details>
+                            @endcan
+                        </dd>
                         @else
                         <dt>Item</dt><dd><span class="item-avulso">Sem veículo</span> {{ $ordem->item_descricao }}</dd>
                         @endif

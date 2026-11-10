@@ -64,6 +64,7 @@
                     @include('livewire.partials.campo', ['nome' => 'modelo', 'rotulo' => 'Modelo do veículo (opcional)', 'atributos' => ['autocomplete' => 'off']])
                     @include('livewire.partials.campo', ['nome' => 'ano', 'rotulo' => 'Ano (opcional)', 'atributos' => ['inputmode' => 'numeric', 'maxlength' => 4, 'autocomplete' => 'off']])
                     @include('livewire.partials.campo', ['nome' => 'cor', 'rotulo' => 'Cor (opcional)', 'atributos' => ['autocomplete' => 'off']])
+                    @include('livewire.partials.campo', ['nome' => 'chassi', 'rotulo' => 'Chassi (opcional)', 'atributos' => ['autocomplete' => 'off', 'maxlength' => 20, 'style' => 'text-transform:uppercase']])
                 @endunless
             </div>
             <label class="check-linha sem-veiculo-opcao"><input type="checkbox" wire:model.live="sem_veiculo"> Sem veículo (peças avulsas) — o cliente trouxe só o item, sem placa</label>

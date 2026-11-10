@@ -45,6 +45,8 @@ class NovaEntrada extends Component
 
     public string $cor = '';
 
+    public string $chassi = '';
+
     public ?string $avisoPlaca = null; // resultado da consulta externa sem dados
 
     public ?string $origemVeiculo = null; // 'sistema' | 'consulta' (06/11/2026: dados puxados pela placa)
@@ -100,6 +102,7 @@ class NovaEntrada extends Component
             'marca' => ['exclude_if:sem_veiculo,true', 'nullable', 'string', 'max:40'],
             'ano' => ['exclude_if:sem_veiculo,true', 'nullable', 'integer', 'min:1950', 'max:'.(now()->year + 1)],
             'cor' => ['exclude_if:sem_veiculo,true', 'nullable', 'string', 'max:30'],
+            'chassi' => ['exclude_if:sem_veiculo,true', 'nullable', 'regex:'.Normaliza::REGEX_CHASSI, Rule::unique('veiculos', 'chassi')->where(fn ($q) => $q->where('placa', '<>', $this->placa))],
             'quilometragem' => ['nullable', 'integer', 'min:0', 'max:2000000'],
             'observacoes' => ['nullable', 'string', 'max:2000'],
             'fotos' => ['array', 'max:5'],
@@ -133,6 +136,8 @@ class NovaEntrada extends Component
             'telefone.regex' => 'Informe o telefone com DDD (10 ou 11 dígitos).',
             'documento.regex' => 'CPF (11 dígitos) ou CNPJ (14 dígitos).',
             'placa.regex' => 'Placa inválida. Use o formato ABC1234 ou ABC1D23.',
+            'chassi.regex' => 'Chassi deve ter 17 letras e números (sem I, O ou Q).',
+            'chassi.unique' => 'Este chassi já está cadastrado em outro veículo.',
             'unidade_id.in' => 'Escolha uma unidade ativa à qual você tem acesso.',
             'endereco.cep.regex' => 'Informe o CEP com 8 dígitos.',
             'endereco.uf.in' => 'Escolha uma UF válida.',
@@ -154,7 +159,7 @@ class NovaEntrada extends Component
         $this->avisoPlaca = null;
         $this->placa = Normaliza::placa($this->placa);
         if ($this->origemVeiculo) { // placa mudou: descarta o que foi puxado da placa anterior
-            $this->marca = $this->modelo = $this->ano = $this->cor = '';
+            $this->marca = $this->modelo = $this->ano = $this->cor = $this->chassi = '';
         }
         $this->origemVeiculo = null;
         if (! preg_match(Normaliza::REGEX_PLACA, $this->placa)) {
@@ -163,6 +168,7 @@ class NovaEntrada extends Component
         $veiculo = Veiculo::with('cliente')->where('placa', $this->placa)->first();
         if ($veiculo) {
             $this->preencherVeiculo($veiculo->only('marca', 'modelo', 'ano', 'cor'));
+            $this->chassi = $this->chassi ?: (string) $veiculo->chassi;
             $this->origemVeiculo = 'sistema';
             $dono = $veiculo->cliente;
             if (! $this->cliente_id && $this->telefone === '' && $dono && $dono->mesclado_em_id === null) {
@@ -248,6 +254,7 @@ class NovaEntrada extends Component
         $this->telefone = Normaliza::telefone($this->telefone);
         $this->placa = $this->sem_veiculo ? '' : Normaliza::placa($this->placa);
         $this->documento = (string) preg_replace('/\D/', '', $this->documento);
+        $this->chassi = Normaliza::chassi($this->chassi);
         $this->endereco = array_map(fn ($v) => (string) $v, Endereco::normalizar($this->endereco));
         if (! auth()->user()->can('ver_contato_cliente')) {
             $this->endereco = array_fill_keys(array_keys($this->endereco), '');

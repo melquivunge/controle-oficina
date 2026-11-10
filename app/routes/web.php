@@ -201,6 +201,7 @@ Route::middleware(['auth', 'dois-fatores'])->group(function () {
         Route::delete('/{tema}', 'destroy')->name('temas.destroy');
     });
     Route::put('/conta/tema', [\App\Http\Controllers\ContaController::class, 'tema'])->middleware('throttle:30,1')->name('conta.tema');
+    Route::put('/ordens/{ordem}/chassi', [\App\Http\Controllers\VeiculoController::class, 'chassi'])->middleware('throttle:30,1')->name('ordens.chassi');
     Route::post('/ordens/{ordem}/vendedor', [\App\Http\Controllers\OsImpressaController::class, 'vendedor'])->middleware('throttle:30,1')->name('ordens.vendedor');
     Route::get('/ordens/{ordem}/impressao', [\App\Http\Controllers\OsImpressaController::class, 'interna'])->middleware('throttle:60,1')->name('ordens.impressao');
 });

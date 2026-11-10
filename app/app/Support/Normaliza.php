@@ -6,6 +6,14 @@ class Normaliza
 {
     public const REGEX_PLACA = '/^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/'; // antiga (ABC1234) e Mercosul (ABC1D23)
 
+    /** Chassi (VIN) de 17 caracteres; nunca usa I, O ou Q. */
+    public const REGEX_CHASSI = '/^[A-HJ-NPR-Z0-9]{17}$/';
+
+    public static function chassi(?string $valor): string
+    {
+        return preg_replace('/[^A-Z0-9]/', '', mb_strtoupper((string) $valor));
+    }
+
     public static function placa(?string $valor): string
     {
         return preg_replace('/[^A-Z0-9]/', '', mb_strtoupper((string) $valor));

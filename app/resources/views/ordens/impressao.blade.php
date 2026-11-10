@@ -56,7 +56,7 @@
             @if ($o->veiculo)
                 <h2>Veículo</h2>
                 <p><strong>Placa {{ $o->veiculo->placaFormatada() }}</strong></p>
-                <p>{{ collect([$o->veiculo->modelo, $o->veiculo->cor, $o->quilometragem !== null ? number_format($o->quilometragem, 0, ',', '.').' km' : null])->filter()->join(' · ') ?: 'Modelo não informado' }}</p>
+                <p>{{ collect([$o->veiculo->modelo, $o->veiculo->cor, $o->veiculo->chassi ? 'Chassi '.$o->veiculo->chassi : null, $o->quilometragem !== null ? number_format($o->quilometragem, 0, ',', '.').' km' : null])->filter()->join(' · ') ?: 'Modelo não informado' }}</p>
             @else
                 <h2>Item (sem veículo)</h2>
                 <p><strong>{{ $o->item_descricao }}</strong></p>

@@ -33,6 +33,7 @@
                 @include('partials.campo', ['nome' => 'modelo', 'rotulo' => 'Modelo'])
                 @include('partials.campo', ['nome' => 'ano', 'rotulo' => 'Ano', 'atributos' => ['inputmode' => 'numeric', 'maxlength' => 4]])
                 @include('partials.campo', ['nome' => 'cor', 'rotulo' => 'Cor'])
+                @include('partials.campo', ['nome' => 'chassi', 'rotulo' => 'Chassi (opcional)', 'atributos' => ['autocomplete' => 'off', 'maxlength' => 20, 'style' => 'text-transform:uppercase']])
             </div>
         </section>
         <section class="form-section form-acoes-fim"><button class="button primary" type="submit">Cadastrar cliente</button><a class="button" href="{{ route('clientes.index') }}">Cancelar</a></section>

@@ -62,7 +62,7 @@ class ClienteController extends Controller
     public function store(Request $request)
     {
         $request->merge(['telefone' => Normaliza::telefone($request->input('telefone')), 'placa' => Normaliza::placa($request->input('placa')),
-            'documento' => preg_replace('/\D/', '', (string) $request->input('documento'))]);
+            'documento' => preg_replace('/\D/', '', (string) $request->input('documento')), 'chassi' => Normaliza::chassi($request->input('chassi'))]);
         $comEndereco = $request->user()->can('ver_contato_cliente') && $request->hasAny(Endereco::CAMPOS);
         if ($comEndereco) {
             $request->merge(Endereco::normalizar($request->all()));
@@ -76,9 +76,11 @@ class ClienteController extends Controller
             'placa' => ['nullable', 'regex:'.Normaliza::REGEX_PLACA, Rule::unique('veiculos', 'placa')],
             'marca' => ['nullable', 'string', 'max:40'], 'modelo' => ['nullable', 'string', 'max:80'],
             'ano' => ['nullable', 'integer', 'min:1950', 'max:'.(now()->year + 1)], 'cor' => ['nullable', 'string', 'max:30'],
+            'chassi' => ['nullable', 'regex:'.Normaliza::REGEX_CHASSI, Rule::unique('veiculos', 'chassi')],
         ] + ($comEndereco ? Endereco::regras() : []), [
             'telefone.regex' => 'Informe o telefone com DDD (10 ou 11 dígitos).', 'documento.regex' => 'CPF (11 dígitos) ou CNPJ (14 dígitos).',
             'placa.regex' => 'Placa inválida (ex.: ABC1D23).', 'placa.unique' => 'Esta placa já está cadastrada. Busque pela placa em Clientes.',
+            'chassi.regex' => 'Chassi deve ter 17 letras e números (sem I, O ou Q).', 'chassi.unique' => 'Este chassi já está cadastrado em outro veículo.',
         ] + Endereco::MENSAGENS, Endereco::atributos());
         $mesmoTelefone = Cliente::ativos()->where('telefone', $dados['telefone'])->first();
         if ($mesmoTelefone && ! $request->boolean('confirmar_telefone')) {
@@ -92,7 +94,7 @@ class ClienteController extends Controller
             Auditoria::registrar('cliente_criado', $c, depois: $c->only(['nome', 'telefone']));
             if (! empty($dados['placa'])) {
                 $v = new Veiculo(['placa' => $dados['placa'], 'marca' => $dados['marca'] ?? null, 'modelo' => $dados['modelo'] ?? null,
-                    'ano' => $dados['ano'] ?? null, 'cor' => $dados['cor'] ?? null]);
+                    'ano' => $dados['ano'] ?? null, 'cor' => $dados['cor'] ?? null, 'chassi' => ($dados['chassi'] ?? null) ?: null]);
                 $v->cliente_id = $c->id;
                 $v->save();
                 Auditoria::registrar('veiculo_criado', $v, depois: ['placa' => $v->placa, 'cliente_id' => $c->id]);

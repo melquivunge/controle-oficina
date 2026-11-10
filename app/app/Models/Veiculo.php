@@ -12,7 +12,7 @@ class Veiculo extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['placa', 'marca', 'modelo', 'ano', 'cor'];
+    protected $fillable = ['placa', 'chassi', 'marca', 'modelo', 'ano', 'cor'];
 
     protected function casts(): array
     {

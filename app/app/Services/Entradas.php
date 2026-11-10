@@ -182,7 +182,8 @@ class Entradas
     private static function dadosVeiculo(array $dados): array
     {
         return array_filter(['marca' => trim((string) ($dados['marca'] ?? '')), 'modelo' => trim((string) ($dados['modelo'] ?? '')),
-            'ano' => ($dados['ano'] ?? '') === '' || ($dados['ano'] ?? null) === null ? null : (int) $dados['ano'], 'cor' => trim((string) ($dados['cor'] ?? ''))],
+            'ano' => ($dados['ano'] ?? '') === '' || ($dados['ano'] ?? null) === null ? null : (int) $dados['ano'], 'cor' => trim((string) ($dados['cor'] ?? '')),
+            'chassi' => \App\Support\Normaliza::chassi($dados['chassi'] ?? '')],
             fn ($v) => $v !== '' && $v !== null);
     }
 }
