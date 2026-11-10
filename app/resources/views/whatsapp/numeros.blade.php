@@ -24,6 +24,10 @@
             </header>
             <p class="hint">{{ $n->conversas_count }} {{ $n->conversas_count === 1 ? 'conversa' : 'conversas' }} · alerta após {{ $n->minutos_alerta }} min sem resposta ·
                 credenciais {{ $n->temCredenciais() ? 'salvas (não exibidas)' : 'não informadas' }}@if ($n->provedor === 'meta') · Phone number ID {{ $n->phone_number_id }}@endif</p>
+            <form method="POST" action="{{ route('whatsapp.numeros.ativo', $n) }}" class="inline-form">@csrf @method('PUT')
+                <button @class(['button', 'primary' => ! $n->ativo]) type="submit">{{ $n->ativo ? 'Desativar número' : 'Ativar número' }}</button>
+                <span class="hint">{{ $n->ativo ? 'Ativo: envia e recebe mensagens.' : 'Desativado: nada é enviado nem recebido por este número.' }}</span>
+            </form>
             @if ($n->provedor === 'drope')
                 <form method="POST" action="{{ route('whatsapp.numeros.drope-webhook', $n) }}" class="inline-form">@csrf
                     <button class="button" type="submit" @disabled(! $n->credencial('token'))>{{ $n->credencial('signing_secret') ? 'Registrar webhook no Drope de novo' : 'Registrar webhook no Drope' }}</button>

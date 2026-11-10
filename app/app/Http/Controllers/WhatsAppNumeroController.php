@@ -27,6 +27,23 @@ class WhatsAppNumeroController extends Controller
 
     private const SEGREDOS = ['token', 'app_secret', 'verify_token', 'signing_secret'];
 
+    /** Botão Ativar/Desativar: inativo não envia nem recebe (webhook recusa; mensagens automáticas param). */
+    public function alternarAtivo(WhatsappNumero $numero)
+    {
+        $ativo = DB::transaction(function () use ($numero) {
+            $n = WhatsappNumero::lockForUpdate()->findOrFail($numero->id);
+            $antes = $n->only(self::AUDITADOS);
+            $n->ativo = ! $n->ativo;
+            $n->save();
+            Auditoria::registrar('whatsapp_numero_alterado', $n, $antes, $n->only(self::AUDITADOS) + ['credenciais_alteradas' => false], unidadeId: $n->unidade_id);
+
+            return $n->ativo;
+        });
+
+        return redirect()->route('whatsapp.numeros.index')->with('sucesso', $ativo ? 'Número ativado: volta a enviar e receber.'
+            : 'Número desativado: não envia nem recebe mensagens. As mensagens que chegarem enquanto estiver desativado não entram na Central.');
+    }
+
     /** URL a partir do APP_URL, nunca do Host da requisição (Host forjado registraria webhook de terceiro). */
     public static function urlWebhookDrope(WhatsappNumero $n): string
     {

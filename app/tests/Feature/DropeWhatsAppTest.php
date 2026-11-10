@@ -93,6 +93,21 @@ class DropeWhatsAppTest extends TestCase
         $this->webhook($this->msg(['messageid' => 'A', 'text' => 'x']))->assertStatus(401);
     }
 
+    public function test_botao_desativa_e_reativa_o_numero(): void
+    {
+        $url = route('whatsapp.numeros.ativo', $this->n);
+        $this->entrarComo($this->dono)->get(route('whatsapp.numeros.index'))->assertSee('Desativar número');
+        $this->entrarComo($this->rec1)->put($url)->assertForbidden();
+        $this->entrarComo($this->dono)->put($url)->assertRedirect();
+        $this->assertFalse($this->n->fresh()->ativo);
+        $this->assertNull(\App\Integracoes\Mensagens\MensageiroDrope::paraUnidade($this->u1->id), 'desativado não envia');
+        $this->webhook($this->msg(['messageid' => 'X1', 'messageType' => 'Conversation', 'text' => 'oi']))->assertStatus(401);
+        $this->entrarComo($this->dono)->get(route('whatsapp.numeros.index'))->assertSee('Ativar número');
+        $this->entrarComo($this->dono)->put($url)->assertRedirect();
+        $this->assertTrue($this->n->fresh()->ativo);
+        $this->assertSame(2, \App\Models\AuditEvent::where('acao', 'whatsapp_numero_alterado')->count());
+    }
+
     public function test_payload_desconhecido_loga_so_a_estrutura_sem_valores(): void
     {
         Log::spy();
