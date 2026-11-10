@@ -25,7 +25,38 @@ class WhatsAppNumeroController extends Controller
         ]);
     }
 
-    private const SEGREDOS = ['token', 'app_secret', 'verify_token'];
+    private const SEGREDOS = ['token', 'app_secret', 'verify_token', 'signing_secret'];
+
+    /** URL a partir do APP_URL, nunca do Host da requisição (Host forjado registraria webhook de terceiro). */
+    public static function urlWebhookDrope(WhatsappNumero $n): string
+    {
+        return rtrim((string) config('app.url'), '/').'/webhooks/whatsapp/drope/'.$n->id;
+    }
+
+    /** Registra no Drope o webhook deste número e guarda o segredo de assinatura (cifrado) devolvido por ele. */
+    public function registrarWebhookDrope(WhatsappNumero $numero)
+    {
+        abort_unless($numero->provedor === 'drope', 404);
+        if (\App\Integracoes\WhatsApp\Provedores::simulacaoAtiva()) {
+            return back()->withErrors(['drope' => 'Modo de simulação: nada é registrado no Drope.']);
+        }
+        if (! $numero->ativo || (app()->isProduction() && ! str_starts_with(self::urlWebhookDrope($numero), 'https://'))) {
+            return back()->withErrors(['drope' => $numero->ativo ? 'APP_URL precisa ser https em produção.' : 'Ative o número antes de registrar o webhook.']);
+        }
+        try {
+            $segredo = (new \App\Integracoes\WhatsApp\DropeApi)->registrarWebhook($numero, self::urlWebhookDrope($numero));
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['drope' => $e->getMessage()]);
+        }
+        DB::transaction(function () use ($numero, $segredo) {
+            $n = WhatsappNumero::lockForUpdate()->findOrFail($numero->id);
+            $n->credenciais = array_merge($n->credenciais ?? [], ['signing_secret' => $segredo]);
+            $n->save();
+            Auditoria::registrar('whatsapp_drope_webhook_registrado', $n, depois: ['url' => self::urlWebhookDrope($n)], unidadeId: $n->unidade_id);
+        });
+
+        return redirect()->route('whatsapp.numeros.index')->with('sucesso', 'Webhook registrado no Drope. Mande uma mensagem de teste para o número.');
+    }
 
     public function store(Request $request)
     {
@@ -84,12 +115,13 @@ class WhatsAppNumeroController extends Controller
             'nome' => ['required', 'string', 'max:80'],
             'telefone' => ['required', 'string', 'max:25'],
             'unidade_id' => ['nullable', 'integer', Rule::exists('unidades', 'id')->where('ativa', true)],
-            'provedor' => ['required', Rule::in(['simulado', 'meta'])],
+            'provedor' => ['required', Rule::in(['simulado', 'meta', 'drope'])],
             'modo_conexao' => ['required', Rule::in(['api', 'coexistencia'])],
             'phone_number_id' => ['nullable', 'required_if:provedor,meta', 'regex:/^[0-9]{5,64}$/', Rule::unique('whatsapp_numeros', 'phone_number_id')->ignore($atual?->id)],
             'token' => ['nullable', 'string', 'max:1000'],
             'app_secret' => ['nullable', 'string', 'max:200'],
             'verify_token' => ['nullable', 'string', 'min:12', 'max:200'],
+            'signing_secret' => ['nullable', 'string', 'max:200'],
             'minutos_alerta' => ['required', 'integer', 'min:1', 'max:1440'],
             'modelos' => ['nullable', 'string', 'max:3000'],
         ], [], ['nome' => 'descrição', 'unidade_id' => 'unidade', 'phone_number_id' => 'Phone number ID', 'app_secret' => 'App secret',
@@ -101,7 +133,8 @@ class WhatsAppNumeroController extends Controller
         if (WhatsappNumero::where('telefone', $telefone)->when($atual, fn ($q) => $q->whereKeyNot($atual->id))->exists()) {
             throw ValidationException::withMessages(['telefone' => 'Este número já está cadastrado.']);
         }
-        $credenciais = array_filter(['token' => $d['token'] ?? null, 'app_secret' => $d['app_secret'] ?? null, 'verify_token' => $d['verify_token'] ?? null],
+        $credenciais = array_filter(['token' => $d['token'] ?? null, 'app_secret' => $d['app_secret'] ?? null, 'verify_token' => $d['verify_token'] ?? null,
+            'signing_secret' => $d['signing_secret'] ?? null],
             fn ($v) => is_string($v) && trim($v) !== '');
         $modelos = [];
         foreach (preg_split('/\R/', (string) ($d['modelos'] ?? '')) as $linha) {

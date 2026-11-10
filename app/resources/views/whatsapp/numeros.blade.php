@@ -8,7 +8,7 @@
     @endif
 
     @php($opcoesUnidade = ['' => 'Central (triagem)'] + $unidades->mapWithKeys(fn ($u) => [$u->id => $u->nome])->all())
-    @php($provedores = ['simulado' => 'Simulador (demonstração/testes)', 'meta' => 'API oficial do WhatsApp (Meta Cloud API) — não homologado'])
+    @php($provedores = ['simulado' => 'Simulador (demonstração/testes)', 'meta' => 'API oficial do WhatsApp (Meta Cloud API) — não homologado', 'drope' => 'Drope (QR Code, não oficial)'])
     @php($modos = ['api' => 'Somente API', 'coexistencia' => 'Coexistência (app do celular continua ativo)'])
 
     @forelse ($numeros as $n)
@@ -17,13 +17,20 @@
                 <div><strong>{{ $n->nome }}</strong> <span class="muted">{{ $n->telefoneFormatado() }}</span></div>
                 <div class="wa-numero-tags">
                     <span @class(['tag', 'extra' => $n->central()])>{{ $n->rotuloEscopo() }}</span>
-                    <span class="tag">{{ $n->provedor === 'meta' ? 'API oficial' : 'Simulador' }}</span>
+                    <span class="tag">{{ ['meta' => 'API oficial', 'drope' => 'Drope'][$n->provedor] ?? 'Simulador' }}</span>
                     @if ($n->modo_conexao === 'coexistencia')<span class="tag">Coexistência</span>@endif
                     <span @class(['tag', 'off' => ! $n->ativo])>{{ $n->ativo ? 'Ativo' : 'Inativo' }}</span>
                 </div>
             </header>
             <p class="hint">{{ $n->conversas_count }} {{ $n->conversas_count === 1 ? 'conversa' : 'conversas' }} · alerta após {{ $n->minutos_alerta }} min sem resposta ·
                 credenciais {{ $n->temCredenciais() ? 'salvas (não exibidas)' : 'não informadas' }}@if ($n->provedor === 'meta') · Phone number ID {{ $n->phone_number_id }}@endif</p>
+            @if ($n->provedor === 'drope')
+                <form method="POST" action="{{ route('whatsapp.numeros.drope-webhook', $n) }}" class="inline-form">@csrf
+                    <button class="button" type="submit" @disabled(! $n->credencial('token'))>{{ $n->credencial('signing_secret') ? 'Registrar webhook no Drope de novo' : 'Registrar webhook no Drope' }}</button>
+                    <span class="hint">Recebe em {{ \App\Http\Controllers\WhatsAppNumeroController::urlWebhookDrope($n) }}</span>
+                </form>
+                @error('drope')<p class="field-error">{{ $message }}</p>@enderror
+            @endif
             <details @if (old('_numero') === (string) $n->id) open @endif><summary>Alterar número</summary>
                 <form method="POST" action="{{ route('whatsapp.numeros.update', $n) }}">@csrf @method('PUT')
                     <input type="hidden" name="_numero" value="{{ $n->id }}">
@@ -53,6 +60,7 @@
             <li><strong>Coexistência:</strong> o número continua no app WhatsApp Business do celular e também conectado à API. O que o atendente responde pelo celular aparece na Central como “Enviada pelo celular” e conta como resposta.</li>
             <li><strong>Webhook da API oficial:</strong> {{ url('/webhooks/whatsapp/meta') }} (verificação pelo token de verificação; assinatura X-Hub-Signature-256 com o App secret). Assine também os campos de ecos e histórico para coexistência.</li>
             <li><strong>Modelos aprovados:</strong> um por linha, no formato <code>nome_do_modelo|pt_BR|descrição</code>. Fora da janela de 24 h só eles podem ser enviados.</li>
+            <li><strong>Drope (não oficial):</strong> conecte o aparelho pelo QR Code no painel do Drope, cole o token do aparelho em “Token de acesso” e clique em “Registrar webhook no Drope”. Sem janela de 24 h e sem modelos. Risco de bloqueio do número pelo WhatsApp.</li>
             <li>Credenciais são guardadas cifradas e nunca exibidas. Deixe em branco para manter as já salvas.</li>
         </ul>
     </section>

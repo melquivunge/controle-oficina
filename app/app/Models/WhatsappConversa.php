@@ -72,8 +72,13 @@ class WhatsappConversa extends Model
     }
 
     /** Janela de atendimento do WhatsApp: texto livre só até 24 h após a última mensagem do cliente. */
+    /** Janela de 24 h é regra da API oficial; no Drope (não oficial) o texto livre é sempre permitido. */
     public function janelaAberta(): bool
     {
+        if ($this->numero?->provedor === 'drope') {
+            return true;
+        }
+
         return $this->ultima_entrada_em !== null && $this->ultima_entrada_em->greaterThan(now()->subHours(self::JANELA_HORAS));
     }
 

@@ -447,7 +447,7 @@ class CentralWhatsAppTest extends TestCase
         $this->entrarComo($this->rec1)->get(route('whatsapp.index', ['situacao' => 'resolvida']))->assertDontSee('Mensagem visível na lista');
         $this->entrarComo($this->rec1)->get(route('whatsapp.index', ['busca' => '4567']))->assertSee('Mensagem visível na lista');
         $this->entrarComo($this->rec1)->get(route('whatsapp.index', ['responsavel' => 'eu']))->assertDontSee('Mensagem visível na lista');
-        $this->entrarComo($this->rec1)->get(route('whatsapp.show', $c))->assertOk()->assertSee('Responder pelo WhatsApp oficial')->assertSee('wa-msg entrada', false);
+        $this->entrarComo($this->rec1)->get(route('whatsapp.show', $c))->assertOk()->assertSee('Responder pelo WhatsApp')->assertSee('wa-msg entrada', false);
     }
 
     public function test_cadastro_de_numero_so_proprietario_com_reautenticacao_credenciais_ocultas_e_auditado(): void

@@ -37,6 +37,8 @@ class EnviarMensagem implements ShouldQueue
         }
         // OS enviada por WhatsApp aponta para a versão somente leitura da OS no portal (/c/{token}/os).
         $link = $m->segredo_link ? route($m->tipo === 'documento_os' ? 'portal.impressao' : 'portal.show', $m->segredo_link) : url('/');
+        // Modo real com número Drope ativo: todas as mensagens ao cliente/colaborador saem por ele (decisão do usuário, 10/11/2026).
+        $canal = \App\Integracoes\Mensagens\MensageiroDrope::paraUnidade($m->unidade_id) ?? $canal;
         try {
             $id = $canal->enviar($m->destino, str_replace(Mensagens::MARCADOR_LINK, $link, $m->conteudo));
         } catch (\Throwable $e) {

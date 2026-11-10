@@ -27,6 +27,12 @@ class WhatsAppWebhookController extends Controller
         return response('verificação recusada', 403);
     }
 
+    /** Drope: o número vem na URL; DropeApi confere a assinatura com o segredo dele. */
+    public function receberDrope(Request $request, Recebimento $recebimento)
+    {
+        return $this->receber($request, 'drope', $recebimento);
+    }
+
     public function receber(Request $request, string $provedor, Recebimento $recebimento)
     {
         $adaptador = Provedores::paraWebhook($provedor);

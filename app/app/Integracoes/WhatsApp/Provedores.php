@@ -24,9 +24,11 @@ class Provedores
             return new SimuladorWhatsApp;
         }
 
-        return $numero->provedor === 'meta'
-            ? new MetaCloudApi
-            : new WhatsAppIndisponivel('Número cadastrado como simulado: em modo real ele não envia nem baixa nada. Configure a API oficial.');
+        return match ($numero->provedor) {
+            'meta' => new MetaCloudApi,
+            'drope' => new DropeApi,
+            default => new WhatsAppIndisponivel('Número cadastrado como simulado: em modo real ele não envia nem baixa nada. Configure a API oficial ou o Drope.'),
+        };
     }
 
     /** Adaptador que atende o webhook; null = rota inexistente neste modo (404). */
@@ -35,6 +37,7 @@ class Provedores
         return match (true) {
             $provedor === 'simulado' && self::simulacaoAtiva() => new SimuladorWhatsApp,
             $provedor === 'meta' && ! self::simulacaoAtiva() => new MetaCloudApi,
+            $provedor === 'drope' && ! self::simulacaoAtiva() => new DropeApi,
             default => null,
         };
     }

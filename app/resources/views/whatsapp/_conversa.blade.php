@@ -30,7 +30,7 @@
         @if ($janela)
             <form method="POST" action="{{ route('whatsapp.responder', $conversa) }}" enctype="multipart/form-data" class="wa-compor-form">@csrf
                 <div class="field wa-compor-texto">
-                    <label for="wa-texto">Responder pelo WhatsApp oficial</label>
+                    <label for="wa-texto">Responder pelo WhatsApp</label>
                     <textarea id="wa-texto" name="texto" rows="2" maxlength="4096" placeholder="Escreva a mensagem" @error('texto') aria-invalid="true" aria-describedby="wa-texto-erro" @enderror>{{ old('texto') }}</textarea>
                     @error('texto')<span class="field-error" id="wa-texto-erro">{{ $message }}</span>@enderror
                 </div>
@@ -41,7 +41,7 @@
                 </div>
                 <button class="button primary" type="submit">Enviar resposta</button>
             </form>
-            <p class="hint">Janela de 24 h aberta até {{ \App\Support\Fuso::exibir($conversa->janelaFechaEm()) }}. Depois disso, só modelo aprovado.</p>
+            @if ($conversa->numero->provedor !== 'drope')<p class="hint">Janela de 24 h aberta até {{ \App\Support\Fuso::exibir($conversa->janelaFechaEm()) }}. Depois disso, só modelo aprovado.</p>@endif
         @else
             <p class="notice wa-janela" role="status">@include('partials.icone', ['i' => 'cadeado'])
                 <span>Fora da janela de 24 h do WhatsApp: {{ $conversa->ultima_entrada_em ? 'a última mensagem do cliente foi em '.\App\Support\Fuso::exibir($conversa->ultima_entrada_em).'.' : 'o cliente ainda não escreveu.' }} Texto livre está bloqueado; envie um modelo aprovado.</span></p>
@@ -176,6 +176,6 @@
             </form>
         </section>
     @endif
-    <p class="hint wa-modo">{{ \App\Integracoes\WhatsApp\Provedores::simulacaoAtiva() ? 'Modo simulado: nada é enviado nem recebido de verdade.' : 'Número '.($conversa->numero->provedor === 'meta' ? 'na API oficial (adaptador não homologado com conta real)' : 'simulado').'.' }}
+    <p class="hint wa-modo">{{ \App\Integracoes\WhatsApp\Provedores::simulacaoAtiva() ? 'Modo simulado: nada é enviado nem recebido de verdade.' : 'Número '.(['meta' => 'na API oficial (adaptador não homologado com conta real)', 'drope' => 'no Drope (QR Code, não oficial)'][$conversa->numero->provedor] ?? 'simulado').'.' }}
         @if ($conversa->numero->modo_conexao === 'coexistencia') Coexistência: respostas digitadas no celular da empresa também aparecem aqui.@endif</p>
 </aside>

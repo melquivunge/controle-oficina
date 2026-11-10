@@ -145,6 +145,7 @@ Route::middleware('auth')->group(function () {
                 Route::get('/numeros', 'index')->name('index');
                 Route::post('/numeros', 'store')->name('store');
                 Route::put('/numeros/{numero}', 'update')->whereNumber('numero')->name('update');
+                Route::post('/numeros/{numero}/drope-webhook', 'registrarWebhookDrope')->whereNumber('numero')->middleware('throttle:5,1')->name('drope-webhook');
             });
 
         // Configurações sensíveis: somente proprietário e com reautenticação recente.

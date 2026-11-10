@@ -44,7 +44,7 @@ class WhatsappNumero extends Model
 
     public function temCredenciais(): bool
     {
-        return $this->credencial('token') !== null && $this->credencial('app_secret') !== null;
+        return $this->credencial('token') !== null && $this->credencial($this->provedor === 'drope' ? 'signing_secret' : 'app_secret') !== null;
     }
 
     public function rotuloEscopo(): string
