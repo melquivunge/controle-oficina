@@ -223,8 +223,12 @@ class DropeApi implements ProvedorWhatsApp
         $r = $this->http($numero)->post(self::BASE.'/webhook', ['enabled' => true, 'url' => $url,
             'events' => ['messages', 'messages_update', 'connection'], 'excludeMessages' => ['wasSentByApi', 'isGroupYes']]);
         $this->exigirSucesso($r, 'registro do webhook');
-        foreach (['signing_secret', 'data.signing_secret', 'secret', 'data.secret', '0.signing_secret'] as $chave) {
-            $s = $r->json($chave);
+        // Resposta real (10/11/2026): {success, data: [{id, enabled, url, events, ..., signing_secret}]}; escolhe o item da nossa URL.
+        $itens = $r->json('data');
+        $itens = is_array($itens) && array_is_list($itens) ? $itens : [(array) $itens];
+        usort($itens, fn ($a, $b) => (($b['url'] ?? null) === $url) <=> (($a['url'] ?? null) === $url));
+        foreach ($itens as $item) {
+            $s = is_array($item) ? ($item['signing_secret'] ?? null) : null;
             if (is_string($s) && $s !== '') {
                 return $s;
             }

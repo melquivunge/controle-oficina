@@ -148,7 +148,11 @@ class DropeWhatsAppTest extends TestCase
     public function test_dono_registra_webhook_e_segredo_fica_cifrado_recepcao_nao(): void
     {
         $this->n->update(['credenciais' => ['token' => 'dwa_TESTE']]);
-        Http::fake(['dropestore.com/wp-json/wdm/v1/webhook' => Http::response(['success' => true, 'data' => ['id' => 'wh1', 'signing_secret' => 'whsec-novo']])]);
+        Http::fake(['dropestore.com/wp-json/wdm/v1/webhook' => Http::response(['success' => true, 'data' => [
+            ['id' => 'wh0', 'enabled' => true, 'url' => 'https://outro.exemplo/hook', 'events' => ['messages'], 'excludeMessages' => [], 'addUrlEvents' => false, 'addUrlTypesMessages' => false, 'signing_secret' => 'whsec-outro'],
+            ['id' => 'wh1', 'enabled' => true, 'url' => rtrim(config('app.url'), '/').'/webhooks/whatsapp/drope/'.$this->n->id, 'events' => ['messages'], 'excludeMessages' => ['wasSentByApi'],
+                'addUrlEvents' => false, 'addUrlTypesMessages' => false, 'signing_secret' => 'whsec-novo'],
+        ]])]);
         $this->entrarComo($this->rec1)->post(route('whatsapp.numeros.drope-webhook', $this->n))->assertForbidden();
 
         $this->entrarComo($this->dono)->post(route('whatsapp.numeros.drope-webhook', $this->n))->assertRedirect()->assertSessionHasNoErrors();
