@@ -99,6 +99,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/historico-antigo/{id}', [\App\Http\Controllers\HistoricoAntigoController::class, 'show'])->whereNumber('id')->name('historico.show');
             Route::get('/historico-antigo/{id}/imprimir', [\App\Http\Controllers\HistoricoAntigoController::class, 'imprimir'])->whereNumber('id')->name('historico.imprimir');
             Route::get('/clientes/novo', [ClienteController::class, 'create'])->name('clientes.create');
+            Route::post('/placas/consulta', \App\Http\Controllers\ConsultaPlacaController::class)->middleware('throttle:30,1')->name('placas.consulta');
             Route::post('/clientes', [ClienteController::class, 'store'])->middleware('throttle:30,1')->name('clientes.store');
             Route::get('/clientes/{cliente}', [ClienteController::class, 'show'])->whereNumber('cliente')->name('clientes.show');
             Route::put('/clientes/{cliente}', [ClienteController::class, 'update'])->name('clientes.update');

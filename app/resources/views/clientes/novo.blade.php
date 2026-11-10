@@ -28,7 +28,7 @@
         <section class="form-section">
             <h2>Veículo (opcional)</h2>
             <div class="fields">
-                @include('partials.campo', ['nome' => 'placa', 'rotulo' => 'Placa', 'atributos' => ['style' => 'text-transform:uppercase', 'autocomplete' => 'off']])
+                @include('partials.placa-consulta', ['id' => 'placa'])
                 @include('partials.campo', ['nome' => 'marca', 'rotulo' => 'Marca'])
                 @include('partials.campo', ['nome' => 'modelo', 'rotulo' => 'Modelo'])
                 @include('partials.campo', ['nome' => 'ano', 'rotulo' => 'Ano', 'atributos' => ['inputmode' => 'numeric', 'maxlength' => 4]])

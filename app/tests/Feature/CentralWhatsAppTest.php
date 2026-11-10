@@ -559,6 +559,27 @@ class CentralWhatsAppTest extends TestCase
         $this->assertStringNotContainsString('WhatsApp sem resposta', $mec);
     }
 
+    public function test_consulta_placa_no_cadastro_pela_conversa(): void
+    {
+        $this->recebeDireto($this->num1, '61977776666');
+        $c = $this->conversa($this->num1, '61977776666');
+        $this->entrarComo($this->rec1)->get(route('whatsapp.show', $c))->assertSee('Buscar dados do veículo')->assertSee(route('placas.consulta'), false);
+
+        $url = route('placas.consulta');
+        $this->entrarComo($this->mec1)->postJson($url, ['placa' => 'RDA1B23'])->assertForbidden();
+        $this->entrarComo($this->rec1)->postJson($url, ['placa' => 'XX'])->assertStatus(422)->assertJsonPath('aviso', 'Digite a placa completa (ex.: ABC1D23).');
+        $esperado = (new \App\Integracoes\Placa\SimuladorPlaca)->consultar('RDA1B23');
+        $this->entrarComo($this->rec1)->postJson($url, ['placa' => 'rda-1b23'])->assertOk()
+            ->assertJsonPath('dados.marca', $esperado['marca'])->assertJsonPath('dados.modelo', $esperado['modelo'])
+            ->assertJsonPath('dados.ano', (string) $esperado['ano'])->assertJsonPath('dados.cor', $esperado['cor']);
+        $this->entrarComo($this->rec1)->postJson($url, ['placa' => 'RDA1B20'])->assertOk()->assertJsonMissingPath('dados'); // não encontrada: aviso
+        \App\Models\Veiculo::forceCreate(['placa' => 'JKL2M34', 'cliente_id' => \App\Models\Cliente::create(['nome' => 'Dono', 'telefone' => '61988887777'])->id]);
+        $this->entrarComo($this->rec1)->postJson($url, ['placa' => 'JKL2M34'])->assertOk()->assertJsonMissingPath('dados')->assertJsonPath('aviso', fn ($a) => str_contains($a, 'já está cadastrada'));
+
+        config(['oficina.integracoes' => 'real', 'oficina.placa.provedor' => null, 'database.default' => config('database.default')]);
+        $this->entrarComo($this->rec1)->get(route('whatsapp.show', $c))->assertDontSee('Buscar dados do veículo');
+    }
+
     public function test_cadastra_cliente_novo_pela_conversa_sem_duplicar(): void
     {
         $this->recebeDireto($this->num1, '61977776666');

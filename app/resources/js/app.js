@@ -208,6 +208,35 @@ if (waLista) {
     setTimeout(atualizarWa, 5000);
 }
 
+// Consulta da placa em formulários comuns (Central, Novo cliente): botão ou Enter na placa; só preenche campos vazios.
+document.querySelectorAll('[data-consulta-placa]').forEach((caixa) => {
+    const form = caixa.closest('form');
+    const entrada = caixa.querySelector('input[name=placa]');
+    const botao = caixa.querySelector('[data-consulta-placa-botao]');
+    const aviso = caixa.querySelector('[data-consulta-placa-aviso]');
+    const consultar = async () => {
+        botao.disabled = true;
+        aviso.textContent = 'Consultando placa…';
+        try {
+            const corpo = new FormData();
+            corpo.append('placa', entrada.value);
+            corpo.append('_token', form.querySelector('input[name=_token]').value);
+            const r = await fetch(caixa.dataset.consultaPlaca, { method: 'POST', body: corpo, headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' });
+            const d = await r.json();
+            Object.entries(d.dados || {}).forEach(([campo, valor]) => {
+                const el = form.elements[campo];
+                if (el && el.value.trim() === '' && valor) el.value = valor;
+            });
+            aviso.textContent = d.aviso || '';
+        } catch (e) {
+            aviso.textContent = 'Não foi possível consultar agora. Preencha marca, modelo, ano e cor à mão.';
+        }
+        botao.disabled = false;
+    };
+    botao.addEventListener('click', consultar);
+    entrada.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); consultar(); } });
+});
+
 // Abas da OS no celular: a aba atual fica visível mesmo quando a barra rola na horizontal.
 document.querySelectorAll('nav.abas').forEach((nav) => {
     const atual = nav.querySelector('a[aria-current=page]');

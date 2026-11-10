@@ -89,7 +89,7 @@
                         @include('partials.campo', ['nome' => 'documento', 'rotulo' => 'CPF ou CNPJ (opcional)', 'id' => 'wa-novo-doc', 'atributos' => ['inputmode' => 'numeric', 'autocomplete' => 'off']])
                         @include('partials.campo', ['nome' => 'email', 'rotulo' => 'E-mail (opcional)', 'id' => 'wa-novo-email', 'tipo' => 'email'])
                         <fieldset class="wa-novo-veiculo"><legend>Veículo (opcional)</legend>
-                            @include('partials.campo', ['nome' => 'placa', 'rotulo' => 'Placa', 'id' => 'wa-novo-placa', 'atributos' => ['style' => 'text-transform:uppercase', 'autocomplete' => 'off']])
+                            @include('partials.placa-consulta', ['id' => 'wa-novo-placa'])
                             @include('partials.campo', ['nome' => 'marca', 'rotulo' => 'Marca', 'id' => 'wa-novo-marca'])
                             @include('partials.campo', ['nome' => 'modelo', 'rotulo' => 'Modelo', 'id' => 'wa-novo-modelo'])
                             @include('partials.campo', ['nome' => 'ano', 'rotulo' => 'Ano', 'id' => 'wa-novo-ano', 'atributos' => ['inputmode' => 'numeric', 'maxlength' => 4]])
