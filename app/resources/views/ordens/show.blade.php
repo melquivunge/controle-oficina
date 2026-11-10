@@ -72,6 +72,7 @@
                         <dt>Item</dt><dd><span class="item-avulso">Sem veículo</span> {{ $ordem->item_descricao }}</dd>
                         @endif
                         <dt>Cliente</dt><dd>@can('registrar_entrada')<a href="{{ route('clientes.show', $ordem->cliente) }}">{{ $ordem->cliente->nome }}</a>@else{{ $ordem->cliente->nome }}@endcan @if ($verContato)· {{ $ordem->cliente->telefoneFormatado() }}@endif</dd>
+                        @if ($verContato)<dt>CPF/CNPJ</dt><dd>@if ($ordem->cliente->documentoFormatado()){{ $ordem->cliente->documentoFormatado() }}@else<span class="field-error">Não cadastrado: necessário para a nota fiscal.</span> @can('registrar_entrada')<a href="{{ route('clientes.show', $ordem->cliente) }}">Cadastrar na ficha do cliente</a>@endcan @endif</dd>@endif
                         @if ($verContato && \App\Support\Endereco::preenchido($ordem->cliente))<dt>Endereço</dt><dd>{{ $ordem->cliente->enderecoTexto() }}</dd>@endif
                         @if ($verValores)<dt>Vendedor</dt><dd>{{ $ordem->vendedor?->name ?? 'Definido ao enviar o orçamento' }}</dd>@endif
                         <dt>Chegada</dt><dd>{{ \App\Support\Fuso::exibir($ordem->entrada_em) }}</dd>

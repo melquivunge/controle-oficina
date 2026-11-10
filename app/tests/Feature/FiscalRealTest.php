@@ -359,9 +359,12 @@ class FiscalRealTest extends TestCase
         $this->assertSame(0, FiscalDocument::where('ordem_id', $o->id)->count());
         Http::assertNothingSent();
 
+        $this->entrarComo($rec)->get("/ordens/{$o->numero}")->assertSee('Não cadastrado: necessário para a nota fiscal.');
         $this->entrarComo($rec)->get(route('clientes.show', $o->cliente_id))->assertSee('CPF ou CNPJ');
         $this->entrarComo($rec)->put(route('clientes.update', $o->cliente_id), ['nome' => 'Mariana Costa', 'telefone' => '61991234567', 'documento' => '529.982.247-25'])->assertSessionHasNoErrors();
         $this->assertSame('52998224725', DB::table('clientes')->where('id', $o->cliente_id)->value('documento'));
+        $this->entrarComo($rec)->get("/ordens/{$o->numero}")->assertSee('529.982.247-25');
+        $this->entrarComo($this->usuario(Papel::Mecanico, $this->unidade))->get("/ordens/{$o->numero}")->assertDontSee('529.982.247-25');
         $this->entrarComo($rec)->put(route('clientes.update', $o->cliente_id), ['nome' => 'Mariana Costa', 'telefone' => '61991234567', 'documento' => '123'])->assertSessionHasErrors('documento');
 
         $mec = $this->usuario(Papel::Mecanico, $this->unidade);
