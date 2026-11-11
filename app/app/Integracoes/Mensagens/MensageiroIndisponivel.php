@@ -13,6 +13,6 @@ class MensageiroIndisponivel implements Mensageiro
 
     public function enviar(string $destino, string $texto): string
     {
-        throw new RuntimeException('Canal oficial de mensagens não configurado. Escolha e contrate o provedor.');
+        throw new RuntimeException('Nenhum número de WhatsApp ativo para esta unidade. Ative ou cadastre o número em Configurações › Números de WhatsApp e clique em Reenviar.');
     }
 }

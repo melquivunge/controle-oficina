@@ -201,7 +201,8 @@ class DropeWhatsAppTest extends TestCase
         try {
             (new EnviarMensagem($outra->id))->handle(app(\App\Integracoes\Mensagens\Mensageiro::class));
             $this->fail('deveria falhar sem canal');
-        } catch (\RuntimeException) {
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('Nenhum número de WhatsApp ativo', $e->getMessage());
         }
         Http::assertSentCount(2);
     }

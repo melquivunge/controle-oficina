@@ -75,6 +75,13 @@ class NovaEntrada extends Component
     #[\Livewire\Attributes\Locked]
     public ?string $avulsoNumero = null;
 
+    /** Importação de OS do sistema antigo (?legado=ID): número novo; itens entram como rascunho do orçamento. */
+    #[\Livewire\Attributes\Locked]
+    public ?int $legadoId = null;
+
+    #[\Livewire\Attributes\Locked]
+    public ?string $legadoCodigo = null;
+
     public string $item_descricao = '';
 
     public array $endereco = ['cep' => '', 'logradouro' => '', 'numero' => '', 'complemento' => '', 'bairro' => '', 'cidade' => '', 'uf' => ''];
@@ -89,6 +96,24 @@ class NovaEntrada extends Component
         // Pré-preenchimento vindo de outra tela (ex.: Central de WhatsApp); o cadastro existente é sugerido pela busca normal.
         $this->telefone = Normaliza::telefone((string) request()->query('telefone', ''));
         $this->nome = mb_substr(trim((string) request()->query('nome', '')), 0, 150);
+        if (($legado = (int) request()->query('legado')) > 0) {
+            $r = \Illuminate\Support\Facades\DB::table('legado_registros')->where('tabela', 'TBL_OS')->where('id', $legado)->first();
+            $cli = $r ? Cliente::ativos()->find($r->cliente_id) : null;
+            if ($r && $cli && app(\App\Services\ImportacaoOsLegada::class)->situacao($r)['importavel']) {
+                $d = json_decode($r->dados, true);
+                [$this->legadoId, $this->legadoCodigo] = [$r->id, (string) $d['CODIGO']];
+                [$this->cliente_id, $this->telefone, $this->nome] = [$cli->id, (string) $cli->telefone, $cli->nome];
+                $this->motivo = "Continuação da OS nº {$d['CODIGO']} do sistema antigo.".(trim((string) ($d['OBS'] ?? '')) !== '' ? ' '.mb_substr(trim($d['OBS']), 0, 500) : '');
+                $this->quilometragem = is_numeric($d['KM'] ?? null) && (int) $d['KM'] > 0 ? (string) (int) $d['KM'] : '';
+                if ($placa = Veiculo::whereKey($r->veiculo_id)->value('placa')) {
+                    $this->placa = $placa;
+                    $this->updatedPlaca();
+                } else {
+                    $this->sem_veiculo = true;
+                    $this->item_descricao = 'Itens da OS nº '.$d['CODIGO'].' do sistema antigo';
+                }
+            }
+        }
         if ($numero = request()->query('orcamento')) {
             $a = \App\Models\OrcamentoAvulso::visiveisPara($user)->with('cliente')->where('numero', (string) $numero)->where('status', 'aprovado')->first();
             if ($a) {
@@ -281,6 +306,7 @@ class NovaEntrada extends Component
         $dados = $this->validate();
         $dados['sem_veiculo'] = $this->sem_veiculo;
         $dados['orcamento_avulso_id'] = $this->avulsoId;
+        $dados['legado_id'] = $this->legadoId;
         $dados['ano'] = $this->sem_veiculo || $this->ano === '' ? null : (int) $this->ano;
         $dados['endereco'] = $this->endereco;
 

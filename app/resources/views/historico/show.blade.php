@@ -5,8 +5,16 @@
     @php($dataOs = fn ($d) => $d ? \Carbon\Carbon::parse($d)->format('d/m/Y') : '—')
     <div class="page-head">
         <div><h1>OS {{ $os['CODIGO'] }} <span @class(['tag', 'off' => $situacaoOs($os) === 'Cancelada'])>{{ $situacaoOs($os) }}</span></h1>
-            <p class="subtitle">Sistema antigo · só consulta · <a href="{{ route('historico.index') }}">voltar à lista</a></p></div>
-        <div class="page-acoes"><a class="button primary" href="{{ route('historico.imprimir', request()->route('id')) }}" target="_blank" rel="noopener">Imprimir (versão simples)</a></div>
+            <p class="subtitle">Sistema antigo · só consulta · <a href="{{ route('historico.index') }}">voltar à lista</a></p>
+            @if ($importacao['aberto'] > 0 || $importacao['pago'] > 0)<p class="hint">Financeiro do sistema antigo: em aberto {{ $dinheiro($importacao['aberto']) }} · pago {{ $dinheiro($importacao['pago']) }}.</p>@endif
+            @unless ($importacao['importavel'] || $ordemImportada)<p class="hint">{{ $importacao['motivo'] }}</p>@endunless</div>
+        <div class="page-acoes">
+            @if ($importacao['importavel'])
+                @can('registrar_entrada')<a class="button primary" href="{{ route('entradas.nova', ['legado' => $registroId]) }}">Importar para nova OS</a>@endcan
+            @elseif ($ordemImportada)
+                <a class="button primary" href="{{ route('ordens.show', $ordemImportada) }}">Ver OS {{ $ordemImportada->numero }} (importada)</a>
+            @endif
+            <a class="button" href="{{ route('historico.imprimir', request()->route('id')) }}" target="_blank" rel="noopener">Imprimir (versão simples)</a></div>
     </div>
     <section class="form-panel"><div class="form-section legado">
         <dl class="legado-campos">

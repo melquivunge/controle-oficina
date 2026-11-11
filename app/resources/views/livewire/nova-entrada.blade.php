@@ -1,5 +1,8 @@
 <div class="form-grid">
     <form class="form-panel" wire:submit="salvar" novalidate>
+        @if ($legadoCodigo)
+            <p class="notice" role="status">Importando a OS nº <strong>{{ $legadoCodigo }}</strong> do sistema antigo. A OS nova recebe número novo e os itens de lá entram como rascunho do orçamento, com o mesmo total.</p>
+        @endif
         @if ($avulsoNumero)
             <p class="notice" role="status">Entrada do orçamento <strong>{{ $avulsoNumero }}</strong>, aprovado pelo cliente. A OS terá o mesmo número e os itens do orçamento entram como rascunho para conferência depois do diagnóstico.</p>
         @endif

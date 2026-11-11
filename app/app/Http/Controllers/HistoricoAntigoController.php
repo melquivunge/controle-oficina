@@ -27,7 +27,7 @@ class HistoricoAntigoController extends Controller
     public function index(Request $request)
     {
         abort_unless(self::existe(), 404);
-        $f = $request->validate(['busca' => ['nullable', 'string', 'max:100'], 'situacao' => ['nullable', 'in:aberta,finalizada,cancelada'],
+        $f = $request->validate(['busca' => ['nullable', 'string', 'max:100'], 'situacao' => ['nullable', 'in:aberta,finalizada,cancelada,importar'],
             'de' => ['nullable', 'date_format:Y-m-d'], 'ate' => ['nullable', 'date_format:Y-m-d']]);
         $busca = trim((string) ($f['busca'] ?? ''));
         $q = DB::table('legado_registros as r')->leftJoin('clientes as c', 'c.id', '=', 'r.cliente_id')->leftJoin('veiculos as v', 'v.id', '=', 'r.veiculo_id')
@@ -53,11 +53,12 @@ class HistoricoAntigoController extends Controller
                 'cancelada' => $q->whereRaw("r.dados->>'CANCELADA' = 'S'"),
                 'finalizada' => $q->whereRaw("coalesce(r.dados->>'CANCELADA','N') <> 'S' and r.dados->>'STATUS' = 'F'"),
                 'aberta' => $q->whereRaw("coalesce(r.dados->>'CANCELADA','N') <> 'S' and coalesce(r.dados->>'STATUS','A') <> 'F'"),
+                'importar' => $q->whereIn('r.id', app(\App\Services\ImportacaoOsLegada::class)->idsImportaveis()),
             })
             ->when($f['de'] ?? null, fn ($q, $d) => $q->whereRaw("r.dados->>'DATAIN' >= ?", [$d]))
             ->when($f['ate'] ?? null, fn ($q, $d) => $q->whereRaw("r.dados->>'DATAIN' <= ?", [$d]))
             ->orderByRaw("r.dados->>'DATAIN' desc nulls last, length(r.codigo) desc, r.codigo desc")
-            ->select('r.id', 'r.codigo', 'r.dados', 'c.id as cliente_id', 'c.nome', 'v.placa', 'v.marca', 'v.modelo');
+            ->select('r.id', 'r.codigo', 'r.dados', 'r.ordem_id', 'c.id as cliente_id', 'c.nome', 'v.placa', 'v.marca', 'v.modelo');
 
         return view('historico.index', ['lista' => $q->paginate(30)->withQueryString(), 'total' => self::total(), 'f' => $f]);
     }
@@ -74,6 +75,9 @@ class HistoricoAntigoController extends Controller
         $relacionados = DB::table('legado_registros')->where('grupo', $os->grupo)->where('id', '!=', $os->id)->orderBy('tabela')->orderBy('linha')->get();
 
         return view('historico.show', [
+            'registroId' => $os->id,
+            'importacao' => app(\App\Services\ImportacaoOsLegada::class)->situacao($os),
+            'ordemImportada' => $os->ordem_id ? \App\Models\Ordem::find($os->ordem_id) : null,
             'os' => json_decode($os->dados, true),
             'cliente' => $os->cliente_id ? \App\Models\Cliente::find($os->cliente_id) : null,
             'veiculo' => $os->veiculo_id ? \App\Models\Veiculo::find($os->veiculo_id) : null,

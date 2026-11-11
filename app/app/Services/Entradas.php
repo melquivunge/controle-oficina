@@ -45,6 +45,11 @@ class Entradas
                     throw ValidationException::withMessages(['telefone' => "O orçamento {$avulso->numero} é de outro cliente. Use o cliente do orçamento."]);
                 }
                 $sequencia = $avulso?->sequencia ?? $this->proximoNumero($unidade->id);
+                // OS do sistema antigo (11/11/2026): número novo; itens do SGA viram rascunho do orçamento.
+                $legada = ! empty($dados['legado_id']) ? app(ImportacaoOsLegada::class)->travarParaEntrada((int) $dados['legado_id']) : null;
+                if ($legada && (int) $legada->cliente_id !== $cliente->id) {
+                    throw ValidationException::withMessages(['telefone' => 'A OS do sistema antigo é de outro cliente. Use o cliente dela.']);
+                }
 
                 $ordem = new Ordem([
                     'motivo' => $dados['motivo'],
@@ -75,6 +80,9 @@ class Entradas
                 ], motivo: $ordem->contingencia_nota, ator: $ator);
                 if ($avulso) {
                     app(OrcamentosAvulsos::class)->concluirEntrada($avulso, $ordem, $ator);
+                }
+                if ($legada) {
+                    app(ImportacaoOsLegada::class)->concluirEntrada($legada, $ordem, $ator);
                 }
                 app(Mensagens::class)->enfileirar($ordem, 'entrada', app(Orcamentos::class)->novoLink($ordem, $ator));
 

@@ -8,7 +8,7 @@
     </div>
     <form method="GET" class="filters">
         @include('partials.campo', ['nome' => 'busca', 'rotulo' => 'Número, cliente, telefone ou placa', 'valorAtual' => $f['busca'] ?? ''])
-        @include('partials.campo', ['nome' => 'situacao', 'rotulo' => 'Situação', 'tipo' => 'select', 'opcoes' => ['' => 'Todas', 'aberta' => 'Aberta', 'finalizada' => 'Finalizada', 'cancelada' => 'Cancelada'], 'valorAtual' => $f['situacao'] ?? ''])
+        @include('partials.campo', ['nome' => 'situacao', 'rotulo' => 'Situação', 'tipo' => 'select', 'opcoes' => ['' => 'Todas', 'importar' => 'Para importar (abertas ou com saldo)', 'aberta' => 'Aberta', 'finalizada' => 'Finalizada', 'cancelada' => 'Cancelada'], 'valorAtual' => $f['situacao'] ?? ''])
         @include('partials.campo', ['nome' => 'de', 'rotulo' => 'Entrada de', 'tipo' => 'date', 'valorAtual' => $f['de'] ?? ''])
         @include('partials.campo', ['nome' => 'ate', 'rotulo' => 'até', 'tipo' => 'date', 'valorAtual' => $f['ate'] ?? ''])
         <button class="button" type="submit">Filtrar</button>
@@ -28,7 +28,7 @@
                     <td data-label="Cliente">@if ($l->cliente_id)<a href="{{ route('clientes.show', $l->cliente_id) }}">{{ $l->nome }}</a>@else — @endif</td>
                     <td data-label="Veículo">@if ($l->placa)<span class="chip-placa">{{ \App\Support\Normaliza::placaExibicao($l->placa) }}</span> {{ trim($l->marca.' '.$l->modelo) }}@else — @endif</td>
                     @can('ver_valores')<td data-label="Total">{{ $dinheiro($o['TOTAL'] ?? 0) }}</td>@endcan
-                    <td data-label="Situação"><span @class(['tag', 'off' => $situacaoOs($o) === 'Cancelada'])>{{ $situacaoOs($o) }}</span></td>
+                    <td data-label="Situação"><span @class(['tag', 'off' => $situacaoOs($o) === 'Cancelada'])>{{ $situacaoOs($o) }}</span>@if ($l->ordem_id) <span class="tag">Importada</span>@endif</td>
                 </tr>
             @endforeach
             </tbody>
