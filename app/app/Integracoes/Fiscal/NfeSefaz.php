@@ -167,7 +167,8 @@ class NfeSefaz
         $m->tagtransp($o(['modFrete' => 9]));
         $m->tagpag($o(['vTroco' => null]));
         $m->tagdetPag($o(['indPag' => 0, 'tPag' => '99', 'xPag' => 'Conforme ordem de servico', 'vPag' => number_format($d['valor_centavos'] / 100, 2, '.', '')]));
-        $m->taginfAdic($o(['infCpl' => 'OS '.$d['ordem'].'. Documento emitido por ME ou EPP optante pelo Simples Nacional.']));
+        $obs = NfseNacional::texto((string) ($d['observacao'] ?? ''), 500);
+        $m->taginfAdic($o(['infCpl' => 'OS '.$d['ordem'].'. '.($obs !== '' ? rtrim($obs, '. ').'. ' : '').'Documento emitido por ME ou EPP optante pelo Simples Nacional.']));
         $xml = $m->getXML();
         if (! $xml || $m->getErrors()) {
             throw new RuntimeException('NF-e com dados incompletos: '.implode('; ', $m->getErrors()));

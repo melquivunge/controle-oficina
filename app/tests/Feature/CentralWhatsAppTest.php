@@ -559,6 +559,18 @@ class CentralWhatsAppTest extends TestCase
         $this->assertStringNotContainsString('WhatsApp sem resposta', $mec);
     }
 
+    public function test_telefone_de_numero_com_conversas_nao_pode_ser_trocado(): void
+    {
+        $dados = fn (string $tel) => ['_numero' => (string) $this->num1->id, 'nome' => $this->num1->nome, 'telefone' => $tel, 'unidade_id' => $this->u1->id,
+            'provedor' => 'simulado', 'modo_conexao' => 'api', 'minutos_alerta' => 15, 'ativo' => '1'];
+        $this->entrarComo($this->dono)->put(route('whatsapp.numeros.update', $this->num1), $dados('61 3000-0999'))->assertSessionHasNoErrors(); // sem conversas: pode
+        $this->num1->refresh();
+        $this->recebeDireto($this->num1, '61977776666');
+        $this->entrarComo($this->dono)->put(route('whatsapp.numeros.update', $this->num1), $dados('61 3000-0888'))->assertSessionHasErrors('telefone');
+        $this->assertSame('6130000999', $this->num1->fresh()->telefone);
+        $this->entrarComo($this->dono)->put(route('whatsapp.numeros.update', $this->num1), $dados('61 3000-0999') + ['nome' => 'Renomeado'])->assertSessionHasNoErrors(); // outros campos continuam editáveis
+    }
+
     public function test_orcamento_sem_entrada_pela_conversa_fica_no_historico(): void
     {
         $this->recebeDireto($this->num1, '61977776666');

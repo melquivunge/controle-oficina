@@ -150,6 +150,10 @@ class WhatsAppNumeroController extends Controller
         if (WhatsappNumero::where('telefone', $telefone)->when($atual, fn ($q) => $q->whereKeyNot($atual->id))->exists()) {
             throw ValidationException::withMessages(['telefone' => 'Este número já está cadastrado.']);
         }
+        // Trocar o telefone de um número com conversas misturava as conversas do aparelho antigo com as do novo (11/11/2026).
+        if ($atual && $atual->telefone !== $telefone && $atual->conversas()->exists()) {
+            throw ValidationException::withMessages(['telefone' => 'Este número já tem conversas. Para usar outro telefone, cadastre um número novo e desative este: as conversas antigas ficam separadas.']);
+        }
         $credenciais = array_filter(['token' => $d['token'] ?? null, 'app_secret' => $d['app_secret'] ?? null, 'verify_token' => $d['verify_token'] ?? null,
             'signing_secret' => $d['signing_secret'] ?? null],
             fn ($v) => is_string($v) && trim($v) !== '');

@@ -169,9 +169,10 @@ class FiscalRealTest extends TestCase
         $this->guardarCertificado();
         $this->sefinAutoriza();
         $o = $this->aprovada();
-        app(Fiscal::class)->solicitar($o, $this->usuario(Papel::Recepcao, $this->unidade)); // fila síncrona nos testes
+        app(Fiscal::class)->solicitar($o, $this->usuario(Papel::Recepcao, $this->unidade), observacao: "Garantia de 90 dias\x07"); // fila síncrona nos testes
 
         $d = FiscalDocument::where('ordem_id', $o->id)->sole();
+        $this->assertSame('Garantia de 90 dias', $d->observacao, 'caractere de controle removido');
         $this->assertSame(['autorizado', 2, '3', 1, '101', 'homologacao'], [$d->status, $d->ambiente, $d->serie, (int) $d->numero_dps, $d->numero, $d->provedor]);
         $this->assertSame(50, strlen($d->chave_acesso));
         $this->assertStringStartsWith('%PDF', Storage::disk('local')->get($d->arquivo));
@@ -187,7 +188,7 @@ class FiscalRealTest extends TestCase
         $this->assertSame(45, strlen($id));
         $this->assertStringContainsString('Id="'.$id.'"', $dps);
         foreach (['<tpAmb>2</tpAmb>', '<serie>3</serie>', '<nDPS>1</nDPS>', '<CPF>52998224725</CPF>', '<xNome>Mariana Costa</xNome>', '<opSimpNac>3</opSimpNac>',
-            '<cTribNac>140101</cTribNac>', '<vServ>350.00</vServ>', '<vTotTribMun>7.00</vTotTribMun>', '<xDescServ>OS '.$o->numero.' - 1 x Alinhamento</xDescServ>'] as $t) {
+            '<cTribNac>140101</cTribNac>', '<vServ>350.00</vServ>', '<vTotTribMun>7.00</vTotTribMun>', '<xDescServ>OS '.$o->numero.' - 1 x Alinhamento. Obs.: Garantia de 90 dias</xDescServ>'] as $t) {
             $this->assertStringContainsString($t, $dps);
         }
 
@@ -446,7 +447,7 @@ class FiscalRealTest extends TestCase
         $dados = ['tipo' => 'nfe', 'chave' => str_repeat('a', 64), 'fiscal' => DadosFiscais::atuais(), 'serie' => '1', 'numero_dps' => 8,
             'criado_em' => now(), 'valor_centavos' => 39000, 'ordem' => 'A-1', 'cliente' => 'Mariana Costa', 'cliente_documento' => '52998224725', 'cliente_email' => null,
             'cliente_local' => ['logradouro' => 'Rua A', 'numero' => '', 'complemento' => '', 'bairro' => 'Asa Sul', 'cidade' => 'Brasília', 'uf' => 'DF', 'cep' => '70040010'],
-            'itens' => [['descricao' => 'Roda aro 17', 'quantidade' => '2', 'total_centavos' => 40000, 'ncm' => '87087090', 'codigo' => 5]]];
+            'itens' => [['descricao' => 'Roda aro 17', 'quantidade' => '2', 'total_centavos' => 40000, 'ncm' => '87087090', 'codigo' => 5]], 'observacao' => 'Pedido 123 do cliente.'];
         $chave = NfeSefaz::chave($dados, self::CNPJ);
         $this->assertSame(44, strlen($chave));
 
@@ -455,7 +456,7 @@ class FiscalRealTest extends TestCase
             'cnpj' => self::CNPJ, 'schemes' => 'PL_010_V1.30', 'versao' => '4.00']), CertificadoDigital::atual()->certificado());
         $assinado = $tools->signNFe($xml); // valida no XSD antes de assinar
         $this->assertStringContainsString('Id="NFe'.$chave.'"', $assinado);
-        foreach (['<vDesc>10.00</vDesc>', '<vNF>390.00</vNF>', '<CSOSN>102</CSOSN>', '<enderDest>', '<nro>SN</nro>', '<cMun>5300108</cMun>', '<CFOP>5102</CFOP>', '<tpAmb>2</tpAmb>', 'SEM VALOR FISCAL'] as $t) {
+        foreach (['<vDesc>10.00</vDesc>', '<vNF>390.00</vNF>', '<CSOSN>102</CSOSN>', '<enderDest>', '<nro>SN</nro>', '<cMun>5300108</cMun>', '<CFOP>5102</CFOP>', '<tpAmb>2</tpAmb>', 'SEM VALOR FISCAL', '<infCpl>OS A-1. Pedido 123 do cliente. Documento emitido por ME'] as $t) {
             $this->assertStringContainsString($t, $assinado);
         }
     }

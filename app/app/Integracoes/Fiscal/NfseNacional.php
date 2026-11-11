@@ -214,7 +214,9 @@ class NfseNacional
     {
         $linhas = array_map(fn ($i) => rtrim(rtrim(number_format((float) $i['quantidade'], 2, ',', ''), '0'), ',').' x '.$i['descricao'], $d['itens'] ?? []);
 
-        return 'OS '.$d['ordem'].' - '.implode('; ', $linhas ?: ['Serviços de manutenção de veículo']);
+        $obs = self::texto((string) ($d['observacao'] ?? ''), 500);
+
+        return 'OS '.$d['ordem'].' - '.implode('; ', $linhas ?: ['Serviços de manutenção de veículo']).($obs !== '' ? '. Obs.: '.$obs : '');
     }
 
     /** Texto aceito pela Sefin: sem quebras nem caracteres de controle, tamanho limitado. */

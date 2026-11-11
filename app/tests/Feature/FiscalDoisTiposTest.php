@@ -53,10 +53,13 @@ class FiscalDoisTiposTest extends TestCase
         $this->assertSame(['servico', 'produto', 'produto'], $o->orcamentoAprovado->itens->pluck('tipo')->all());
 
         $this->entrarComo($this->usuario(Papel::Recepcao, $this->unidade))->get("/ordens/{$o->numero}?aba=documentos")
-            ->assertSee('Emitir as 2 notas fiscais')->assertSee('NFS-e (serviços) de R$ 271,15')->assertSee('NF-e (peças/produtos) de R$ 198,85');
-        $this->post(route('fiscal.solicitar', $o))->assertRedirect()->assertSessionHas('sucesso');
+            ->assertSee('Emitir as 2 notas fiscais')->assertSee('NFS-e (serviços) de R$ 271,15')->assertSee('NF-e (peças/produtos) de R$ 198,85')->assertSee('Observação na nota (opcional)');
+        $this->post(route('fiscal.solicitar', $o), ['observacao' => str_repeat('x', 501)])->assertSessionHasErrors('observacao');
+        $this->post(route('fiscal.solicitar', $o), ['observacao' => 'Pedido 123'])->assertRedirect()->assertSessionHas('sucesso');
 
         $docs = FiscalDocument::where('ordem_id', $o->id)->get()->keyBy('tipo');
+        $this->assertSame(['Pedido 123', 'Pedido 123'], [$docs['nfse']->observacao, $docs['nfe']->observacao]);
+        $this->get("/ordens/{$o->numero}?aba=documentos")->assertSee('Observação na nota: Pedido 123');
         $this->assertSame([27115, 19885], [$docs['nfse']->valor_centavos, $docs['nfe']->valor_centavos]); // R$ 50 rateado: 28,85 no serviço, 21,15 nas peças
         $this->assertSame($o->orcamentoAprovado->total_centavos, $docs->sum('valor_centavos'), 'soma das notas = total aprovado');
         $this->assertSame(['autorizado', 'autorizado'], [$docs['nfse']->status, $docs['nfe']->status]);

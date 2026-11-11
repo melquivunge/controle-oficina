@@ -17,7 +17,8 @@ class FiscalController extends Controller
 {
     public function solicitar(Request $request, Ordem $ordem, Fiscal $fiscal)
     {
-        $notas = $fiscal->solicitar($ordem, $request->user());
+        $obs = $request->validate(['observacao' => ['nullable', 'string', 'max:500']], [], ['observacao' => 'observação na nota'])['observacao'] ?? null;
+        $notas = $fiscal->solicitar($ordem, $request->user(), observacao: $obs);
 
         return back()->with('sucesso', $notas->map(fn ($d) => DadosFiscais::NOTAS[$d->tipo])->join(' e ').' solicitada'.($notas->count() > 1 ? 's' : '').'. O resultado aparece aqui em instantes.');
     }

@@ -30,13 +30,14 @@ class Fiscal
      *
      * @return Collection<int, FiscalDocument> notas criadas
      */
-    public function solicitar(Ordem $ordem, User $ator, ?string $tipo = null): Collection
+    public function solicitar(Ordem $ordem, User $ator, ?string $tipo = null, ?string $observacao = null): Collection
     {
+        $observacao = ($o = \App\Integracoes\Fiscal\NfseNacional::texto((string) $observacao, 500)) === '' ? null : $o;
         if (! $ator->pode('cobrar') || ! $ator->acessaUnidade($ordem->unidade_id)) {
             throw new AuthorizationException('Sem permissão para solicitar documento fiscal.');
         }
 
-        return DB::transaction(function () use ($ordem, $ator, $tipo) {
+        return DB::transaction(function () use ($ordem, $ator, $tipo, $observacao) {
             $o = Ordem::lockForUpdate()->findOrFail($ordem->id);
             $orc = Orcamento::where('ordem_id', $o->id)->where('status', 'aprovado')->first();
             if (! $orc || $o->status === StatusOrdem::Cancelado) {
@@ -58,10 +59,10 @@ class Fiscal
             foreach ($faltam as $t => $valor) {
                 $tentativa = FiscalDocument::where('ordem_id', $o->id)->where('tipo', $t)->count() + 1;
                 $doc = FiscalDocument::create(['ordem_id' => $o->id, 'unidade_id' => $o->unidade_id, 'orcamento_id' => $orc->id, 'tipo' => $t, 'valor_centavos' => $valor,
-                    'status' => 'pendente', 'provedor' => $this->emissor->nome(), 'solicitado_por' => $ator->id,
+                    'status' => 'pendente', 'provedor' => $this->emissor->nome(), 'solicitado_por' => $ator->id, 'observacao' => $observacao,
                     // NFS-e mantém a chave anterior (compatível com notas já emitidas); NF-e tem a sua.
                     'chave_idempotencia' => hash('sha256', $t === 'nfse' ? "{$o->id}|{$orc->id}|{$tentativa}" : "{$o->id}|{$orc->id}|nfe|{$tentativa}")]);
-                Auditoria::registrar('fiscal_solicitado', $o, depois: ['documento_id' => $doc->id, 'tipo' => $t, 'valor_centavos' => $doc->valor_centavos], ator: $ator);
+                Auditoria::registrar('fiscal_solicitado', $o, depois: ['documento_id' => $doc->id, 'tipo' => $t, 'valor_centavos' => $doc->valor_centavos, 'observacao' => $observacao], ator: $ator);
                 ProcessarDocumentoFiscal::dispatch($doc->id)->afterCommit();
                 $criados->push($doc);
             }
@@ -163,7 +164,7 @@ class Fiscal
     {
         return [
             'tipo' => $doc->tipo, 'fiscal' => $fiscal, 'serie' => $doc->serie, 'numero_dps' => $doc->numero_dps, 'criado_em' => $doc->created_at,
-            'valor_centavos' => $doc->valor_centavos, 'ordem' => $ordem->numero, 'unidade' => $ordem->unidade->nome, 'cliente' => $ordem->cliente->nome,
+            'valor_centavos' => $doc->valor_centavos, 'ordem' => $ordem->numero, 'observacao' => $doc->observacao, 'unidade' => $ordem->unidade->nome, 'cliente' => $ordem->cliente->nome,
             'cliente_documento' => $ordem->cliente->documento,
             'cliente_local' => $ordem->cliente->only('logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf', 'cep'),
             'cliente_endereco' => $ordem->cliente->enderecoTexto(), 'cliente_telefone' => $ordem->cliente->telefoneFormatado(), 'cliente_email' => $ordem->cliente->email,

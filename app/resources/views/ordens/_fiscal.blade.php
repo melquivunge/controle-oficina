@@ -10,6 +10,7 @@
             <strong>{{ \App\Support\DadosFiscais::NOTAS[$d->tipo] ?? 'Nota' }} · {{ $d->numero ? 'Nº '.$d->numero : 'Documento #'.$d->id }} · {{ \App\Support\Dinheiro::formatar($d->valor_centavos) }}</strong>
             <span class="fiscal-estado fiscal-estado--{{ $d->status }}">@if ($emAndamento)<span class="fiscal-giro" aria-hidden="true"></span>@endif{{ $rotulos[$d->status] }}</span>
         </header>
+        @if ($d->observacao)<p class="fiscal-doc__texto">Observação na nota: {{ $d->observacao }}</p>@endif
         @if ($emAndamento && ! $d->mensagem)
             <p class="fiscal-doc__texto">Enviando ao emissor. O resultado aparece aqui automaticamente.</p>
         @elseif ($d->status === 'pendente' && $d->mensagem)
@@ -64,7 +65,10 @@
         @php($faltam = array_diff_key($partes, array_flip($docs->whereIn('status', ['pendente', 'processando', 'autorizado'])->pluck('tipo')->all())))
         @if ($faltam)
             <p class="hint">A emitir: @foreach ($faltam as $t => $v){{ \App\Support\DadosFiscais::NOTAS[$t] }} de {{ \App\Support\Dinheiro::formatar($v) }}@if (! $loop->last) e @endif @endforeach.</p>
-            <form method="POST" action="{{ route('fiscal.solicitar', $ordem) }}">@csrf<button class="button primary" type="submit">{{ count($faltam) > 1 ? 'Emitir as 2 notas fiscais' : 'Emitir '.\App\Support\DadosFiscais::NOTAS[array_key_first($faltam)] }}</button></form>
+            <form method="POST" action="{{ route('fiscal.solicitar', $ordem) }}">@csrf
+                @include('partials.campo', ['nome' => 'observacao', 'rotulo' => 'Observação na nota (opcional)', 'id' => 'fiscal-observacao',
+                    'atributos' => ['maxlength' => 500, 'autocomplete' => 'off'], 'ajuda' => 'Sai nas informações complementares da NF-e e no fim da descrição da NFS-e. Até 500 caracteres.'])
+                <button class="button primary" type="submit">{{ count($faltam) > 1 ? 'Emitir as 2 notas fiscais' : 'Emitir '.\App\Support\DadosFiscais::NOTAS[array_key_first($faltam)] }}</button></form>
         @endif
     @endif
 @endcan
