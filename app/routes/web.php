@@ -125,6 +125,7 @@ Route::middleware('auth')->group(function () {
         Route::middleware('can:resolver_divergencias')->group(function () {
             Route::get('/pendencias', [\App\Http\Controllers\PendenciaController::class, 'index'])->name('pendencias.index');
             Route::post('/pendencias/{tipo}/{id}/resolver', [\App\Http\Controllers\PendenciaController::class, 'resolver'])->whereNumber('id')->name('pendencias.resolver');
+            Route::post('/pendencias/mensagens/resolver-todas', [\App\Http\Controllers\PendenciaController::class, 'resolverMensagens'])->name('pendencias.mensagens.resolver');
             Route::post('/pendencias/mensagens/processar', [\App\Http\Controllers\PendenciaController::class, 'processarFila'])->middleware('throttle:10,1')->name('pendencias.mensagens.processar');
             Route::post('/pendencias/mensagens/{mensagem}/reenviar', [\App\Http\Controllers\PendenciaController::class, 'reenviar'])->name('pendencias.mensagens.reenviar');
         });

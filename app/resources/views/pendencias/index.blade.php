@@ -12,6 +12,17 @@
             <noscript><button class="button" type="submit">Aplicar</button></noscript>
             <p class="hint">{{ $abertas }} em aberto</p>
         </form>
+        @if ($falhas > 1)
+            <details class="versao pendencia-resolver" @if (old('_pendencia') === 'mensagens') open @endif>
+                <summary>Resolver todas as mensagens não enviadas ({{ $falhas }})</summary>
+                <form method="POST" action="{{ route('pendencias.mensagens.resolver') }}" class="inline-form">@csrf
+                    <input type="hidden" name="_pendencia" value="mensagens">
+                    @include('partials.campo', ['nome' => 'resolucao', 'rotulo' => 'O que foi verificado e decidido', 'id' => 'resolucao-mensagens', 'obrigatorio' => true, 'atributos' => ['minlength' => 5, 'maxlength' => 500], 'valorAtual' => old('_pendencia') === 'mensagens' ? old('resolucao') : ''])
+                    <button class="button primary" type="submit">Resolver todas</button>
+                </form>
+                <p class="hint">Use quando as mensagens já foram reenviadas ou o cliente já recebeu por outro meio. Cada uma fica registrada no histórico.</p>
+            </details>
+        @endif
         @forelse ($itens as $i)
             <article class="versao pendencia {{ $i['resolucao'] ? 'resolvida' : $i['gravidade'] }}">
                 <header>

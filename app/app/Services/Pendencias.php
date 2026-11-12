@@ -82,7 +82,10 @@ class Pendencias
                 'Cobrança de '.Dinheiro::formatar((int) $c->valor_centavos).' não foi gerada: '.($c->erro ?: 'erro não informado').'.'));
         }
 
-        foreach ($escopo(MessageDelivery::query())->where('status', 'falhou')->where($semResolucao('mensagem_falhou', 'message_deliveries'))->orderByDesc('updated_at')->limit(self::LIMITE_POR_TIPO)->get() as $m) {
+        // Sai da lista sozinha quando a mesma mensagem (OS + tipo) foi enviada depois, pelo reenvio ou por um envio novo.
+        foreach ($escopo(MessageDelivery::query())->where('status', 'falhou')->where($semResolucao('mensagem_falhou', 'message_deliveries'))
+            ->whereNotExists(fn ($s) => $s->from('message_deliveries as ok')->where('ok.status', 'enviado')->whereColumn('ok.ordem_id', 'message_deliveries.ordem_id')
+                ->whereColumn('ok.tipo', 'message_deliveries.tipo')->whereColumn('ok.id', '>', 'message_deliveries.id'))->orderByDesc('updated_at')->limit(self::LIMITE_POR_TIPO)->get() as $m) {
             $itens->push($this->item('mensagem_falhou', $m, 'atencao', 'Mensagem não enviada', $m->updated_at,
                 "{$m->rotuloTipo()} falhou após {$m->tentativas} tentativa(s): ".($m->ultimo_erro ?: 'erro não informado').'. Reenvie na aba Mensagens.'));
         }
@@ -156,6 +159,17 @@ class Pendencias
         } catch (UniqueConstraintViolationException) {
             throw ValidationException::withMessages(['resolucao' => 'Esta pendência já foi resolvida.']);
         }
+    }
+
+    /** Resolve de uma vez todas as mensagens não enviadas em aberto que o usuário vê; cada uma fica com a mesma resolução e auditoria. */
+    public function resolverMensagensFalhas(User $ator, string $texto): int
+    {
+        $abertas = $this->listar($ator)->where('tipo', 'mensagem_falhou');
+        foreach ($abertas as $i) {
+            $this->resolver($ator, 'mensagem_falhou', $i['id'], $texto);
+        }
+
+        return $abertas->count();
     }
 
     private function item(string $tipo, $registro, string $gravidade, string $rotulo, $data, string $descricao, bool $resolvivel = true): array

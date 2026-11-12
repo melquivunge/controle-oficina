@@ -23,6 +23,7 @@ class PendenciaController extends Controller
             $todas = $pendencias->listar($user, $request->boolean('resolvidas'));
             $pagina = LengthAwarePaginator::resolveCurrentPage();
             $dados['itens'] = (new LengthAwarePaginator($todas->forPage($pagina, 30)->values(), $todas->count(), 30, $pagina, ['path' => $request->url()]))->withQueryString();
+            $dados['falhas'] = $todas->where('tipo', 'mensagem_falhou')->whereNull('resolucao')->count();
             $dados['abertas'] = $request->boolean('resolvidas') ? $todas->whereNull('resolucao')->count() : $todas->count();
         } else {
             $dados['mensagens'] = MessageDelivery::when(! $user->visaoGlobal(), fn ($q) => $q->whereIn('unidade_id', $user->unidadeIds()))
@@ -41,7 +42,16 @@ class PendenciaController extends Controller
         $request->validate(['resolucao' => ['required', 'string', 'min:5', 'max:500']], [], ['resolucao' => 'resolução']);
         $pendencias->resolver($request->user(), $tipo, $id, $request->input('resolucao'));
 
-        return back()->with('sucesso', 'Resolução registrada no histórico.');
+        // Sem "mostrar resolvidas": o card resolvido sai da lista (antes descia para o fim e parecia que nada mudou).
+        return redirect()->route('pendencias.index')->with('sucesso', 'Resolução registrada no histórico. A pendência saiu da lista.');
+    }
+
+    public function resolverMensagens(Request $request, Pendencias $pendencias)
+    {
+        $request->validate(['resolucao' => ['required', 'string', 'min:5', 'max:500']], [], ['resolucao' => 'resolução']);
+        $n = $pendencias->resolverMensagensFalhas($request->user(), $request->input('resolucao'));
+
+        return redirect()->route('pendencias.index')->with('sucesso', "{$n} mensagem(ns) não enviada(s) marcada(s) como resolvida(s).");
     }
 
     public function reenviar(Request $request, MessageDelivery $mensagem, Mensagens $mensagens)
