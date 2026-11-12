@@ -116,7 +116,7 @@
             </section>
         </div>
         <aside class="form-aside">
-            <section class="helper"><h2>Tema</h2><p>O tema padrão vale para quem não escolheu outro em Minha conta. Cada pessoa pode trocar o próprio tema a qualquer momento.</p></section>
+            <section class="helper"><h2>Tema</h2><p>O tema padrão vale para toda a equipe: na tela de entrada, no sistema inteiro e no link que o cliente recebe.</p></section>
             <section class="helper"><h2>Onde aparece</h2><p>Nome do sistema, logo e descrição: menu e tela de entrada. Na OS impressa (e na versão do cliente pelo link): logo, nome fantasia, CNPJ, telefone e endereço. A OS impressa não é documento fiscal.</p></section>
             <section class="helper"><h2>CNPJ</h2><p>Os dígitos verificadores são conferidos. O formato alfanumérico (novas inscrições a partir de julho/2026) também é aceito.</p></section>
         </aside>

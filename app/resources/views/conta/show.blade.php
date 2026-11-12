@@ -37,30 +37,13 @@
                 <div class="form-footer"><span class="hint">Alterações ficam registradas na auditoria.</span><button class="button primary" type="submit">Salvar perfil</button></div>
             </form>
 
-            @php($empresaAtual = \App\Models\Empresa::atual())
-            @php($padraoEmpresa = \App\Support\Aparencia::opcoes()[$empresaAtual->tema_padrao ?? 'claro'] ?? 'Claro')
-            <form method="POST" action="{{ route('conta.tema') }}" class="form-panel" id="aparencia" style="margin-bottom:20px">
-                @csrf @method('PUT')
+            <section class="form-panel" id="aparencia" style="margin-bottom:20px">
                 <section class="form-section">
                     <h2>Aparência</h2>
-                    <p class="section-copy">Vale só para você, em qualquer aparelho em que entrar.</p>
-                    <fieldset class="tema-opcoes">
-                        <legend class="sr-only">Tema</legend>
-                        @foreach (['' => 'Padrão da empresa ('.$padraoEmpresa.')'] + \App\Support\Aparencia::opcoes() as $valor => $nome)
-                            {{-- "Padrão da empresa" mostra a miniatura do tema que a empresa usa de fato. --}}
-                            @php($chaveAmostra = $valor ?: ($empresaAtual->tema_padrao ?? 'claro'))
-                            @php($temaCustom = str_starts_with($chaveAmostra, 'tema:') ? \App\Models\Tema::find((int) substr($chaveAmostra, 5)) : null)
-                            <label class="tema-opcao">
-                                <input type="radio" name="tema" value="{{ $valor }}" @checked((string) old('tema', $usuario->tema) === (string) $valor)>
-                                <span class="tema-amostra tema-amostra-{{ $temaCustom?->base ?? (isset(\App\Support\Aparencia::PADROES[$chaveAmostra]) ? $chaveAmostra : 'claro') }}{{ $valor === '' ? ' tema-amostra-padrao' : '' }}" @if ($temaCustom) style="--amostra-menu:{{ $temaCustom->cor_menu }};--amostra-marca:{{ $temaCustom->cor_marca }}" @endif aria-hidden="true"><i></i><b></b></span>
-                                <span>{{ $nome }}</span>
-                            </label>
-                        @endforeach
-                    </fieldset>
-                    @error('tema')<span class="field-error">{{ $message }}</span>@enderror
+                    <p class="section-copy">O tema e as cores são os mesmos para toda a equipe, na tela de entrada e no sistema inteiro.
+                        @can('configurar') Para mudar, use <a href="{{ route('empresa.edit') }}">Identidade da empresa › Tema padrão</a>.@else Quem escolhe é o dono.@endcan</p>
                 </section>
-                <div class="form-footer"><span class="hint">"Seguir o aparelho" troca entre claro e escuro conforme o celular ou computador.</span><button class="button primary" type="submit">Salvar aparência</button></div>
-            </form>
+            </section>
 
             <form method="POST" action="{{ route('conta.senha') }}" class="form-panel" id="senha">
                 @csrf @method('PUT')

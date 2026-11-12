@@ -709,6 +709,12 @@ body.app{--roxo:var(--t-roxo-grafico,#1d3150)}
   --nav-indicador:var(--menu-texto);--nav-icone-ativo:var(--menu-texto);--nav-foco:var(--menu-texto);
   --t-sombra-menu:inset -1px 0 0 color-mix(in srgb,var(--menu-texto) 14%,var(--menu-fundo));
 }
+/* Tela de entrada com o tema da empresa (12/11/2026): o painel lateral usa a cor do menu, como dentro do sistema. */
+:root[style*="--menu-fundo"] .guest-marca{background:var(--menu-fundo);color:var(--menu-texto)}
+:root[style*="--menu-fundo"] .guest-titulo{color:var(--menu-texto)}
+:root[style*="--menu-fundo"] .guest-marca li:before{background:var(--marca)}
+:root[style*="--menu-fundo"] .portal-topo{background:var(--menu-fundo);color:var(--menu-texto)}
+:root[style*="--menu-fundo"] .portal-topo small{color:var(--menu-texto);opacity:.8}
 /* Botão primário com a cor da marca: hover sem mexer no contraste (anel interno com a cor do texto). */
 :root[style*="--marca"]{--primario-hover:var(--marca);--primario-borda:color-mix(in srgb,var(--marca) 75%,var(--marca-contraste))}
 body.app .sidebar{background:var(--nav-bg);color:var(--nav-ink);box-shadow:var(--t-sombra-menu,none)}

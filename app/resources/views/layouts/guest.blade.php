@@ -1,5 +1,5 @@
 @php($empresaAtual = \App\Models\Empresa::atual())
-@php($aparencia = \App\Support\Aparencia::resolver(null, $empresaAtual))
+@php($aparencia = \App\Support\Aparencia::resolver($empresaAtual))
 <!doctype html>
 <html lang="pt-BR" data-tema="{{ $aparencia['modo'] }}" @if ($aparencia['estilo']) style="{{ $aparencia['estilo'] }}" @endif>
 <head>

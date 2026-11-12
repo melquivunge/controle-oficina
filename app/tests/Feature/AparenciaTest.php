@@ -42,24 +42,40 @@ class AparenciaTest extends TestCase
             'cep' => '70.040-010', 'logradouro' => 'Rua das Rodas', 'numero' => '17', 'bairro' => 'Asa Sul', 'cidade' => 'Brasília', 'uf' => 'df'];
     }
 
-    public function test_padrao_e_claro_e_usuario_escolhe_escuro_ou_sistema(): void
+    /** 12/11/2026: tema único da empresa — o mesmo na entrada, para todos os papéis e no link do cliente; sem escolha pessoal. */
+    public function test_tema_da_empresa_vale_para_todos_e_nao_ha_tema_pessoal(): void
     {
-        $this->entrarComo($this->recepcao)->get(route('conta'))->assertOk()->assertSee('data-tema="claro"', false)->assertSee('Seguir o aparelho');
+        $this->entrarComo($this->recepcao)->get(route('conta'))->assertOk()->assertSee('data-tema="claro"', false)->assertSee('Quem escolhe é o dono')
+            ->assertDontSee('Salvar aparência');
+        $this->assertFalse(\Illuminate\Support\Facades\Route::has('conta.tema'));
 
-        foreach (['escuro', 'sistema'] as $tema) {
-            $this->entrarComo($this->recepcao)->put(route('conta.tema'), ['tema' => $tema])->assertSessionHasNoErrors();
-            $this->assertSame($tema, $this->recepcao->fresh()->tema);
-            $this->entrarComo($this->recepcao->fresh())->get(route('conta'))->assertSee('data-tema="'.$tema.'"', false);
+        $this->entrarComo($this->dono)->put(route('empresa.update'), $this->empresa(['tema_padrao' => 'escuro']))->assertSessionHasNoErrors();
+        foreach ([$this->dono, $this->recepcao, $this->mecanico] as $u) {
+            $this->entrarComo($u)->get(route('conta'))->assertSee('data-tema="escuro"', false);
         }
-        $this->assertSame(2, AuditEvent::where('acao', 'tema_usuario_alterado')->count());
-
-        // Mecânico também escolhe o próprio tema; valor fora da lista é recusado e o banco também barra.
-        $this->entrarComo($this->mecanico)->put(route('conta.tema'), ['tema' => 'escuro'])->assertSessionHasNoErrors();
-        $this->entrarComo($this->mecanico)->put(route('conta.tema'), ['tema' => 'rosa'])->assertSessionHasErrors('tema');
-        $this->entrarComo($this->mecanico)->put(route('conta.tema'), ['tema' => 'tema:999'])->assertSessionHasErrors('tema');
-        $this->assertSame('escuro', $this->mecanico->fresh()->tema);
+        // Coluna antiga preenchida não muda mais nada.
+        $this->recepcao->forceFill(['tema' => 'claro'])->save();
+        $this->entrarComo($this->recepcao->fresh())->get(route('conta'))->assertSee('data-tema="escuro"', false);
+        $this->entrarComo($this->dono)->get(route('conta'))->assertSee('Identidade da empresa › Tema padrão');
         $this->expectException(QueryException::class);
         DB::table('users')->where('id', $this->mecanico->id)->update(['tema' => 'qualquer"><script>']);
+    }
+
+    public function test_migracao_leva_o_tema_pessoal_do_dono_para_a_empresa(): void
+    {
+        $this->entrarComo($this->dono)->post(route('temas.store'), $this->tema())->assertSessionHasNoErrors();
+        $tema = Tema::sole();
+        Empresa::atual()->forceFill(['tema_padrao' => null])->save();
+        $this->dono->forceFill(['tema' => $tema->chave()])->save();
+        $this->recepcao->forceFill(['tema' => 'escuro'])->save();
+
+        (require database_path('migrations/2026_11_12_000200_tema_unico_da_empresa.php'))->up();
+
+        $this->assertSame($tema->chave(), Empresa::atual()->fresh()->tema_padrao);
+        $this->assertSame(0, User::whereNotNull('tema')->count());
+        auth()->logout();
+        $this->flushSession();
+        $this->get(route('login'))->assertSee('--marca:#ffd400', false);
     }
 
     public function test_somente_proprietario_cria_tema_e_cores_vao_com_texto_legivel(): void
@@ -78,8 +94,8 @@ class AparenciaTest extends TestCase
         $this->assertSame(['escuro', '#ffd400', '#000000'], [$tema->base, $tema->cor_marca, $tema->cor_menu]);
         $this->assertSame(1, AuditEvent::where('acao', 'tema_criado')->count());
 
-        $this->entrarComo($this->recepcao)->put(route('conta.tema'), ['tema' => $tema->chave()])->assertSessionHasNoErrors();
-        $this->entrarComo($this->recepcao->fresh())->get(route('conta'))->assertOk()
+        $this->entrarComo($this->dono)->put(route('empresa.update'), $this->empresa(['tema_padrao' => $tema->chave()]))->assertSessionHasNoErrors();
+        $this->entrarComo($this->recepcao)->get(route('conta'))->assertOk()
             ->assertSee('data-tema="escuro"', false)
             // amarelo pede texto escuro; preto pede texto branco
             ->assertSee('--marca:#ffd400;--marca-contraste:#000000;--menu-fundo:#000000;--menu-texto:#ffffff', false);
@@ -89,21 +105,18 @@ class AparenciaTest extends TestCase
         $this->entrarComo($this->recepcao)->delete(route('temas.destroy', $tema))->assertForbidden();
     }
 
-    public function test_excluir_tema_devolve_usuarios_e_empresa_ao_padrao(): void
+    public function test_excluir_tema_devolve_a_empresa_ao_padrao(): void
     {
         $this->entrarComo($this->dono)->post(route('temas.store'), $this->tema())->assertSessionHasNoErrors();
         $tema = Tema::sole();
         $this->entrarComo($this->dono)->put(route('empresa.update'), $this->empresa(['tema_padrao' => $tema->chave()]))->assertSessionHasNoErrors();
-        $this->recepcao->forceFill(['tema' => $tema->chave()])->save();
 
-        // Usuário sem escolha segue o padrão da empresa.
         $this->entrarComo($this->mecanico)->get(route('conta'))->assertSee('data-tema="escuro"', false)->assertSee('--menu-fundo:#000000', false);
 
         $this->entrarComo($this->dono)->delete(route('temas.destroy', $tema))->assertSessionHasNoErrors();
-        $this->assertNull($this->recepcao->fresh()->tema);
         $this->assertNull(Empresa::atual()->tema_padrao);
         $this->assertSame(1, AuditEvent::where('acao', 'tema_excluido')->count());
-        $this->entrarComo($this->recepcao->fresh())->get(route('conta'))->assertSee('data-tema="claro"', false)->assertDontSee('--menu-fundo:', false);
+        $this->entrarComo($this->recepcao)->get(route('conta'))->assertSee('data-tema="claro"', false)->assertDontSee('--menu-fundo:', false);
     }
 
     public function test_tema_padrao_da_empresa_vale_na_tela_de_entrada(): void

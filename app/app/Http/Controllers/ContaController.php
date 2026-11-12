@@ -8,9 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use App\Models\User;
-use App\Support\Aparencia;
 use App\Support\Normaliza;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 
@@ -53,18 +51,6 @@ class ContaController extends Controller
         Auditoria::registrar('perfil_alterado', $user, $antes, $user->only('name', 'telefone', 'cargo', 'receber_avisos_whatsapp') + ['foto' => (bool) $user->foto_caminho], ator: $user);
 
         return redirect()->route('conta')->with('sucesso', 'Perfil atualizado.');
-    }
-
-    /** Tema do próprio usuário; vazio segue o padrão da empresa. */
-    public function tema(Request $request)
-    {
-        $dados = $request->validate(['tema' => ['nullable', Rule::in(array_keys(Aparencia::opcoes()))]], [], ['tema' => 'tema']);
-        $user = $request->user();
-        $antes = $user->only('tema');
-        $user->forceFill(['tema' => $dados['tema'] ?? null])->save();
-        Auditoria::registrar('tema_usuario_alterado', $user, $antes, $user->only('tema'), ator: $user);
-
-        return redirect()->to(route('conta').'#aparencia')->with('sucesso', 'Tema atualizado.');
     }
 
     /** Foto de qualquer usuário ativo da empresa para quem está autenticado (aparece em menus e listas). */

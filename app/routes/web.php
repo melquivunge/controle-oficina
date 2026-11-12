@@ -207,13 +207,12 @@ Route::middleware(['auth', 'dois-fatores'])->group(function () {
         Route::post('/', 'store')->name('certificado.store');
         Route::delete('/', 'destroy')->name('certificado.destroy');
     });
-    // Aparência (31/10/2026): temas personalizados só pelo proprietário; cada usuário escolhe o próprio tema.
+    // Aparência: temas personalizados só pelo proprietário; o tema padrão da empresa vale para todos (12/11/2026).
     Route::middleware(['can:configurar', 'password.confirm', 'throttle:30,1'])->prefix('configuracoes/temas')->controller(\App\Http\Controllers\TemaController::class)->group(function () {
         Route::post('/', 'store')->name('temas.store');
         Route::put('/{tema}', 'update')->name('temas.update');
         Route::delete('/{tema}', 'destroy')->name('temas.destroy');
     });
-    Route::put('/conta/tema', [\App\Http\Controllers\ContaController::class, 'tema'])->middleware('throttle:30,1')->name('conta.tema');
     Route::put('/ordens/{ordem}/chassi', [\App\Http\Controllers\VeiculoController::class, 'chassi'])->middleware('throttle:30,1')->name('ordens.chassi');
     Route::post('/ordens/{ordem}/vendedor', [\App\Http\Controllers\OsImpressaController::class, 'vendedor'])->middleware('throttle:30,1')->name('ordens.vendedor');
     Route::get('/ordens/{ordem}/impressao', [\App\Http\Controllers\OsImpressaController::class, 'interna'])->middleware('throttle:60,1')->name('ordens.impressao');

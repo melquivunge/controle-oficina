@@ -880,10 +880,10 @@ Menu **Identidade da empresa** (ou a engrenagem no alto).
 
 ![Identidade da empresa: sistema, dados da empresa, endereço, logo, temas e dados por unidade](imagens/empresa.jpg)
 
-- **Sistema:** nome do sistema, tema padrão e uma descrição curta (aparece na tela de entrada).
+- **Sistema:** nome do sistema, **tema padrão** e uma descrição curta (aparece na tela de entrada). O tema vale para **toda a equipe**: na tela de entrada, no sistema inteiro e no link que o cliente recebe.
 - **Empresa:** razão social, nome fantasia, **CNPJ** (os dígitos são conferidos; o formato alfanumérico também é aceito), telefone, e-mail e cor principal.
 - **Endereço** e **Logo**.
-- **Temas:** crie temas personalizados de cores. Cada pessoa pode escolher o próprio tema em Minha conta.
+- **Temas:** crie temas personalizados de cores (cor da marca e cor do menu) e escolha um deles em **Tema padrão**.
 - **Dados próprios por unidade:** unidades com CNPJ ou endereço próprios usam esses dados na OS impressa.
 
 Esses dados aparecem no menu, na tela de entrada e na **OS impressa** (que não é documento fiscal).
@@ -985,7 +985,7 @@ Menu **Minha conta e segurança** (vale para todo mundo).
 ![Minha conta: perfil, aparência e alterar senha](imagens/conta.jpg)
 
 - **Perfil:** nome, cargo, telefone e foto. E-mail, papel e unidade são definidos pelo dono. Com telefone preenchido, você pode receber **avisos de serviço** pelo WhatsApp (OS, veículo, serviço e entrega prevista, **sem valores nem contato do cliente**).
-- **Aparência:** tema só para você.
+- **Aparência:** o tema é o mesmo para todos; quem escolhe é o dono, em Identidade da empresa.
 - **Alterar senha:** senha atual, nova senha e confirmação (mínimo de 10 caracteres, com letras e números). Ao salvar, suas outras sessões abertas são encerradas.
 
 ### 10.13 Dados fiscais

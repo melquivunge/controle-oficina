@@ -4,10 +4,9 @@ namespace App\Support;
 
 use App\Models\Empresa;
 use App\Models\Tema;
-use App\Models\User;
 
 /**
- * Resolve o tema da tela: escolha do usuário > padrão da empresa > claro.
+ * Tema único da empresa (12/11/2026, pedido do dono): o mesmo na entrada, no sistema todo e no link do cliente; sem escolha pessoal.
  * Saída vai para <html data-tema="claro|escuro|sistema" style="--marca…">; as cores do tema personalizado
  * vêm com a cor de texto calculada (preto ou branco, o de maior contraste WCAG) para nunca ficar ilegível.
  */
@@ -16,16 +15,11 @@ final class Aparencia
     public const PADROES = ['claro' => 'Claro', 'escuro' => 'Escuro', 'sistema' => 'Seguir o aparelho'];
 
     /** @return array{modo: string, estilo: string, chave: string} */
-    public static function resolver(?User $usuario = null, ?Empresa $empresa = null): array
+    public static function resolver(?Empresa $empresa = null): array
     {
-        $empresa ??= Empresa::atual();
-        foreach ([$usuario?->tema, $empresa->tema_padrao] as $chave) {
-            if ($chave && ($r = self::deChave($chave))) {
-                return $r;
-            }
-        }
+        $chave = ($empresa ?? Empresa::atual())->tema_padrao;
 
-        return ['modo' => 'claro', 'estilo' => '', 'chave' => 'claro'];
+        return ($chave ? self::deChave($chave) : null) ?? ['modo' => 'claro', 'estilo' => '', 'chave' => 'claro'];
     }
 
     /** Opções válidas para os seletores (padrões + personalizados). @return array<string, string> */

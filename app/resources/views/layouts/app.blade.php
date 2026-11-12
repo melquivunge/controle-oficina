@@ -1,7 +1,7 @@
 @php($usuario = auth()->user())
 @php(['total' => $totalNotificacoes, 'whatsapp' => $whatsappSemResposta, 'itens' => $notificacoes] = app(\App\Services\Notificacoes::class)->abertas($usuario))
 @php($empresaAtual = \App\Models\Empresa::atual())
-@php($aparencia = \App\Support\Aparencia::resolver($usuario, $empresaAtual))
+@php($aparencia = \App\Support\Aparencia::resolver($empresaAtual))
 <!doctype html>
 <html lang="pt-BR" data-tema="{{ $aparencia['modo'] }}" @if ($aparencia['estilo']) style="{{ $aparencia['estilo'] }}" @endif>
 <head>
