@@ -2,7 +2,7 @@
 
 Guia completo, com fotos das telas, para quem usa o sistema no dia a dia: dono, gerente, supervisor, recepção/caixa e mecânico. No fim, há uma parte sobre o que o cliente vê pelo link.
 
-> **Sobre as fotos.** Todas as imagens foram tiradas da **versão de demonstração**, com dados fictícios (clientes, placas, valores e telefones inventados). Por isso aparece a faixa marrom **"DEMONSTRAÇÃO — dados fictícios"** no alto da tela. No sistema real essa faixa não aparece. As telas foram capturadas em 05/11/2026 e as telas novas em 12/11/2026; os dados da demonstração vão de 30/09 a 29/10/2026.
+> **Sobre as fotos.** Todas as imagens foram tiradas da **versão de demonstração**, com dados fictícios (clientes, placas, valores e telefones inventados). Por isso aparece a faixa marrom **"DEMONSTRAÇÃO — dados fictícios"** no alto da tela. No sistema real essa faixa não aparece. As telas foram capturadas em 12/11/2026; os dados da demonstração vão de 30/09 a 29/10/2026.
 
 > **Manual do proprietário.** Para abrir e configurar uma **unidade nova** e cadastrar e treinar a **gerente**, veja o [Manual do proprietário](proprietario.html).
 
@@ -289,7 +289,7 @@ Se a empresa usava outro sistema antes, aparece o link **Ver as N OS do sistema 
 
 **A aprovação do orçamento é feita na oficina, não pelo cliente.** A recepção **não monta orçamento** (isso é de quem orça: gerente, supervisor ou dono), mas pode aprovar ou recusar um orçamento que ficou **aguardando aprovação**. Na OS, aba **Orçamento e execução**:
 
-![Aba Orçamento vista pela recepção. A foto é de uma versão anterior do sistema: hoje a versão aguardando aparece com os botões "Aprovar versão N" e "Recusar"](imagens/os-orcamento-recepcao.jpg)
+![Aba Orçamento vista pela recepção](imagens/os-orcamento-recepcao.jpg)
 
 > **Sobre a foto.** Ela foi tirada antes da mudança e ainda mostra o formulário antigo de "registrar decisão". Hoje a tela traz os botões descritos abaixo.
 
@@ -628,7 +628,7 @@ O cliente **não aprova pelo link**. O link, se for enviado, serve só para ele 
 
 Veja também como fica uma OS aguardando aprovação:
 
-![OS aguardando aprovação, com a versão concluída e o editor para nova versão. A foto é de antes da mudança: hoje a versão aguardando mostra os botões "Aprovar versão N" e "Recusar"](imagens/os-aguardando-aprovacao.jpg)
+![OS aguardando aprovação, com a versão concluída e o editor para nova versão, com os botões "Aprovar versão 1" e "Recusar"](imagens/os-aguardando-aprovacao.jpg)
 
 > **Sobre as fotos desta seção.** Elas foram tiradas antes da mudança e ainda podem mostrar o botão antigo **Enviar versão ao cliente** e o formulário de "registrar decisão". Hoje os botões são **Aprovar orçamento** e **Deixar aguardando aprovação** (para quem orça) e **Aprovar versão N** / **Recusar** (para a versão aguardando).
 
@@ -1064,7 +1064,7 @@ Resumo das regras de dinheiro:
 
 ### 11.5 Aba Documentos e mensagens
 
-![Aba Documentos e mensagens com documentos fiscais simulados e mensagens ao cliente. A foto é de antes da divisão em dois tipos de nota: hoje o botão é "Emitir as 2 notas fiscais" (ou só a nota que couber)](imagens/os-documentos.jpg)
+![Aba Documentos e mensagens de uma OS com notas já emitidas (simuladas, da demonstração) e as mensagens ao cliente](imagens/os-documentos.jpg)
 
 **Notas fiscais: serviços e peças em notas separadas.** Cada item do orçamento é **Serviço** ou **Peça/produto**. Os serviços saem na **NFS-e (serviços)** e as peças na **NF-e (peças/produtos)**.
 
