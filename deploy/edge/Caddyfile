@@ -17,7 +17,7 @@
 	redir /manual /manual/ 308
 	handle_path /manual/* {
 		root * /etc/caddy/manual
-		@internos path /scripts/* /MANUAL.md
+		@internos path /scripts/* /MANUAL.md /MANUAL-PROPRIETARIO.md
 		respond @internos 404
 		templates
 		file_server

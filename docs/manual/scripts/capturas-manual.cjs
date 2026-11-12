@@ -108,6 +108,11 @@ async function foto(p, nome, largura) {
   await tela('usuario-novo', 'dono', '/configuracoes/usuarios/novo');
   { const h = quer('usuario-editar') ? await primeiroLink('dono', '/configuracoes/usuarios', '^/configuracoes/usuarios/\\d+$') : null; if (h) await tela('usuario-editar', 'dono', h); }
   await tela('whatsapp-numeros', 'dono', '/configuracoes/whatsapp/numeros');
+  // Manual do proprietário (12/11/2026): formulários preenchidos SEM enviar.
+  await tela('unidade-nova', 'dono', '/configuracoes/unidades', 1440, async p => { await p.fill('#nova-codigo', 'GUA'); await p.fill('#nova-nome', 'Oficina Guará'); });
+  await tela('usuario-novo-gerente', 'dono', '/configuracoes/usuarios/novo', 1440, async p => {
+    await p.fill('#name', 'Maria Souza'); await p.fill('#email', 'maria.gerente@exemplo.com.br'); await p.selectOption('#papel', 'gerente');
+    await p.selectOption('#unidade_id', { index: 1 }); await p.waitForTimeout(300); });
   await tela('catalogo', 'dono', '/configuracoes/catalogo');
   { const h = quer('catalogo-editar') ? await primeiroLink('dono', '/configuracoes/catalogo', '^/configuracoes/catalogo/\\d+$') : null; if (h) await tela('catalogo-editar', 'dono', h); }
   await tela('feriados-dono', 'dono', '/feriados');
@@ -133,6 +138,8 @@ async function foto(p, nome, largura) {
   await tela('impressao', 'gerente', `/ordens/${OS}/impressao`);
   { const h = quer('fiscal') ? await primeiroLink('gerente', '/ordens/ASN-00003?aba=documentos', '/fiscal/\\d+$') : null; if (h) await tela('fiscal', 'gerente', h); }
   await tela('orcamentos', 'gerente', '/orcamentos?status=todos');
+  await tela('orcamentos-avulsos', 'gerente', '/orcamentos-sem-entrada');
+  await tela('orcamento-avulso-novo', 'gerente', '/orcamentos-sem-entrada/novo');
   await tela('caixa', 'gerente', '/caixa?data=2026-10-22');
   await tela('caixa-receber', 'gerente', '/caixa?data=2026-10-22&aba=receber');
   await tela('caixa-fechamento', 'gerente', '/caixa?data=2026-10-22&aba=fechamento');

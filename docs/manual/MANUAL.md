@@ -2,7 +2,9 @@
 
 Guia completo, com fotos das telas, para quem usa o sistema no dia a dia: dono, gerente, supervisor, recepção/caixa e mecânico. No fim, há uma parte sobre o que o cliente vê pelo link.
 
-> **Sobre as fotos.** Todas as imagens foram tiradas da **versão de demonstração**, com dados fictícios (clientes, placas, valores e telefones inventados). Por isso aparece a faixa marrom **"DEMONSTRAÇÃO — dados fictícios"** no alto da tela. No sistema real essa faixa não aparece. As telas foram capturadas em 05/11/2026; os dados da demonstração vão de 30/09 a 29/10/2026.
+> **Sobre as fotos.** Todas as imagens foram tiradas da **versão de demonstração**, com dados fictícios (clientes, placas, valores e telefones inventados). Por isso aparece a faixa marrom **"DEMONSTRAÇÃO — dados fictícios"** no alto da tela. No sistema real essa faixa não aparece. As telas foram capturadas em 05/11/2026 e as telas novas em 12/11/2026; os dados da demonstração vão de 30/09 a 29/10/2026.
+
+> **Manual do proprietário.** Para abrir e configurar uma **unidade nova** e cadastrar e treinar a **gerente**, veja o [Manual do proprietário](proprietario.html).
 
 ---
 
@@ -135,6 +137,8 @@ O código muda a cada 30 segundos e não pode ser usado duas vezes. Se aparecer 
 
 **Trocou ou perdeu o celular?** Outro proprietário pode gerar uma nova chave na tela do seu usuário (botão **Gerar nova chave**). A chave anterior deixa de funcionar.
 
+**Pessoa que não consegue usar o aplicativo.** Outro proprietário pode marcar, no cadastro dela, **Dispensar a verificação em duas etapas para esta pessoa** (veja [10.6](#106-usuários-e-permissões)). A conta passa a entrar só com a senha, então use uma senha forte. A dispensa fica registrada na auditoria.
+
 ### 4.3 Confirmar a senha antes de configurações sensíveis
 
 Ao abrir telas de configuração (unidades, usuários, contas de recebimento, empresa etc.), o sistema pede a senha de novo se a última confirmação foi há mais de 15 minutos.
@@ -222,13 +226,16 @@ Menu **Nova entrada** (ou o botão **＋ Nova entrada** do painel).
 3. **Placa** do veículo. Se a placa já estiver no sistema, os dados do carro aparecem sozinhos (veja abaixo).
 4. **Nome do cliente.**
 5. **Marca**, **Modelo do veículo**, **Ano** e **Cor** (todos opcionais).
-6. **Endereço do cliente** (opcional; clique para abrir). Se preencher, o endereço da ficha do cliente é atualizado.
-7. Em **Motivo da visita**, escreva **o que o cliente relatou**, com as palavras dele, mesmo sem diagnóstico. É obrigatório.
-8. **Quilometragem** e **Observações** (opcionais).
-9. **Fotos do veículo** (opcional, até 5; JPG, PNG ou WebP, até 8 MB cada).
-10. Clique em **Registrar entrada**.
+6. **Chassi (opcional):** os 17 caracteres do chassi, se o cliente ou o documento do carro tiver. Espaços e letras minúsculas são corrigidos sozinhos. A placa continua obrigatória. Um chassi não pode estar em dois carros diferentes.
+7. **Endereço do cliente** (opcional; clique para abrir). Se preencher, o endereço da ficha do cliente é atualizado.
+8. Em **Motivo da visita**, escreva **o que o cliente relatou**, com as palavras dele, mesmo sem diagnóstico. É obrigatório.
+9. **Quilometragem** e **Observações** (opcionais).
+10. **Fotos do veículo** (opcional, até 5; JPG, PNG ou WebP, até 8 MB cada).
+11. Clique em **Registrar entrada**.
 
 O sistema cria a ordem numerada da unidade, e o mecânico passa a vê-la na fila para diagnóstico. O botão **Cancelar** volta ao painel sem gravar nada.
+
+**Carro de um orçamento sem entrada** (veja [8.14](#814-orçamento-sem-entrada-do-veículo)) ou **OS do sistema antigo** (veja [6.14](#614-os-do-sistema-antigo)): a Nova entrada abre já preenchida a partir dessas telas. Confira os dados e registre a entrada normalmente.
 
 **Cliente que já veio antes.** Use o campo **Cliente já cadastrado? Buscar pelo nome**:
 
@@ -385,7 +392,7 @@ Na ficha você vê os **atendimentos**, os **veículos** e os **dados de contato
 
 1. Preencha **Nome** e **Telefone com DDD** (obrigatórios).
 2. Se tiver, preencha **CPF ou CNPJ**, **E-mail**, **Endereço** e **Observações** (todos opcionais).
-3. Em **Veículo (opcional)**, informe **Placa**, **Marca**, **Modelo**, **Ano** e **Cor**.
+3. Em **Veículo (opcional)**, informe a **Placa** e clique em **Buscar dados do veículo** (igual à Nova entrada). Confira **Marca**, **Modelo**, **Ano** e **Cor** e corrija o que estiver diferente.
 4. Clique em **Cadastrar cliente**.
 
 Se o telefone já for de outro cliente, o sistema avisa e mostra a opção **É outra pessoa com o mesmo telefone (família ou empresa): cadastrar mesmo assim**. Marque só se for mesmo outra pessoa; se for o mesmo cliente, use o cadastro que já existe. **Placa repetida é recusada**: se a placa já está no sistema, procure o carro pela busca.
@@ -406,7 +413,7 @@ Menu **Veículos**. Busque pela placa (completa ou parte dela) para ver os veíc
 
 ### 6.11 Central de WhatsApp
 
-Menu **Central de WhatsApp**. Reúne as conversas que chegam nos números oficiais da empresa.
+Menu **Central de WhatsApp**. Reúne as conversas que chegam nos números de WhatsApp da empresa. **A tela se atualiza sozinha** a cada poucos segundos: mensagens novas aparecem e as enviadas mudam de situação sem precisar recarregar a página.
 
 ![Central de WhatsApp com indicadores e filtros](imagens/whatsapp.jpg)
 
@@ -416,12 +423,13 @@ Ao abrir uma conversa:
 
 ![Conversa aberta na Central de WhatsApp, com mensagens, dados do cliente e atendimento](imagens/whatsapp-conversa.jpg)
 
-- **No meio:** as mensagens. Escreva a resposta e envie. Se o cliente não escreve há mais de 24 horas, o WhatsApp só permite enviar um **modelo aprovado** (o texto livre fica bloqueado) — escolha o modelo e clique em **Enviar modelo**.
-- **Cliente:** vincule a conversa a um cliente (ou troque). Há um atalho **Registrar entrada de veículo**.
+- **No meio:** as mensagens. Escreva a resposta e envie. Nos números da **API oficial**, se o cliente não escreve há mais de 24 horas, só dá para enviar um **modelo aprovado** — escolha o modelo e clique em **Enviar modelo**. Nos números conectados pelo **Drope** (QR Code), essa regra não existe e o texto livre fica sempre liberado.
+- **Cliente:** vincule a conversa a um cliente (ou troque). Se for cliente novo, cadastre ali mesmo: nome, telefone, **CPF ou CNPJ** e o **veículo** (placa com **Buscar dados do veículo**, marca, modelo, ano e cor).
+- **Atalhos:** **Registrar entrada de veículo** (o carro chegou) e **Fazer orçamento (sem o carro)** (o cliente só quer saber o preço; veja [8.14](#814-orçamento-sem-entrada-do-veículo)).
 - **OS abertas do cliente:** ligue a conversa a uma OS.
 - **Atendimento:** escolha o **Responsável** e a **Situação**. Para marcar como resolvida, o **Motivo** é obrigatório.
 
-Na demonstração, aparecem botões de simulação (**Simular mensagem recebida**, **Simular resposta pelo celular da empresa**). Eles existem só para testes: **nada é enviado nem recebido de verdade**. Veja [15](#15-o-que-ainda-não-é-real).
+Na demonstração, aparecem botões de simulação (**Simular mensagem recebida**, **Simular resposta pelo celular da empresa**). Eles existem só para testes: na demonstração **nada é enviado nem recebido de verdade**. No sistema real, os números ativos enviam e recebem mensagens de verdade (veja [10.8](#108-números-de-whatsapp)).
 
 O mecânico **nunca** acessa a Central de WhatsApp.
 
@@ -471,6 +479,17 @@ São as ordens de serviço feitas no sistema anterior, **só para consulta**. El
 4. Clique no número da OS para abrir.
 
 A página da OS antiga mostra cliente, veículo, quilometragem, datas de entrada e saída, valores de serviços e peças, total, se foi pago, descrição, observações e a lista de **Serviços e peças**. Quem não tem acesso a valores não vê os preços.
+
+**Trazer uma OS antiga para o sistema novo.** Serve para a OS que ficou **aberta** ou **com valor a receber** no sistema antigo, quando o cliente volta. Assim ninguém precisa digitar tudo de novo.
+
+1. Em **Situação**, escolha **Para importar (abertas ou com saldo)** e clique em **Filtrar**.
+2. Abra a OS. A página mostra o financeiro do sistema antigo: quanto está **em aberto** e quanto já foi **pago**.
+3. Clique em **Importar para nova OS**. Abre a **Nova entrada já preenchida** com cliente, veículo, quilometragem e o motivo *"Continuação da OS nº X do sistema antigo"*, e o aviso *"Importando a OS nº X do sistema antigo"*.
+4. Confira, coloque fotos se quiser e clique em **Registrar entrada**.
+
+A OS nova recebe **número novo**. Os serviços e peças do sistema antigo entram como **rascunho do orçamento**, com o **mesmo total** (serviços primeiro). Se parte já tinha sido paga, o rascunho avisa *"Já pago no sistema antigo: R$ X"*. Revise o orçamento antes de enviar.
+
+Cada OS antiga só pode ser importada **uma vez**. Depois, o botão vira **Ver OS N (importada)** e a lista mostra a marca **Importada**. OS canceladas, quitadas ou finalizadas sem lançamento no financeiro não aparecem para importar. Só quem registra entradas (recepção, gerente, dono) vê o botão.
 
 **Imprimir para o cliente.** Clique em **Imprimir (versão simples)**. Abre uma folha em linguagem simples com cliente, veículo, datas, o que foi feito, os totais e se foi pago. Use para imprimir ou salvar em PDF.
 
@@ -701,7 +720,11 @@ Menu **Pendências e mensagens**. Junta tudo o que precisa de revisão nas suas 
 
 Tipos de pendência: entrega sem quitação, falha de cobrança, mensagem que falhou, documento fiscal rejeitado, devolução que falhou, Pix em revisão, divergência de conferência e relatos do pós-venda (problema no serviço ou negociação fora do padrão).
 
-Para resolver, escreva **O que foi verificado e decidido** e clique em **Salvar resolução**. A resolução fica registrada com seu nome e a data. Pix em revisão é resolvido na própria OS.
+Para resolver, clique em **Registrar resolução**, escreva **O que foi verificado e decidido** e clique em **Salvar resolução**. A pendência **sai da lista** e aparece o aviso *"Resolução registrada no histórico"*. A resolução fica registrada com seu nome e a data. Para ver as já resolvidas, marque **Mostrar resolvidas**. Pix em revisão é resolvido na própria OS.
+
+**Mensagens não enviadas.** Quando a mesma mensagem da OS é **reenviada com sucesso**, a falha antiga sai da lista sozinha. Se sobrarem várias (por exemplo, enquanto o número de WhatsApp estava desativado), use **Resolver todas as mensagens não enviadas (N)**, no alto da lista: escreva o motivo uma vez e clique em **Resolver todas**. Cada uma fica registrada no histórico.
+
+O **sino** no alto da tela conta essas mesmas pendências: resolvendo aqui, o número do sino também diminui.
 
 Na parte de mensagens, **Tentar de novo** reenvia uma mensagem que falhou e **Processar fila agora** recoloca na fila mensagens paradas há mais de 5 minutos.
 
@@ -763,6 +786,35 @@ A planilha tem estas abas:
 O gerente baixa só os dados da(s) própria(s) loja(s). O dono pode baixar todas.
 
 ---
+
+### 8.14 Orçamento sem entrada do veículo
+
+Para o cliente que **só quer saber o preço** e ainda não trouxe o carro. O orçamento fica separado das OS, mas usa a **mesma numeração** da unidade: se ele virar serviço, a OS fica com o mesmo número do orçamento.
+
+![Lista de orçamentos sem entrada](imagens/orcamentos-avulsos.jpg)
+
+**Onde criar:**
+
+- Menu **Orçamentos** › botão **Novo orçamento sem entrada**; ou
+- na conversa da **Central de WhatsApp**, botão **Fazer orçamento (sem o carro)**. Nesse caso, o orçamento já fica ligado à conversa e é enviado nela.
+
+![Novo orçamento sem entrada: cliente, veículo opcional e unidade](imagens/orcamento-avulso-novo.jpg)
+
+1. Informe o **Telefone com DDD** e o **Nome do cliente**. Se o telefone já for de um cliente, o cadastro dele é usado.
+2. Em **Veículo (opcional)**, a **Placa** e o **Veículo ou item** (ex.: Jeep Compass 2024, jogo de rodas aro 18).
+3. Escolha a **Unidade** e clique em **Criar e incluir os itens**.
+4. Inclua os serviços e peças como em qualquer orçamento (veja [8.2](#82-montar-e-aprovar-um-orçamento)) e salve. O preço não pode ficar abaixo do preço de tabela do catálogo.
+5. Clique em **Enviar ao cliente**: **Enviar na conversa do WhatsApp** (ou **Enviar pelo WhatsApp da loja**) manda o texto com o total, a validade e um link; **Abrir no meu WhatsApp** abre a conversa no seu aparelho com o texto pronto. Depois do envio, os itens ficam travados.
+
+O orçamento vale **15 dias**. Para mudar, use o campo **Válido até** ao montar os itens (até 90 dias). O cliente vê pelo link os itens e o total, com o aviso de que não é documento fiscal.
+
+**Resposta do cliente.** Em **Resposta do cliente**, escolha **Como o cliente respondeu** (WhatsApp, telefone, presencial) e clique em **Cliente aprovou** ou **Cliente recusou**. Orçamento vencido não pode ser aprovado.
+
+**O carro chegou.** No orçamento aprovado, clique em **Dar entrada do veículo**. Abre a Nova entrada preenchida com cliente e placa; ao registrar, a OS recebe o **número do orçamento** e os itens entram como rascunho do orçamento da OS. Cada orçamento vira OS uma vez só.
+
+**Cancelar orçamento** exige motivo e desativa o link do cliente.
+
+Quem pode: quem orça (gerente, supervisor e dono). A recepção não cria orçamento sem entrada.
 
 ## 9. Supervisor
 
@@ -840,7 +892,9 @@ Esses dados aparecem no menu, na tela de entrada e na **OS impressa** (que não 
 
 ![Unidades com código, nome, usuários e situação](imagens/unidades.jpg)
 
-Cada ordem, pagamento e usuário pertence a uma unidade. Em **Nova unidade**, informe o **Código** (ex.: ASN) e o **Nome** e clique em **Criar unidade**. Use **Editar** para mudar dados ou desativar.
+Cada ordem, pagamento e usuário pertence a uma unidade. Em **Nova unidade**, informe o **Código** (ex.: ASN; só letras e números, até 10) e o **Nome** e clique em **Criar unidade**. O código é o começo do número das OS da unidade (ex.: ASN-00001). Use **Editar** para mudar dados ou desativar.
+
+O passo a passo completo para **abrir uma unidade nova** (dados próprios, conta de recebimento, WhatsApp, feriados, preços e a equipe) está no [Manual do proprietário](proprietario.html).
 
 ### 10.6 Usuários e permissões
 
@@ -854,8 +908,9 @@ Filtre por unidade. Clique em um usuário para editar ou em **Novo usuário**:
 2. **Papel** e **Unidade** (obrigatória para gerente, recepção e mecânico; para o supervisor é a unidade principal).
 3. **Unidades supervisionadas:** só para o papel Supervisor.
 4. **Permissões financeiras adicionais:** aplicar descontos, cancelar ordens, registrar devoluções, liberar veículo sem quitação, combinar pagamento do saldo, WhatsApp (triagem do número central / atender conversas da unidade) e aprovar desconto acima do limite (essa última só tem efeito se o suporte religar a regra de aprovação de desconto). Gerente e dono já têm as financeiras; conceda à recepção só se necessário. O mecânico nunca recebe acesso a valores, contato do cliente nem WhatsApp.
-5. **Senha inicial:** mínimo de 10 caracteres, com letras e números.
-6. Clique em **Criar conta**.
+5. **Verificação em duas etapas:** obrigatória só para proprietários. Para um proprietário que não consegue usar o aplicativo de códigos, marque **Dispensar a verificação em duas etapas para esta pessoa**. A conta fica protegida só pela senha.
+6. **Senha inicial:** mínimo de 10 caracteres, com letras e números.
+7. Clique em **Criar conta**.
 
 Na edição de um usuário existente:
 
@@ -877,7 +932,21 @@ Para trocar, informe a **Descrição** (ex.: Conta PJ Asa Norte) e a **Identific
 
 ![Números de WhatsApp: número central de triagem e números das unidades](imagens/whatsapp-numeros.jpg)
 
-O **número central** cai em **Triagem** (alguém com permissão encaminha a conversa para a unidade certa). O **número de unidade** vai direto para a equipe da unidade. Para cada número, define-se após quantos minutos sem resposta o sistema alerta. Hoje, nenhum número envia ou recebe de verdade.
+O **número central** cai em **Triagem** (alguém com permissão encaminha a conversa para a unidade certa). O **número de unidade** vai direto para a equipe da unidade. Para cada número, define-se após quantos minutos sem resposta o sistema alerta.
+
+**Cadastrar um número pelo Drope (QR Code):**
+
+1. No painel do **Drope**, conecte o celular do número lendo o **QR Code** e copie o **token do aparelho**.
+2. Aqui, abra **Cadastrar número** e preencha **Descrição**, **Telefone (DDD + número)** e **Pertence a** (**Central (triagem)** ou a unidade).
+3. Em **Integração**, escolha **Drope (QR Code, não oficial)** e cole o token em **Token de acesso**. Clique em **Cadastrar número**.
+4. No cartão do número (que precisa estar **ativo**), clique em **Registrar webhook no Drope**. É isso que faz as mensagens dos clientes chegarem na Central.
+5. Mande uma mensagem de teste de outro celular e veja se ela aparece na Central.
+
+O Drope é uma conexão **não oficial**: o WhatsApp pode bloquear o número. Não use para mensagens em massa.
+
+**Ativar e desativar.** Cada cartão tem o botão **Desativar número** / **Ativar número**. Desativado, **nada é enviado nem recebido** por ele (o que o cliente mandar nesse período não entra na Central), e as mensagens automáticas das OS falham com o aviso *"Nenhum número de WhatsApp ativo para esta unidade"*. Depois de reativar, reenvie em **Pendências e mensagens**.
+
+**Trocar de telefone.** Um número que já tem conversas **não pode mudar de telefone** (para não misturar as conversas do número antigo com as do novo). Cadastre um **número novo** e desative o antigo.
 
 ### 10.9 Integrações
 
@@ -934,7 +1003,7 @@ A tela **já vem preenchida com o que o sistema antigo usava** nas notas emitida
 
 **Peça ao contador para conferir** todos os campos. Depois clique em **Salvar dados fiscais**. Enquanto não for salva, a tela mostra o aviso *"Valores preenchidos com o que o sistema antigo usava nas notas emitidas. Peça ao contador para conferir e salve."*
 
-> **Importante:** a emissão real das notas **ainda não está ligada**. Ela depende do **certificado digital da empresa** e da **homologação com a Fazenda do DF**. Até lá, no sistema real as notas aparecem como **indisponíveis**. Veja [15](#15-o-que-ainda-não-é-real).
+> **Importante:** desde 09/11/2026 as notas do sistema real são **notas de verdade**, emitidas com o **certificado digital da empresa** (menu **Certificado digital**). As notas saem sempre com o **CNPJ da empresa**, para todas as unidades. Os campos de próximo número continuam a numeração do sistema antigo; peça ao contador para confirmar.
 
 ---
 
@@ -957,7 +1026,7 @@ A tela da OS tem um cabeçalho (número, cliente, unidade, data de entrada e eta
 
 - Quatro números no alto: **Entrada**, **Entrega prevista** (marcada "Atrasada" se passou), **Aprovado** e **Saldo a receber**.
 - **Próximo passo:** o sistema indica o que fazer agora e leva direto à aba certa.
-- **Veículo e cliente**, **Motivo da visita** e **Serviço a executar**.
+- **Veículo e cliente** (com o **CPF/CNPJ** do cliente, e um aviso quando falta, e o **Chassi**: use **Adicionar chassi** / **Alterar chassi** para gravar os 17 caracteres), **Motivo da visita** e **Serviço a executar**.
 - À direita: **Ordem impressa** (Imprimir OS, Enviar por WhatsApp, Abrir no meu WhatsApp), **Vendedor**, **Data de entrega**, **Mecânico responsável** e **Cancelar ordem**, conforme a permissão.
 
 No celular:
@@ -1012,7 +1081,9 @@ Como os valores são divididos:
 
 Cada nota tem **situação própria**: enviando, autorizada (com protocolo), rejeitada (com o motivo; botão **Tentar de novo**) ou cancelada. Cada uma também tem o **cancelamento próprio**, que exige permissão de cancelamento e justificativa.
 
-> **Ainda não é real.** A emissão real depende do certificado digital da empresa e da homologação com a Fazenda do DF. No sistema real, as notas aparecem como **indisponíveis**. Nos testes e na demonstração, elas são **simuladas** e trazem *"SEM VALIDADE FISCAL"*. Os códigos usados ficam em **Dados fiscais** (veja [10.13](#1013-dados-fiscais)).
+**Observação na nota.** Acima do botão de emitir há o campo **Observação na nota (opcional)**, com até 500 caracteres (ex.: garantia, número do pedido do cliente). Ela vai impressa na nota e aparece no cartão da nota como *"Observação na nota: …"*. Nota já autorizada não pode ser alterada: escreva a observação **antes** de emitir.
+
+> **Notas reais.** No sistema real, as notas são **de verdade** desde 09/11/2026. Nos testes e na demonstração, elas são **simuladas** e trazem *"SEM VALIDADE FISCAL"*. Os códigos usados ficam em **Dados fiscais** (veja [10.13](#1013-dados-fiscais)).
 
 Ao abrir um documento simulado, ele aparece assim:
 
@@ -1106,11 +1177,12 @@ Se precisar de acesso, fale com o gerente ou o dono.
 
 ## 15. O que ainda não é real
 
-Hoje, **Pix, mensagens/WhatsApp e nota fiscal existem só como simuladores**:
+Situação em 12/11/2026:
 
-- **Pix:** as cobranças são fictícias. Na demonstração há um botão "Simular pagamento (sem dinheiro real)". Nenhum dinheiro entra ou sai.
-- **Mensagens e WhatsApp:** nada é enviado nem recebido de verdade. As telas mostram "canal simulado (ninguém foi contatado)".
-- **Nota fiscal (NFS-e e NF-e):** nos testes e na demonstração, as notas são simuladas, marcadas **SEM VALIDADE FISCAL**. A emissão real **ainda não está ligada**: depende do **certificado digital da empresa**, da **homologação com a Fazenda do DF** e da conferência dos **Dados fiscais** pelo contador. No sistema real, as notas aparecem como **indisponíveis**.
+- **Nota fiscal (NFS-e e NF-e): é real** no sistema real desde 09/11/2026, com o certificado digital da empresa. Na demonstração, as notas continuam simuladas, marcadas **SEM VALIDADE FISCAL**.
+- **WhatsApp: é real** nos números conectados pelo **Drope** e ativos (veja [10.8](#108-números-de-whatsapp)). Na demonstração, nada é enviado nem recebido; as telas mostram "canal simulado (ninguém foi contatado)".
+- **Pix (cobrança automática pelo sistema):** ainda **simulado**. Nenhum provedor está contratado. O Pix feito no app do banco é registrado à mão, com conferência no extrato (veja [6.5](#65-receber-o-pagamento)). Na demonstração há um botão "Simular pagamento (sem dinheiro real)".
+- **Boleto:** ainda não existe no sistema novo.
 - **Consulta da placa na Nova entrada:** nos testes e na demonstração, os dados do carro podem vir de um simulador, com o aviso *"SIMULAÇÃO: dados fictícios, não vêm do DETRAN."* Confira sempre com o carro.
 
 **Em produção**, enquanto não houver provedor contratado e homologado, essas funções **aparecem como indisponíveis**. A tela **Integrações** (só para o dono) lista o que falta para cada uma.
@@ -1153,7 +1225,7 @@ Não. Elas são só para consulta, no menu **OS do sistema antigo** e na ficha d
 Não. Unificar traz tudo para a ficha principal (atendimentos, veículos, conversas, histórico antigo e dados que faltavam). Nada é apagado.
 
 **Por que a OS gera duas notas fiscais?**
-Serviços saem na nota de serviço (NFS-e) e peças na nota de venda de peças (NF-e). A soma das duas é o total aprovado. Hoje a emissão real ainda não está ligada.
+Serviços saem na nota de serviço (NFS-e) e peças na nota de venda de peças (NF-e). A soma das duas é o total aprovado. No sistema real, as notas são de verdade desde 09/11/2026.
 
 **Como mando os números do mês para o contador?**
 No painel, use **Exportar Excel** (painel completo) ou **Baixar planilha Excel** (versão simples). Veja [8.13](#813-planilha-excel).
