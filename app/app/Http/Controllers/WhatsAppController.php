@@ -240,7 +240,7 @@ class WhatsAppController extends Controller
     {
         $this->exigirConversa($request, $mensagem->conversa);
         abort_unless($mensagem->midia_status === 'baixada' && $mensagem->midia_caminho && Storage::disk('local')->exists($mensagem->midia_caminho), 404);
-        $inline = str_starts_with((string) $mensagem->midia_mime, 'image/') || str_starts_with((string) $mensagem->midia_mime, 'audio/') || $mensagem->midia_mime === 'application/ogg';
+        $inline = str_starts_with((string) $mensagem->midia_mime, 'image/') || str_starts_with((string) $mensagem->midia_mime, 'audio/') || str_starts_with((string) $mensagem->midia_mime, 'video/') || $mensagem->midia_mime === 'application/ogg';
 
         return Storage::disk('local')->response($mensagem->midia_caminho, $mensagem->midia_nome ?: 'arquivo', [
             'Content-Type' => $mensagem->midia_mime,

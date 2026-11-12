@@ -8,6 +8,7 @@ use App\Services\Auditoria;
 use App\Support\Normaliza;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -42,6 +43,38 @@ class WhatsAppNumeroController extends Controller
 
         return redirect()->route('whatsapp.numeros.index')->with('sucesso', $ativo ? 'Número ativado: volta a enviar e receber.'
             : 'Número desativado: não envia nem recebe mensagens. As mensagens que chegarem enquanto estiver desativado não entram na Central.');
+    }
+
+    /**
+     * Começar do zero: apaga de vez as conversas, mensagens e arquivos de um número DESATIVADO (12/11/2026).
+     * OS, clientes e orçamentos continuam; o orçamento sem entrada só perde o vínculo com a conversa. Fica na auditoria (sem conteúdo).
+     */
+    public function apagarConversas(Request $request, WhatsappNumero $numero)
+    {
+        $request->validate(['confirmacao' => ['required', 'in:APAGAR'], 'motivo' => ['required', 'string', 'min:5', 'max:300']],
+            ['confirmacao.in' => 'Digite APAGAR, em letras maiúsculas, para confirmar.'], ['confirmacao' => 'confirmação']);
+
+        $arquivos = DB::transaction(function () use ($numero, $request) {
+            $n = WhatsappNumero::lockForUpdate()->findOrFail($numero->id);
+            if ($n->ativo) {
+                throw ValidationException::withMessages(['confirmacao' => 'Desative o número antes de apagar as conversas.']);
+            }
+            $conversas = $n->conversas()->pluck('id');
+            $mensagens = DB::table('whatsapp_mensagens')->whereIn('conversa_id', $conversas);
+            $arquivos = (clone $mensagens)->whereNotNull('midia_caminho')->pluck('midia_caminho');
+            $totalMensagens = $mensagens->delete();
+            DB::table('whatsapp_conversas')->whereIn('id', $conversas)->delete();
+            // Eventos do webhook guardam o texto recebido: tira o conteúdo e mantém a linha (deduplicação impede recriar a mensagem).
+            DB::table('integration_events')->where('provedor', 'like', 'whatsapp\\_%')->whereRaw("payload::jsonb->>'numero_id' = ?", [(string) $n->id])
+                ->update(['payload' => json_encode(['numero_id' => $n->id, 'apagado' => true])]);
+            Auditoria::registrar('whatsapp_conversas_apagadas', $n, depois: ['conversas' => $conversas->count(), 'mensagens' => $totalMensagens, 'arquivos' => $arquivos->count()],
+                motivo: $request->input('motivo'), unidadeId: $n->unidade_id);
+
+            return $arquivos;
+        });
+        Storage::disk('local')->delete($arquivos->all()); // depois do commit: rollback não deixa mensagem sem arquivo
+
+        return redirect()->route('whatsapp.numeros.index')->with('sucesso', 'Conversas apagadas. O número começa do zero; ative-o de novo quando quiser.');
     }
 
     /** URL a partir do APP_URL, nunca do Host da requisição (Host forjado registraria webhook de terceiro). */

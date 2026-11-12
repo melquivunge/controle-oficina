@@ -159,6 +159,7 @@ Route::middleware('auth')->group(function () {
                 Route::post('/numeros', 'store')->name('store');
                 Route::put('/numeros/{numero}', 'update')->whereNumber('numero')->name('update');
                 Route::put('/numeros/{numero}/ativo', 'alternarAtivo')->whereNumber('numero')->name('ativo');
+                Route::delete('/numeros/{numero}/conversas', 'apagarConversas')->whereNumber('numero')->middleware('throttle:5,1')->name('conversas.apagar');
                 Route::post('/numeros/{numero}/drope-webhook', 'registrarWebhookDrope')->whereNumber('numero')->middleware('throttle:5,1')->name('drope-webhook');
             });
 

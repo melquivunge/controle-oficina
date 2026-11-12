@@ -28,6 +28,18 @@
                 <button @class(['button', 'primary' => ! $n->ativo]) type="submit">{{ $n->ativo ? 'Desativar número' : 'Ativar número' }}</button>
                 <span class="hint">{{ $n->ativo ? 'Ativo: envia e recebe mensagens.' : 'Desativado: nada é enviado nem recebido por este número.' }}</span>
             </form>
+            @if (! $n->ativo && $n->conversas_count)
+                <details class="apagar-conversas" @if ($errors->has('confirmacao') || $errors->has('motivo')) @if (old('_apagar') == $n->id) open @endif @endif>
+                    <summary>Apagar as {{ $n->conversas_count }} {{ $n->conversas_count === 1 ? 'conversa' : 'conversas' }} deste número</summary>
+                    <form method="POST" action="{{ route('whatsapp.numeros.conversas.apagar', $n) }}">@csrf @method('DELETE')
+                        <input type="hidden" name="_apagar" value="{{ $n->id }}">
+                        <p class="hint">Para começar do zero: apaga <strong>de vez</strong> as conversas, mensagens, fotos, áudios e vídeos recebidos por este número. Não dá para desfazer. Clientes, OS e orçamentos continuam.</p>
+                        @include('partials.campo', ['nome' => 'motivo', 'rotulo' => 'Motivo', 'id' => 'apagar-motivo-'.$n->id, 'obrigatorio' => true, 'atributos' => ['minlength' => 5, 'maxlength' => 300], 'valorAtual' => old('_apagar') == $n->id ? old('motivo') : ''])
+                        @include('partials.campo', ['nome' => 'confirmacao', 'rotulo' => 'Digite APAGAR para confirmar', 'id' => 'apagar-confirmacao-'.$n->id, 'obrigatorio' => true, 'atributos' => ['autocomplete' => 'off', 'pattern' => 'APAGAR'], 'valorAtual' => ''])
+                        <button class="button perigo" type="submit">Apagar conversas de vez</button>
+                    </form>
+                </details>
+            @endif
             @if ($n->provedor === 'drope')
                 <form method="POST" action="{{ route('whatsapp.numeros.drope-webhook', $n) }}" class="inline-form">@csrf
                     <button class="button" type="submit" @disabled(! $n->credencial('token'))>{{ $n->credencial('signing_secret') ? 'Registrar webhook no Drope de novo' : 'Registrar webhook no Drope' }}</button>

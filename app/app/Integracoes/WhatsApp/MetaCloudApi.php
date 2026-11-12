@@ -15,7 +15,7 @@ use RuntimeException;
  */
 class MetaCloudApi implements ProvedorWhatsApp
 {
-    private const TIPOS = ['text' => 'texto', 'image' => 'imagem', 'audio' => 'audio', 'document' => 'documento', 'location' => 'localizacao'];
+    private const TIPOS = ['text' => 'texto', 'image' => 'imagem', 'audio' => 'audio', 'document' => 'documento', 'video' => 'video', 'location' => 'localizacao'];
 
     public function nome(): string
     {
@@ -149,7 +149,7 @@ class MetaCloudApi implements ProvedorWhatsApp
 
         return $base + match ($tipo) {
             'texto' => ['tipo' => 'texto', 'texto' => mb_substr((string) ($m['text']['body'] ?? ''), 0, 4096)],
-            'imagem', 'audio', 'documento' => ['tipo' => $tipo, 'texto' => isset($m[$tipoMeta]['caption']) ? mb_substr((string) $m[$tipoMeta]['caption'], 0, 1024) : null,
+            'imagem', 'audio', 'documento', 'video' => ['tipo' => $tipo, 'texto' => isset($m[$tipoMeta]['caption']) ? mb_substr((string) $m[$tipoMeta]['caption'], 0, 1024) : null,
                 'midia' => ['id' => (string) ($m[$tipoMeta]['id'] ?? ''), 'mime' => (string) ($m[$tipoMeta]['mime_type'] ?? ''), 'nome' => $m[$tipoMeta]['filename'] ?? null]],
             'localizacao' => ['tipo' => 'localizacao', 'localizacao' => ['lat' => (float) ($m['location']['latitude'] ?? 0), 'lng' => (float) ($m['location']['longitude'] ?? 0), 'nome' => $m['location']['name'] ?? null]],
             default => ['tipo' => 'texto', 'texto' => '[Mensagem do tipo "'.mb_substr($tipoMeta ?: 'desconhecido', 0, 30).'" não suportada pela Central — veja no aparelho]'],

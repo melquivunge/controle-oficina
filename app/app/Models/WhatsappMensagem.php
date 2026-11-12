@@ -47,7 +47,7 @@ class WhatsappMensagem extends Model
 
     public function rotuloTipo(): string
     {
-        return ['texto' => 'Texto', 'imagem' => 'Imagem', 'audio' => 'Áudio', 'documento' => 'Documento', 'localizacao' => 'Localização', 'modelo' => 'Modelo aprovado'][$this->tipo] ?? $this->tipo;
+        return ['texto' => 'Texto', 'imagem' => 'Imagem', 'audio' => 'Áudio', 'video' => 'Vídeo', 'documento' => 'Documento', 'localizacao' => 'Localização', 'modelo' => 'Modelo aprovado'][$this->tipo] ?? $this->tipo;
     }
 
     public function resumo(): string

@@ -105,7 +105,9 @@ class DropeApi implements ProvedorWhatsApp
             'midia' => ['id' => $id, 'mime' => mb_substr((string) ($c['mimetype'] ?? $m['mimetype'] ?? ''), 0, 100), 'nome' => isset($c['fileName']) ? mb_substr((string) $c['fileName'], 0, 200) : null]];
 
         return match (true) {
-            str_contains($tipo, 'image') => $midia('imagem'),
+            // Vídeo antes de imagem: "videomessage"/"ptv" (vídeo redondo). Figurinha (sticker, webp) entra como imagem.
+            str_contains($tipo, 'video') || $tipo === 'ptvmessage' || $tipo === 'ptv' => $midia('video'),
+            str_contains($tipo, 'image') || str_contains($tipo, 'sticker') => $midia('imagem'),
             str_contains($tipo, 'document') => $midia('documento'),
             str_contains($tipo, 'audio') || str_contains($tipo, 'ptt') => $midia('audio'),
             str_contains($tipo, 'location') => ['tipo' => 'localizacao', 'localizacao' => ['lat' => (float) ($c['degreesLatitude'] ?? 0), 'lng' => (float) ($c['degreesLongitude'] ?? 0), 'nome' => $c['name'] ?? null]],

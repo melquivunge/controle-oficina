@@ -206,4 +206,49 @@ class DropeWhatsAppTest extends TestCase
         }
         Http::assertSentCount(2);
     }
+
+    /** Antes (12/11/2026) "videomessage" virava o texto "não suportada pela Central"; agora baixa e mostra o player. */
+    public function test_video_recebido_e_baixado_e_aparece_com_player(): void
+    {
+        $mp4 = "\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom".str_repeat("\x00", 64);
+        Http::fake(['dropestore.com/wp-json/wdm/v1/message/download' => Http::response(['base64Data' => base64_encode($mp4), 'mimetype' => 'video/mp4'])]);
+        $this->webhook($this->msg(['messageid' => 'VID1', 'messageType' => 'VideoMessage', 'text' => 'olha o barulho', 'content' => ['mimetype' => 'video/mp4']]))->assertOk();
+
+        $m = WhatsappMensagem::where('id_provedor', 'VID1')->sole();
+        $this->assertSame(['video', 'baixada', 'video/mp4', 'olha o barulho'], [$m->tipo, $m->midia_status, $m->midia_mime, $m->texto]);
+        $this->entrarComo($this->rec1)->get(route('whatsapp.show', $m->conversa_id))->assertSee('<video', false)->assertDontSee('não suportada');
+        $this->entrarComo($this->rec1)->get(route('whatsapp.midia', $m))->assertOk()->assertHeader('Content-Type', 'video/mp4');
+    }
+
+    public function test_apagar_conversas_so_com_numero_desativado_confirmacao_e_auditoria(): void
+    {
+        $this->webhook($this->msg(['messageid' => 'A1', 'messageType' => 'Conversation', 'text' => 'mensagem antiga de teste']))->assertOk();
+        $c = WhatsappConversa::sole();
+        Storage::disk('local')->put('whatsapp/'.$c->id.'/foto.jpg', 'x');
+        WhatsappMensagem::where('id_provedor', 'A1')->update(['midia_caminho' => 'whatsapp/'.$c->id.'/foto.jpg']);
+        $url = route('whatsapp.numeros.conversas.apagar', $this->n);
+        $dados = ['confirmacao' => 'APAGAR', 'motivo' => 'Número de teste, começar do zero'];
+
+        $this->entrarComo($this->rec1)->delete($url, $dados)->assertForbidden();
+        $this->entrarComo($this->dono)->delete($url, $dados)->assertSessionHasErrors('confirmacao'); // ainda ativo
+        $this->entrarComo($this->dono)->get(route('whatsapp.numeros.index'))->assertDontSee('deste número</summary>', false);
+
+        $this->n->update(['ativo' => false]);
+        $this->entrarComo($this->dono)->get(route('whatsapp.numeros.index'))->assertSee('Apagar as 1 conversa deste número');
+        $this->entrarComo($this->dono)->delete($url, ['confirmacao' => 'apagar'] + $dados)->assertSessionHasErrors('confirmacao');
+        $this->assertSame(1, WhatsappConversa::count());
+
+        $this->entrarComo($this->dono)->delete($url, $dados)->assertRedirect(route('whatsapp.numeros.index'))->assertSessionHasNoErrors();
+        $this->assertSame([0, 0], [WhatsappConversa::count(), WhatsappMensagem::count()]);
+        Storage::disk('local')->assertMissing('whatsapp/'.$c->id.'/foto.jpg');
+        $this->assertStringNotContainsString('mensagem antiga', DB::table('integration_events')->where('provedor', 'whatsapp_drope')->value('payload'));
+        $this->assertDatabaseHas('audit_events', ['acao' => 'whatsapp_conversas_apagadas', 'motivo' => 'Número de teste, começar do zero']);
+
+        // Webhook repetido do mesmo evento não recria a mensagem; número reativado recebe do zero.
+        $this->n->update(['ativo' => true]);
+        $this->webhook($this->msg(['messageid' => 'A1', 'messageType' => 'Conversation', 'text' => 'mensagem antiga de teste']))->assertOk();
+        $this->assertSame(0, WhatsappMensagem::count());
+        $this->webhook($this->msg(['messageid' => 'N1', 'messageType' => 'Conversation', 'text' => 'nova']))->assertOk();
+        $this->assertSame(1, WhatsappConversa::count());
+    }
 }

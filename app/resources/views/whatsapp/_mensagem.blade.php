@@ -14,6 +14,9 @@
             @case('audio')
                 @if ($midia)<audio controls preload="none" src="{{ $midia }}"><a href="{{ $midia }}">Baixar áudio</a></audio>@endif
                 @break
+            @case('video')
+                @if ($midia)<video class="wa-imagem" controls preload="metadata" src="{{ $midia }}"><a href="{{ $midia }}">Baixar vídeo</a></video>@endif
+                @break
             @case('documento')
                 @if ($midia)<a class="wa-doc" href="{{ $midia }}">@include('partials.icone', ['i' => 'download']) {{ $m->midia_nome ?? 'Documento' }}</a>@endif
                 @break
@@ -24,7 +27,7 @@
                 <span class="wa-autor">Modelo aprovado: {{ $m->modelo }}</span>
                 @break
         @endswitch
-        @if (in_array($m->tipo, ['imagem', 'audio', 'documento'], true) && ! $midia)
+        @if (in_array($m->tipo, ['imagem', 'audio', 'video', 'documento'], true) && ! $midia)
             <p class="wa-midia-aviso">{{ $m->rotuloTipo() }} — {{ match ($m->midia_status) { 'pendente' => 'baixando…', 'rejeitada' => 'recusado: '.$m->ultimo_erro, 'falhou' => 'não foi possível baixar', default => 'indisponível' } }}</p>
         @endif
         @if ($m->texto)<p class="wa-texto">{{ $m->texto }}</p>@endif
