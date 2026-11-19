@@ -41,6 +41,12 @@ class NfeSefaz
 
     // ponytail: sem consulta prévia; reenviar a mesma chave dá duplicidade (204/539), tratada em emitir().
 
+    /** Mesma checagem do envio, para a tela avisar antes de criar a nota avulsa. */
+    public static function faltaNoCliente(\App\Models\Cliente $c): ?string
+    {
+        return self::pendencia(['cliente_documento' => $c->documento, 'cliente_local' => $c->only('logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf', 'cep')]);
+    }
+
     /** O que falta no cliente; a SEFAZ recusa (726) e não adianta repetir. ponytail: destinatário sempre não contribuinte (indIEDest 9): o cadastro não guarda a inscrição estadual do cliente. */
     private static function pendencia(array $d): ?string
     {
@@ -117,14 +123,18 @@ class NfeSefaz
         }
         $homolog = $this->ambiente === 2;
         $interestadual = strtoupper((string) ($d['cliente_local']['uf'] ?? 'DF')) !== 'DF';
+        // Nota da OS: venda presencial com os códigos de venda; nota avulsa (19/11/2026) traz natureza, CFOP, CSOSN, presença, frete e pagamento próprios.
+        $p = ($d['nfe'] ?? null) ?: ['natureza' => $f['nfe_natureza'], 'cfop_dentro' => $f['nfe_cfop_dentro'], 'cfop_fora' => $f['nfe_cfop_fora'], 'csosn' => $f['nfe_csosn'],
+            'ind_pres' => 1, 'intermediador' => null, 'frete' => 9, 'pagamento' => '99', 'pagamento_texto' => 'Conforme ordem de servico'];
         $chave = self::chave($d, $cnpj);
         $o = fn (array $a) => (object) $a;
         $m = new Make;
         $m->taginfNFe($o(['versao' => '4.00', 'Id' => 'NFe'.$chave, 'pk_nItem' => null]));
-        $m->tagide($o(['cUF' => 53, 'cNF' => substr($chave, 35, 8), 'natOp' => $f['nfe_natureza'], 'mod' => 55, 'serie' => (int) $d['serie'],
+        $m->tagide($o(['cUF' => 53, 'cNF' => substr($chave, 35, 8), 'natOp' => NfseNacional::texto($p['natureza'], 60), 'mod' => 55, 'serie' => (int) $d['serie'],
             'nNF' => $d['numero_dps'], 'dhEmi' => now('America/Sao_Paulo')->subMinute()->format('Y-m-d\TH:i:sP'), 'tpNF' => 1, 'idDest' => $interestadual ? 2 : 1,
             'cMunFG' => $f['municipio_ibge'], 'tpImp' => 1, 'tpEmis' => 1, 'cDV' => substr($chave, -1), 'tpAmb' => $this->ambiente, 'finNFe' => 1,
-            'indFinal' => 1, 'indPres' => 1, 'procEmi' => 0, 'verProc' => 'ControleOficina1']));
+            'indFinal' => 1, 'indPres' => $p['ind_pres'], 'indIntermed' => $p['ind_pres'] === 1 ? null : ($p['intermediador'] ? 1 : 0),
+            'procEmi' => 0, 'verProc' => 'ControleOficina1']));
         $m->tagemit($o(['xNome' => $e->razao_social ?: $e->nome_fantasia, 'xFant' => $e->nome_fantasia, 'IE' => $f['inscricao_estadual'],
             'IM' => $f['inscricao_municipal'] ?: null, 'CRT' => $f['regime'] === 'simples' ? 1 : 3, 'CNPJ' => $cnpj]));
         $m->tagenderEmit($o(['xLgr' => $e->logradouro, 'nro' => $e->numero ?: 'SN', 'xCpl' => $e->complemento ?: null, 'xBairro' => $e->bairro,
@@ -152,11 +162,11 @@ class NfeSefaz
             $vUn = number_format($i['total_centavos'] / 100 / max($q, 0.0001), 10, '.', '');
             $m->tagprod($o(['item' => $n, 'cProd' => (string) ($i['codigo'] ?? $n), 'cEAN' => 'SEM GTIN', 'cEANTrib' => 'SEM GTIN',
                 'xProd' => $homolog && $n === 1 ? 'NOTA FISCAL EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL' : NfseNacional::texto($i['descricao'], 120),
-                'NCM' => $i['ncm'] ?: $f['nfe_ncm_padrao'], 'CFOP' => $interestadual ? $f['nfe_cfop_fora'] : $f['nfe_cfop_dentro'], 'uCom' => 'UN', 'qCom' => $q, 'vUnCom' => $vUn,
+                'NCM' => $i['ncm'] ?: $f['nfe_ncm_padrao'], 'CFOP' => $interestadual ? $p['cfop_fora'] : $p['cfop_dentro'], 'uCom' => 'UN', 'qCom' => $q, 'vUnCom' => $vUn,
                 'vProd' => number_format($i['total_centavos'] / 100, 2, '.', ''), 'uTrib' => 'UN', 'qTrib' => $q, 'vUnTrib' => $vUn,
                 'vDesc' => $desc > 0 ? number_format($desc / 100, 2, '.', '') : null, 'indTot' => 1]));
             $m->tagimposto($o(['item' => $n]));
-            $m->tagICMSSN($o(['item' => $n, 'orig' => 0, 'CSOSN' => $f['nfe_csosn']]));
+            $m->tagICMSSN($o(['item' => $n, 'orig' => 0, 'CSOSN' => $p['csosn']]));
             if ($interestadual) { // como 3 das 4 notas do sistema antigo: DIFAL zerado (ponytail: contador confirma; uma nota para a BA destacou o valor)
                 $m->tagICMSUFDest($o(['item' => $n, 'vBCUFDest' => 0, 'vBCFCPUFDest' => 0, 'pFCPUFDest' => 0, 'pICMSUFDest' => 0, 'pICMSInter' => 12, 'pICMSInterPart' => 100, 'vFCPUFDest' => 0, 'vICMSUFDest' => 0, 'vICMSUFRemet' => 0]));
             }
@@ -164,11 +174,16 @@ class NfeSefaz
             $m->tagCOFINS($o(['item' => $n, 'CST' => '49', 'vBC' => 0, 'pCOFINS' => 0, 'vCOFINS' => 0]));
         }
         $m->tagICMSTot($o([]));
-        $m->tagtransp($o(['modFrete' => 9]));
+        $m->tagtransp($o(['modFrete' => $p['frete']]));
         $m->tagpag($o(['vTroco' => null]));
-        $m->tagdetPag($o(['indPag' => 0, 'tPag' => '99', 'xPag' => 'Conforme ordem de servico', 'vPag' => number_format($d['valor_centavos'] / 100, 2, '.', '')]));
+        $semPagamento = $p['pagamento'] === '90';
+        $m->tagdetPag($o(['indPag' => 0, 'tPag' => $p['pagamento'], 'xPag' => $p['pagamento'] === '99' ? NfseNacional::texto($p['pagamento_texto'], 60) : null,
+            'vPag' => $semPagamento ? '0.00' : number_format($d['valor_centavos'] / 100, 2, '.', '')]));
+        if ($p['intermediador']) { // venda em site de terceiro (Mercado Livre): CNPJ do intermediador e a conta do vendedor nele
+            $m->tagIntermed($o(['CNPJ' => $p['intermediador']['cnpj'], 'idCadIntTran' => NfseNacional::texto($p['intermediador']['conta'], 60)]));
+        }
         $obs = NfseNacional::texto((string) ($d['observacao'] ?? ''), 500);
-        $m->taginfAdic($o(['infCpl' => 'OS '.$d['ordem'].'. '.($obs !== '' ? rtrim($obs, '. ').'. ' : '').'Documento emitido por ME ou EPP optante pelo Simples Nacional.']));
+        $m->taginfAdic($o(['infCpl' => ($d['referencia'] ?? 'OS '.$d['ordem']).'. '.($obs !== '' ? rtrim($obs, '. ').'. ' : '').'Documento emitido por ME ou EPP optante pelo Simples Nacional.']));
         $xml = $m->getXML();
         if (! $xml || $m->getErrors()) {
             throw new RuntimeException('NF-e com dados incompletos: '.implode('; ', $m->getErrors()));

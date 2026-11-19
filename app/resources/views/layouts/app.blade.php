@@ -40,6 +40,7 @@
             ['ordens.index', 'Ordens de serviço', 'ordens', $usuario->papel !== \App\Enums\Papel::Mecanico],
             ['historico.index', 'OS do sistema antigo', 'ordens', $usuario->can('registrar_entrada') && \App\Http\Controllers\HistoricoAntigoController::existe()],
             ['orcamentos.index', 'Orçamentos', 'orcamento', $usuario->can('ver_valores')],
+            ['notas-avulsas.index', 'Notas avulsas (peças)', 'orcamento', $usuario->can('cobrar')],
             ['fila', 'Fila do mecânico', 'chave', $usuario->can('executar')],
             ['caixa.index', $usuario->can('fechar_caixa') ? 'Caixa e fechamento' : 'Recebimentos', 'caixa', $usuario->can('receber_manual')],
             ['conferencia.index', 'Conferência física', 'conferencia', $usuario->can('conferir')],

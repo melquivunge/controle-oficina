@@ -149,10 +149,11 @@ class Pendencias
         if (! $ator->pode('resolver_divergencias') || ! $ator->acessaUnidade($registro->unidade_id)) {
             throw new AuthorizationException('A resolução de pendências é feita pelo gerente da unidade.');
         }
-        $ordem = Ordem::findOrFail($registro->ordem_id);
+        // Nota avulsa (sem OS) rejeitada: a auditoria fica na própria nota.
+        $ordem = $registro->ordem_id ? Ordem::findOrFail($registro->ordem_id) : \App\Models\NotaAvulsa::findOrFail($registro->nota_avulsa_id);
         try {
             DB::transaction(function () use ($ator, $tipo, $registro, $ordem, $texto) {
-                ResolucaoPendencia::create(['tipo' => $tipo, 'referencia_id' => $registro->id, 'unidade_id' => $registro->unidade_id, 'ordem_id' => $ordem->id,
+                ResolucaoPendencia::create(['tipo' => $tipo, 'referencia_id' => $registro->id, 'unidade_id' => $registro->unidade_id, 'ordem_id' => $registro->ordem_id,
                     'texto' => $texto, 'resolvido_por' => $ator->id, 'resolvido_em' => now()]);
                 Auditoria::registrar('pendencia_resolvida', $ordem, depois: ['tipo' => $tipo, 'referencia_id' => $registro->id], motivo: $texto, unidadeId: $registro->unidade_id, ator: $ator);
             });
@@ -175,6 +176,7 @@ class Pendencias
     private function item(string $tipo, $registro, string $gravidade, string $rotulo, $data, string $descricao, bool $resolvivel = true): array
     {
         return ['tipo' => $tipo, 'id' => $registro->id, 'gravidade' => $gravidade, 'rotulo' => $rotulo, 'data' => $data, 'descricao' => $descricao,
-            'ordem_id' => $registro->ordem_id, 'unidade_id' => $registro->unidade_id, 'resolvivel' => $resolvivel, 'resolucao' => null];
+            'ordem_id' => $registro->ordem_id, 'unidade_id' => $registro->unidade_id, 'resolvivel' => $resolvivel, 'resolucao' => null,
+            'nota_avulsa_id' => $registro instanceof FiscalDocument ? $registro->nota_avulsa_id : null];
     }
 }

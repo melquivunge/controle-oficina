@@ -18,7 +18,7 @@ class DadosFiscaisController extends Controller
     public function update(Request $request)
     {
         $digitos = fn ($n, $max = null) => ['nullable', 'regex:/^\\d{'.$n.($max ? ','.$max : '').'}$/'];
-        $request->merge(collect(DadosFiscais::PADRAO)->except(['regime', 'nfe_natureza', 'nfse_aliquota_iss'])
+        $request->merge(collect(DadosFiscais::PADRAO)->except(['regime', 'nfe_natureza', 'nfse_aliquota_iss', 'nfe_remessa_natureza', 'nfe_intermediador_conta'])
             ->mapWithKeys(fn ($_, $k) => [$k => preg_replace('/\\D/', '', (string) $request->input($k))])->all()
             + ['nfse_aliquota_iss' => str_replace(',', '.', (string) $request->input('nfse_aliquota_iss'))]);
         $dados = $request->validate([
@@ -30,6 +30,9 @@ class DadosFiscaisController extends Controller
             'nfse_serie' => ['required', 'regex:/^\\d{1,5}$/'], 'nfse_proximo_numero' => $digitos(1, 15), 'nfe_proximo_numero' => $digitos(1, 9),
             'nfe_serie' => ['required', 'regex:/^\\d{1,3}$/'], 'nfe_cfop_dentro' => ['required', 'regex:/^5\\d{3}$/'], 'nfe_cfop_fora' => ['required', 'regex:/^6\\d{3}$/'],
             'nfe_csosn' => ['required', 'regex:/^\\d{3}$/'], 'nfe_ncm_padrao' => ['required', 'regex:/^\\d{8}$/'], 'nfe_natureza' => ['required', 'string', 'max:60'],
+            'nfe_remessa_natureza' => ['required', 'string', 'max:60'], 'nfe_remessa_cfop_dentro' => ['required', 'regex:/^5\\d{3}$/'],
+            'nfe_remessa_cfop_fora' => ['required', 'regex:/^6\\d{3}$/'], 'nfe_remessa_csosn' => ['required', 'regex:/^\\d{3}$/'],
+            'nfe_intermediador_cnpj' => ['required', 'regex:/^\\d{14}$/'], 'nfe_intermediador_conta' => ['nullable', 'string', 'max:60'],
         ], ['regex' => 'Formato inválido.'], DadosFiscais::ROTULOS);
         $dados['nfse_aliquota_iss'] = number_format((float) $dados['nfse_aliquota_iss'], 2, '.', '');
         $empresa = Empresa::atual();

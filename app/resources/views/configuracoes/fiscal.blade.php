@@ -27,6 +27,12 @@
                 @include('partials.campo', ['nome' => $c, 'rotulo' => \App\Support\DadosFiscais::ROTULOS[$c], 'valorAtual' => $dados[$c]])
             @endforeach
         </div></section>
+        <section class="form-section"><h2>Nota de peças avulsa (sem OS): remessa e Mercado Livre</h2>
+            <p class="hint">Usados em Notas avulsas. A venda avulsa usa os CFOP e o CSOSN de venda acima. Padrão da remessa igual à NF-e 998 do Quero Faturar: CFOP 5949/6949, CSOSN 400. Peça ao contador para conferir.</p><div class="fields">
+            @foreach (['nfe_remessa_natureza', 'nfe_remessa_cfop_dentro', 'nfe_remessa_cfop_fora', 'nfe_remessa_csosn', 'nfe_intermediador_cnpj', 'nfe_intermediador_conta'] as $c)
+                @include('partials.campo', ['nome' => $c, 'rotulo' => \App\Support\DadosFiscais::ROTULOS[$c], 'valorAtual' => $dados[$c]])
+            @endforeach
+        </div></section>
         <div class="form-footer"><button class="button primary" type="submit">Salvar dados fiscais</button></div>
     </form>
 @endsection

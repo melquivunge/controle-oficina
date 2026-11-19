@@ -39,6 +39,8 @@
                 <div class="pendencia-acoes">
                     @if ($i['ordem'])
                         <a class="button" href="{{ route('ordens.show', [$i['ordem'], 'aba' => in_array($i['tipo'], ['pagamento_revisao', 'entrega_excecao', 'cobranca_falha', 'devolucao_falhou', 'pagamento_vencido'], true) ? 'pagamentos' : ($i['tipo'] === 'divergencia' ? 'resumo' : 'documentos')]) }}">Abrir OS</a>
+                    @elseif ($i['nota_avulsa_id'] ?? null)
+                        <a class="button" href="{{ route('notas-avulsas.show', $i['nota_avulsa_id']) }}">Abrir nota avulsa</a>
                     @elseif ($i['tipo'] === 'divergencia')
                         <a class="button" href="{{ route('conferencia.index', ['unidade' => $i['unidade_id']]) }}">Abrir conferência</a>
                     @endif

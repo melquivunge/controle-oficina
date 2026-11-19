@@ -86,6 +86,17 @@ Route::middleware('auth')->group(function () {
         Route::post('/ordens/{ordem}/fiscal/{documento}/cancelar', [FiscalController::class, 'cancelar'])->name('fiscal.cancelar');
         Route::get('/ordens/{ordem}/fiscal/{documento}', [FiscalController::class, 'baixar'])->name('fiscal.baixar');
         Route::get('/ordens/{ordem}/fiscal-status', [FiscalController::class, 'status'])->middleware('throttle:60,1')->name('fiscal.status');
+        // Nota de peças avulsa (19/11/2026): NF-e de venda ou remessa sem OS. Unidade conferida no controlador e no serviço.
+        Route::middleware('can:cobrar')->prefix('notas-avulsas')->name('notas-avulsas.')->controller(\App\Http\Controllers\NotaAvulsaController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/nova', 'create')->name('create');
+            Route::post('/', 'store')->middleware('throttle:20,1')->name('store');
+            Route::get('/{nota}', 'show')->whereNumber('nota')->name('show');
+            Route::post('/{nota}/fiscal/{documento}/reprocessar', 'reprocessar')->whereNumber(['nota', 'documento'])->name('reprocessar');
+            Route::post('/{nota}/fiscal/{documento}/interromper', 'interromper')->whereNumber(['nota', 'documento'])->name('interromper');
+            Route::post('/{nota}/fiscal/{documento}/cancelar', 'cancelar')->whereNumber(['nota', 'documento'])->name('cancelar');
+            Route::get('/{nota}/fiscal/{documento}', 'baixar')->whereNumber(['nota', 'documento'])->name('baixar');
+        });
         Route::post('/ordens/{ordem}/mensagens/{mensagem}/reenviar', [FiscalController::class, 'reenviarMensagem'])->name('mensagens.reenviar');
         Route::get('/conferencia', [ConferenciaController::class, 'index'])->middleware('can:conferir')->name('conferencia.index');
         Route::post('/conferencia', [ConferenciaController::class, 'store'])->middleware('can:conferir')->name('conferencia.store');

@@ -22,6 +22,9 @@ final class DadosFiscais
         'nfse_c_trib_nac' => '140101', 'nfse_c_trib_mun' => '1401', 'nfse_c_nbs' => '120013110', 'nfse_aliquota_iss' => '2.00',
         'nfe_serie' => '1', 'nfe_cfop_dentro' => '5102', 'nfe_cfop_fora' => '6108', 'nfe_csosn' => '102', 'nfe_ncm_padrao' => '87087090',
         'nfe_natureza' => 'VENDA DE MERCADORIA',
+        // Nota avulsa (19/11/2026): remessa como na NF-e 998 do Quero Faturar (CFOP 6949, CSOSN 400); intermediador = Mercado Livre.
+        'nfe_remessa_natureza' => 'REMESSA DE MERCADORIA', 'nfe_remessa_cfop_dentro' => '5949', 'nfe_remessa_cfop_fora' => '6949', 'nfe_remessa_csosn' => '400',
+        'nfe_intermediador_cnpj' => '03007331000141', 'nfe_intermediador_conta' => '',
     ];
 
     public const ROTULOS = [
@@ -30,6 +33,8 @@ final class DadosFiscais
         'nfse_c_nbs' => 'Código NBS',
         'nfse_serie' => 'Série da DPS (NFS-e)', 'nfse_proximo_numero' => 'Próximo número da DPS em produção', 'nfe_proximo_numero' => 'Próximo número da NF-e em produção', 'nfse_aliquota_iss' => 'Alíquota do ISS (%)', 'nfe_serie' => 'Série da NF-e', 'nfe_cfop_dentro' => 'CFOP venda dentro do DF',
         'nfe_cfop_fora' => 'CFOP venda para fora do DF', 'nfe_csosn' => 'CSOSN (Simples Nacional)', 'nfe_ncm_padrao' => 'NCM padrão das peças', 'nfe_natureza' => 'Natureza da operação',
+        'nfe_remessa_natureza' => 'Natureza da remessa', 'nfe_remessa_cfop_dentro' => 'CFOP remessa dentro do DF', 'nfe_remessa_cfop_fora' => 'CFOP remessa para fora do DF',
+        'nfe_remessa_csosn' => 'CSOSN da remessa', 'nfe_intermediador_cnpj' => 'CNPJ do Mercado Livre (intermediador)', 'nfe_intermediador_conta' => 'Sua conta (apelido) no Mercado Livre',
     ];
 
     /** @return array<string, string> */

@@ -7,13 +7,16 @@ use App\Integracoes\Fiscal\EmissorFiscal;
 use App\Integracoes\Fiscal\EmissorReal;
 use App\Integracoes\Fiscal\NfseNacional;
 use App\Jobs\ProcessarDocumentoFiscal;
+use App\Models\Cliente;
 use App\Models\FiscalDocument;
+use App\Models\NotaAvulsa;
 use App\Models\Orcamento;
 use App\Models\Ordem;
 use App\Models\User;
 use App\Support\DadosFiscais;
 use App\Support\Danfse;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -71,6 +74,61 @@ class Fiscal
         });
     }
 
+    /**
+     * Nota de peças avulsa (19/11/2026): NF-e de venda ou remessa sem OS. Mesma emissão, numeração e cancelamento das notas da OS.
+     *
+     * @param  array{unidade_id:int, cliente_id:int, operacao:string, canal:string, frete:int, pagamento:string, observacao:?string,
+     *               itens: list<array{descricao:string, quantidade:float|string, preco_unitario_centavos:int, ncm:?string, codigo:?int}>}  $d
+     */
+    public function solicitarAvulsa(User $ator, array $d): NotaAvulsa
+    {
+        if (! $ator->pode('cobrar') || ! $ator->acessaUnidade((int) $d['unidade_id'])) {
+            throw new AuthorizationException('Sem permissão para emitir nota nesta unidade.');
+        }
+        $cliente = Cliente::findOrFail($d['cliente_id']);
+        if ($this->emissor instanceof EmissorReal && ! in_array(strlen((string) preg_replace('/\D/', '', (string) $cliente->documento)), [11, 14], true)) {
+            throw ValidationException::withMessages(['cliente_id' => 'Para emitir a nota, cadastre o CPF ou CNPJ na ficha do cliente.']);
+        }
+        if ($this->emissor instanceof EmissorReal && ($falta = \App\Integracoes\Fiscal\NfeSefaz::faltaNoCliente($cliente))) {
+            throw ValidationException::withMessages(['cliente_id' => $falta]);
+        }
+        if ($d['canal'] === 'mercado_livre' && trim((string) DadosFiscais::atuais()['nfe_intermediador_conta']) === '') {
+            throw ValidationException::withMessages(['canal' => 'Informe sua conta do Mercado Livre em Configurações → Dados fiscais (a NF-e de venda pelo Mercado Livre exige o intermediador).']);
+        }
+        $itens = array_map(fn ($i) => ['descricao' => NfseNacional::texto((string) $i['descricao'], 120), 'quantidade' => (string) $i['quantidade'],
+            'preco_unitario_centavos' => (int) $i['preco_unitario_centavos'], 'total_centavos' => \App\Support\Dinheiro::totalItem((string) $i['quantidade'], (int) $i['preco_unitario_centavos']),
+            'ncm' => $i['ncm'] ?: null, 'codigo' => $i['codigo'] ?? null], array_values($d['itens']));
+        $observacao = ($o = NfseNacional::texto((string) ($d['observacao'] ?? ''), 500)) === '' ? null : $o;
+
+        return DB::transaction(function () use ($ator, $d, $itens, $observacao) {
+            $nota = NotaAvulsa::create(['unidade_id' => $d['unidade_id'], 'cliente_id' => $d['cliente_id'], 'operacao' => $d['operacao'], 'canal' => $d['canal'],
+                'itens' => $itens, 'valor_centavos' => array_sum(array_column($itens, 'total_centavos')), 'frete' => $d['frete'], 'pagamento' => $d['pagamento'],
+                'observacao' => $observacao, 'criado_por' => $ator->id]);
+            $this->novoDocumentoAvulso($nota, $ator);
+
+            return $nota;
+        });
+    }
+
+    private function novoDocumentoAvulso(NotaAvulsa $nota, User $ator): FiscalDocument
+    {
+        $tentativa = FiscalDocument::where('nota_avulsa_id', $nota->id)->count() + 1;
+        $doc = FiscalDocument::create(['nota_avulsa_id' => $nota->id, 'unidade_id' => $nota->unidade_id, 'tipo' => 'nfe', 'valor_centavos' => $nota->valor_centavos,
+            'status' => 'pendente', 'provedor' => $this->emissor->nome(), 'solicitado_por' => $ator->id, 'observacao' => $nota->observacao,
+            'chave_idempotencia' => hash('sha256', "avulsa|{$nota->id}|{$tentativa}")]);
+        Auditoria::registrar('fiscal_solicitado', $nota, depois: ['documento_id' => $doc->id, 'tipo' => 'nfe', 'operacao' => $nota->operacao, 'valor_centavos' => $doc->valor_centavos],
+            unidadeId: $nota->unidade_id, ator: $ator);
+        ProcessarDocumentoFiscal::dispatch($doc->id)->afterCommit();
+
+        return $doc;
+    }
+
+    /** OS ou nota avulsa dona do documento (auditoria, cliente, unidade). */
+    private function origem(FiscalDocument $doc): Model
+    {
+        return $doc->nota_avulsa_id ? NotaAvulsa::with('cliente', 'unidade')->findOrFail($doc->nota_avulsa_id) : Ordem::with('cliente', 'unidade')->findOrFail($doc->ordem_id);
+    }
+
     /** Executado pelo worker. Sem chave repetida: consulta antes de emitir. */
     public function processar(int $documentoId): void
     {
@@ -86,7 +144,7 @@ class Fiscal
         if (! $doc) {
             return;
         }
-        $ordem = Ordem::with('cliente', 'unidade')->findOrFail($doc->ordem_id);
+        $ordem = $this->origem($doc);
         $fiscal = DadosFiscais::atuais();
         try {
             if ($this->emissor instanceof EmissorReal) {
@@ -117,7 +175,7 @@ class Fiscal
         if (! $interrompivel($doc)) {
             throw ValidationException::withMessages(['fiscal' => 'Esta nota não está mais aguardando emissão.']);
         }
-        $ordem = Ordem::with('cliente', 'unidade')->findOrFail($doc->ordem_id);
+        $ordem = $this->origem($doc);
         if ($this->emissor instanceof EmissorReal && $doc->tipo === 'nfse' && $doc->numero_dps) {
             try {
                 $r = $this->emissor->consultar($doc->chave_idempotencia, $this->dados($doc, $ordem, DadosFiscais::atuais()));
@@ -136,7 +194,7 @@ class Fiscal
                 throw ValidationException::withMessages(['fiscal' => 'Esta nota não está mais aguardando emissão.']);
             }
             $d->update(['status' => 'rejeitado', 'mensagem' => 'Emissão interrompida por '.$ator->name.'.']);
-            Auditoria::registrar('fiscal_interrompido', $ordem, depois: ['documento_id' => $d->id, 'tipo' => $d->tipo], ator: $ator);
+            Auditoria::registrar('fiscal_interrompido', $ordem, depois: ['documento_id' => $d->id, 'tipo' => $d->tipo], unidadeId: $d->unidade_id, ator: $ator);
         });
 
         return true;
@@ -160,21 +218,42 @@ class Fiscal
         return true;
     }
 
-    private function dados(FiscalDocument $doc, Ordem $ordem, array $fiscal): array
+    private function dados(FiscalDocument $doc, Model $ordem, array $fiscal): array
     {
+        $avulsa = $ordem instanceof NotaAvulsa;
+
         return [
             'tipo' => $doc->tipo, 'fiscal' => $fiscal, 'serie' => $doc->serie, 'numero_dps' => $doc->numero_dps, 'criado_em' => $doc->created_at,
-            'valor_centavos' => $doc->valor_centavos, 'ordem' => $ordem->numero, 'observacao' => $doc->observacao, 'unidade' => $ordem->unidade->nome, 'cliente' => $ordem->cliente->nome,
+            'valor_centavos' => $doc->valor_centavos, 'ordem' => $avulsa ? $ordem->referencia() : $ordem->numero,
+            'referencia' => $avulsa ? 'Nota avulsa '.$ordem->referencia() : 'OS '.$ordem->numero,
+            'nfe' => $avulsa ? self::parametrosAvulsa($ordem, $fiscal) : null,
+            'observacao' => $doc->observacao, 'unidade' => $ordem->unidade->nome, 'cliente' => $ordem->cliente->nome,
             'cliente_documento' => $ordem->cliente->documento,
             'cliente_local' => $ordem->cliente->only('logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf', 'cep'),
             'cliente_endereco' => $ordem->cliente->enderecoTexto(), 'cliente_telefone' => $ordem->cliente->telefoneFormatado(), 'cliente_email' => $ordem->cliente->email,
-            'itens' => Orcamento::findOrFail($doc->orcamento_id)->itens()->with('catalogoItem')->get()->where('tipo', $doc->tipo === 'nfe' ? 'produto' : 'servico')
+            'itens' => $avulsa ? $ordem->itens : Orcamento::findOrFail($doc->orcamento_id)->itens()->with('catalogoItem')->get()->where('tipo', $doc->tipo === 'nfe' ? 'produto' : 'servico')
                 ->map(fn ($i) => $i->only('descricao', 'quantidade', 'preco_unitario_centavos', 'total_centavos', 'tipo')
                     + ['ncm' => $i->catalogoItem?->ncm, 'codigo' => $i->catalogo_item_id])->values()->all(),
         ];
     }
 
-    private function registrarResultado(FiscalDocument $doc, Ordem $ordem, array $r): void
+    /** Natureza, CFOP, CSOSN, presença/intermediador, frete e pagamento da NF-e avulsa (a NF-e da OS segue o padrão de venda). */
+    public static function parametrosAvulsa(NotaAvulsa $n, array $f): array
+    {
+        $remessa = $n->operacao === 'remessa';
+
+        return [
+            'natureza' => $remessa ? $f['nfe_remessa_natureza'] : $f['nfe_natureza'],
+            'cfop_dentro' => $remessa ? $f['nfe_remessa_cfop_dentro'] : $f['nfe_cfop_dentro'],
+            'cfop_fora' => $remessa ? $f['nfe_remessa_cfop_fora'] : $f['nfe_cfop_fora'],
+            'csosn' => $remessa ? $f['nfe_remessa_csosn'] : $f['nfe_csosn'],
+            'ind_pres' => $n->canal === 'presencial' ? 1 : 2,
+            'intermediador' => $n->canal === 'mercado_livre' ? ['cnpj' => $f['nfe_intermediador_cnpj'], 'conta' => $f['nfe_intermediador_conta']] : null,
+            'frete' => $n->frete, 'pagamento' => $n->pagamento, 'pagamento_texto' => NotaAvulsa::PAGAMENTOS[$n->pagamento] ?? 'Outros',
+        ];
+    }
+
+    private function registrarResultado(FiscalDocument $doc, Model $ordem, array $r): void
     {
         $arquivo = null;
         $base = "fiscal/{$doc->unidade_id}/{$doc->id}-".preg_replace('/\W/', '', (string) ($r['numero'] ?? 'sem-numero'));
@@ -188,7 +267,7 @@ class Fiscal
         $doc->update(['status' => $r['status'], 'numero' => $r['numero'] ?? $doc->numero, 'protocolo' => $r['protocolo'] ?? $doc->protocolo,
             'chave_acesso' => $r['chave_acesso'] ?? $doc->chave_acesso, 'xml' => ! empty($r['xml']) ? $base.'.xml' : $doc->xml,
             'mensagem' => $r['mensagem'], 'arquivo' => $arquivo ?? $doc->arquivo, 'autorizado_em' => $r['status'] === 'autorizado' ? now() : null]);
-        Auditoria::registrar('fiscal_'.$r['status'], $ordem, depois: ['documento_id' => $doc->id, 'numero' => $r['numero'] ?? null], motivo: $r['mensagem'], atorTipo: 'sistema');
+        Auditoria::registrar('fiscal_'.$r['status'], $ordem, depois: ['documento_id' => $doc->id, 'numero' => $r['numero'] ?? null], motivo: $r['mensagem'], unidadeId: $doc->unidade_id, atorTipo: 'sistema');
     }
 
     /**
@@ -209,7 +288,7 @@ class Fiscal
 
         return DB::transaction(function () use ($doc, $ambiente, $serie, $inicial) {
             $d = FiscalDocument::lockForUpdate()->findOrFail($doc->id);
-            $rejeitada = FiscalDocument::where('ordem_id', $d->ordem_id)->where('tipo', $d->tipo)->where('ambiente', $ambiente)->where('serie', $serie)
+            $rejeitada = FiscalDocument::where($d->nota_avulsa_id ? 'nota_avulsa_id' : 'ordem_id', $d->nota_avulsa_id ?? $d->ordem_id)->where('tipo', $d->tipo)->where('ambiente', $ambiente)->where('serie', $serie)
                 ->where('status', 'rejeitado')->whereNotNull('numero_dps')
                 ->whereRaw("coalesce(mensagem, '') !~ '^(110|205|301|302|303) '") // denegada consome o número na SEFAZ
                 ->lockForUpdate()->first();
@@ -242,6 +321,22 @@ class Fiscal
             throw ValidationException::withMessages(['fiscal' => 'Somente documentos pendentes ou rejeitados podem ser reprocessados.']);
         }
 
+        if ($doc->nota_avulsa_id) {
+            $nota = NotaAvulsa::findOrFail($doc->nota_avulsa_id);
+            if (! $ator->pode('cobrar') || ! $ator->acessaUnidade($nota->unidade_id)) {
+                throw new AuthorizationException('Sem permissão.');
+            }
+
+            return DB::transaction(function () use ($nota, $ator) {
+                NotaAvulsa::lockForUpdate()->findOrFail($nota->id);
+                if (FiscalDocument::where('nota_avulsa_id', $nota->id)->whereIn('status', ['pendente', 'processando', 'autorizado'])->exists()) {
+                    throw ValidationException::withMessages(['fiscal' => 'Esta nota já foi emitida (ou está em emissão).']);
+                }
+
+                return $this->novoDocumentoAvulso($nota, $ator);
+            });
+        }
+
         return $this->solicitar(Ordem::findOrFail($doc->ordem_id), $ator, $doc->tipo)->first(); // rejeitada: refaz só a mesma nota
     }
 
@@ -261,7 +356,7 @@ class Fiscal
                 throw ValidationException::withMessages(['fiscal' => mb_substr($e->getMessage(), 0, 300)]);
             }
             $d->update(['status' => 'cancelado', 'cancelado_em' => now(), 'cancelamento_motivo' => $motivo]);
-            Auditoria::registrar('fiscal_cancelado', Ordem::find($d->ordem_id), depois: ['documento_id' => $d->id, 'numero' => $d->numero], motivo: $motivo, ator: $ator);
+            Auditoria::registrar('fiscal_cancelado', $this->origem($d), depois: ['documento_id' => $d->id, 'numero' => $d->numero], motivo: $motivo, unidadeId: $d->unidade_id, ator: $ator);
         });
     }
 }

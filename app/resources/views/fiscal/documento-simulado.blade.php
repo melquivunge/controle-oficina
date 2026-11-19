@@ -140,7 +140,7 @@ tbody tr:nth-child(even) td { background: #f6f7f9; }
 
     <section class="totais">
         <div class="obs">
-            <p><span class="rotulo">Referência</span>Ordem de serviço {{ $d['ordem'] }}</p>
+            <p><span class="rotulo">Referência</span>{{ $d['referencia'] ?? 'Ordem de serviço '.$d['ordem'] }}</p>
             <p>Impostos e retenções não calculados: simulação sem regras tributárias.</p>
         </div>
         <div class="total"><span class="rotulo">Valor total do serviço</span><span class="valor">{{ \App\Support\Dinheiro::formatar((int) $d['valor_centavos']) }}</span></div>
