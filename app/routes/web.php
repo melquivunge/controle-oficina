@@ -86,6 +86,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/ordens/{ordem}/fiscal/{documento}/cancelar', [FiscalController::class, 'cancelar'])->name('fiscal.cancelar');
         Route::get('/ordens/{ordem}/fiscal/{documento}', [FiscalController::class, 'baixar'])->name('fiscal.baixar');
         Route::get('/ordens/{ordem}/fiscal-status', [FiscalController::class, 'status'])->middleware('throttle:60,1')->name('fiscal.status');
+        // Todas as notas fiscais, para controle e contador (19/11/2026).
+        Route::middleware('can:cobrar')->prefix('notas-fiscais')->name('notas-fiscais.')->controller(\App\Http\Controllers\NotaFiscalController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/planilha', 'csv')->middleware('throttle:20,1')->name('csv');
+            Route::get('/xmls', 'xmls')->middleware('throttle:10,1')->name('xmls');
+        });
         // Nota de peças avulsa (19/11/2026): NF-e de venda ou remessa sem OS. Unidade conferida no controlador e no serviço.
         Route::middleware('can:cobrar')->prefix('notas-avulsas')->name('notas-avulsas.')->controller(\App\Http\Controllers\NotaAvulsaController::class)->group(function () {
             Route::get('/', 'index')->name('index');

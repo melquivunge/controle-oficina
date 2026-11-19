@@ -18,6 +18,11 @@ class FiscalDocument extends Model
         return $this->belongsTo(Ordem::class);
     }
 
+    public function notaAvulsa(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(NotaAvulsa::class);
+    }
+
     public function rotuloStatus(): string
     {
         return ['pendente' => 'Pendente', 'processando' => 'Processando', 'autorizado' => 'Autorizado', 'rejeitado' => 'Rejeitado', 'cancelado' => 'Cancelado'][$this->status];
