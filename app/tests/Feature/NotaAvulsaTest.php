@@ -170,4 +170,31 @@ class NotaAvulsaTest extends TestCase
             'inscricao_estadual' => '24.727.296-5', 'telefone' => '82999998888'])->assertSessionHasNoErrors();
         $this->assertSame('247272965', Cliente::firstWhere('documento', '27156664000109')->inscricao_estadual);
     }
+
+    /** 19/11/2026: cliente sem endereço/CPF é completado na própria tela da nota (avulsa ou OS), sem ir à ficha. */
+    public function test_completa_dados_do_cliente_sem_sair_da_nota(): void
+    {
+        config(['oficina.fiscal.modo' => 'homologacao']); // emissor real: a tela confere o que falta antes de emitir
+        $rec = $this->usuario(Papel::Recepcao, $this->u);
+        $cli = Cliente::create(['nome' => 'Sem Endereço', 'telefone' => '61991112222']);
+        $nova = route('notas-avulsas.create', ['cliente' => $cli->id]);
+
+        $this->entrarComo($rec)->get($nova)->assertOk()->assertSee('Completar dados do cliente para a nota')->assertDontSee('Emitir NF-e');
+        $this->entrarComo($this->usuario(Papel::Mecanico, $this->u))->put(route('clientes.dados-nota', $cli), ['documento' => '52998224725'])->assertForbidden();
+        $this->entrarComo($rec)->from($nova)->put(route('clientes.dados-nota', $cli), ['documento' => '52998224725', 'logradouro' => 'Rua A'])
+            ->assertSessionHasErrors(['bairro', 'cidade', 'uf', 'cep']);
+        $this->entrarComo($rec)->from($nova)->put(route('clientes.dados-nota', $cli), ['documento' => '529.982.247-25', 'inscricao_estadual' => '',
+            'cep' => '57073-130', 'logradouro' => 'Avenida Doutor André Papini Góis', 'numero' => '26', 'bairro' => 'Cidade Universitária', 'cidade' => 'Maceió', 'uf' => 'AL'])
+            ->assertSessionHasNoErrors()->assertRedirect($nova.'#fiscal');
+        $this->assertSame(['52998224725', 'AL', 'Cidade Universitária'], [$cli->fresh()->documento, $cli->fresh()->uf, $cli->fresh()->bairro]);
+        $this->entrarComo($rec)->get($nova)->assertSee('Emitir NF-e')->assertDontSee('Completar dados do cliente para a nota');
+
+        // Na OS: cliente sem CPF vê o formulário na aba de documentos.
+        $o = app(\App\Services\Entradas::class)->registrar($rec, ['unidade_id' => $this->u->id, 'nome' => 'Sem CPF', 'telefone' => '61993334444', 'placa' => 'ABC1D23', 'motivo' => 'x']);
+        $ger = $this->usuario(Papel::Gerente, $this->u);
+        app(\App\Services\Ordens::class)->iniciarDiagnostico($o, $this->usuario(Papel::Mecanico, $this->u));
+        app(\App\Services\Orcamentos::class)->aprovarDireto(app(\App\Services\Orcamentos::class)->salvarRascunho($o, $ger, [['descricao' => 'Alinhamento', 'quantidade' => '1', 'preco' => '100']]), $ger);
+        $this->entrarComo($rec)->get(route('ordens.show', [$o->fresh(), 'aba' => 'documentos']))->assertOk()
+            ->assertSee('Completar dados do cliente para a nota')->assertSee('cadastre o CPF ou CNPJ');
+    }
 }

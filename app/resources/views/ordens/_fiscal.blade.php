@@ -67,6 +67,12 @@
         @php($faltam = array_diff_key($partes, array_flip($docs->whereIn('status', ['pendente', 'processando', 'autorizado'])->pluck('tipo')->all())))
         @if ($faltam)
             <p class="hint">A emitir: @foreach ($faltam as $t => $v){{ \App\Support\DadosFiscais::NOTAS[$t] }} de {{ \App\Support\Dinheiro::formatar($v) }}@if (! $loop->last) e @endif @endforeach.</p>
+            {{-- 19/11/2026: o que falta no cliente aparece aqui, com o formulário para completar sem sair da OS. --}}
+            @if ($ordem->cliente && app(\App\Integracoes\Fiscal\EmissorFiscal::class) instanceof \App\Integracoes\Fiscal\EmissorReal)
+                @php($faltaCliente = isset($faltam['nfe']) ? \App\Integracoes\Fiscal\NfeSefaz::faltaNoCliente($ordem->cliente)
+                    : (in_array(strlen((string) preg_replace('/\D/', '', (string) $ordem->cliente->documento)), [11, 14], true) ? null : 'Para emitir a nota, cadastre o CPF ou CNPJ do cliente.'))
+                @if ($faltaCliente)@include('partials.cliente-dados-nota', ['cliente' => $ordem->cliente, 'falta' => $faltaCliente])@endif
+            @endif
             <form method="POST" action="{{ route('fiscal.solicitar', $ordem) }}">@csrf
                 @include('partials.campo', ['nome' => 'observacao', 'rotulo' => 'Observação na nota (opcional)', 'id' => 'fiscal-observacao',
                     'atributos' => ['maxlength' => 500, 'autocomplete' => 'off'], 'ajuda' => 'Sai nas informações complementares da NF-e e no fim da descrição da NFS-e. Até 500 caracteres.'])

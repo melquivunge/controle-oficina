@@ -115,6 +115,8 @@ Route::middleware('auth')->group(function () {
             Route::post('/clientes', [ClienteController::class, 'store'])->middleware('throttle:30,1')->name('clientes.store');
             Route::get('/clientes/{cliente}', [ClienteController::class, 'show'])->whereNumber('cliente')->name('clientes.show');
             Route::put('/clientes/{cliente}', [ClienteController::class, 'update'])->name('clientes.update');
+            // Completar CPF/CNPJ, IE e endereço sem sair da nota (OS ou nota avulsa), 19/11/2026.
+            Route::put('/clientes/{cliente}/dados-nota', [ClienteController::class, 'dadosNota'])->whereNumber('cliente')->middleware('throttle:30,1')->name('clientes.dados-nota');
             Route::post('/clientes/{cliente}/mesclar', [ClienteController::class, 'mesclar'])->name('clientes.mesclar');
         });
 

@@ -112,6 +112,31 @@ class ClienteController extends Controller
             : redirect()->route('clientes.show', $cliente)->with('sucesso', 'Cliente cadastrado.');
     }
 
+    /**
+     * Completa os dados que a nota fiscal exige (CPF/CNPJ, IE e endereço) direto da tela da nota e volta para ela (19/11/2026).
+     * Endereço completo é exigido por inteiro: a NF-e de peças recusa sem rua, bairro, cidade, UF e CEP.
+     */
+    public function dadosNota(Request $request, Cliente $cliente)
+    {
+        abort_unless($request->user()->can('ver_contato_cliente'), 403);
+        $request->merge(Endereco::normalizar($request->all()) + ['documento' => preg_replace('/\D/', '', (string) $request->input('documento')),
+            'inscricao_estadual' => preg_replace('/\D/', '', (string) $request->input('inscricao_estadual'))]);
+        $exigir = fn (array $r) => array_map(fn ($regra) => ['required', ...array_diff($regra, ['nullable'])], $r);
+        $dados = $request->validate(['documento' => ['required', 'regex:/^(\d{11}|\d{14})$/'], 'inscricao_estadual' => ['nullable', 'regex:/^\d{2,14}$/']]
+            + $exigir(array_intersect_key(Endereco::regras(), array_flip(['cep', 'logradouro', 'bairro', 'cidade', 'uf']))) + Endereco::regras(),
+            ['documento.regex' => 'CPF (11 dígitos) ou CNPJ (14 dígitos).', 'inscricao_estadual.regex' => 'Inscrição estadual: só números (2 a 14).'] + Endereco::MENSAGENS,
+            ['documento' => 'CPF ou CNPJ', 'inscricao_estadual' => 'inscrição estadual'] + Endereco::atributos());
+        DB::transaction(function () use ($cliente, $dados) {
+            $antes = $cliente->only(Endereco::CAMPOS);
+            $cliente->documento = $dados['documento'];
+            $cliente->inscricao_estadual = ($dados['inscricao_estadual'] ?? null) ?: null;
+            $cliente->update(collect($dados)->only(Endereco::CAMPOS)->all());
+            Auditoria::registrar('cliente_alterado', $cliente, $antes, $cliente->only(Endereco::CAMPOS) + ['documento' => 'informado', 'inscricao_estadual' => $cliente->inscricao_estadual ? 'informada' : null]);
+        });
+
+        return redirect()->to(strtok(url()->previous(), '#').'#fiscal')->with('sucesso', 'Dados do cliente salvos. Agora é só emitir a nota.');
+    }
+
     public function show(Request $request, Cliente $cliente)
     {
         if ($cliente->mesclado_em_id) {

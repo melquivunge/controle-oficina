@@ -8,7 +8,7 @@
         @if ($cliente)
             <p><strong>{{ $cliente->nome }}</strong> · CPF/CNPJ {{ $cliente->documento ?: 'não informado' }}<br>
                 <span class="muted">{{ $cliente->enderecoTexto() ?: 'Endereço não informado' }}</span></p>
-            @if ($falta)<p class="alert erro" role="alert">{{ $falta }} <a href="{{ route('clientes.show', $cliente) }}">Completar na ficha do cliente</a> e depois volte aqui.</p>@endif
+            @if ($falta)@include('partials.cliente-dados-nota', ['cliente' => $cliente, 'falta' => $falta])@endif
             <p><a href="{{ route('notas-avulsas.create') }}">Escolher outro cliente</a></p>
         @else
             <form method="GET" class="filters">
