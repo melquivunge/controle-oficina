@@ -509,6 +509,11 @@ body.app input[type=file]{padding:8px}body.app input[type=file]::file-selector-b
 body.app .linha-clicavel{position:relative;cursor:pointer}
 body.app .linha-clicavel .linha-link::after{content:"";position:absolute;inset:0}
 body.app .linha-clicavel .linha-link:focus-visible{outline:none}
+/* Recebimento rápido no caixa (19/11/2026): fica acima do link que cobre a linha, para os campos receberem o clique. */
+body.app .receber-rapido{position:relative;z-index:1;cursor:auto}
+body.app tr:has(.receber-rapido[open])>td{vertical-align:top}
+body.app .receber-rapido>summary{list-style:none;white-space:nowrap}body.app .receber-rapido>summary::-webkit-details-marker{display:none}
+body.app .receber-rapido[open]>form{display:grid;gap:10px;min-width:280px;max-width:340px;margin-top:10px;padding:14px;border:1px solid var(--borda);border-radius:12px;background:var(--superficie,#fff);text-align:left}
 body.app .linha-clicavel:focus-within{outline:3px solid var(--t-foco,#6ea8ff);outline-offset:-3px}
 body.app .linha-clicavel:hover td{background:var(--t-superficie-2,#f3f6fb)}
 body.app .linha-clicavel td:last-child::after{content:"›";float:right;margin-left:10px;color:var(--t-texto-4,#a0aabb);font-size:18px;line-height:1}

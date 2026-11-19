@@ -52,6 +52,12 @@
         @if ($fin)
             @php($cards[] = ['Aprovado', $f($total['aprovado']), $serie['aprovado'], 'roxo', $anterior['aprovado'], $total['aprovacoes'].' orçamentos aprovados', $total['aprovado']])
             @php($cards[] = ['Recebido (caixa)', $f($total['recebido']), $serie['recebido'], 'verde', $anterior['recebido'], $total['devolvido'] ? 'após devoluções de '.$f($total['devolvido']) : 'Pix confirmado, dinheiro e cartão', $total['recebido']])
+            @if ($ml = $avulsas['mercado_livre'] ?? null)
+                @php($cards[] = ['Mercado Livre (notas avulsas)', $f($ml['valor']), null, 'roxo', null, $ml['notas'].' NF-e autorizada'.($ml['notas'] > 1 ? 's' : '').' · não entra no Aprovado nem no Recebido (caixa)'])
+            @endif
+            @if ($outras = $avulsas['outras'] ?? null)
+                @php($cards[] = ['Outras notas avulsas', $f($outras['valor']), null, 'azul', null, $outras['notas'].' NF-e sem OS · fora do caixa da oficina'])
+            @endif
         @else
             @php($cards[] = ['No pátio agora', $noPatio, null, 'azul', null, 'ordens abertas'])
             @php($cards[] = ['Prontos para entrega', $porStatus['pronto_para_entrega'] ?? 0, null, 'verde', null, 'conferir antes de liberar'])

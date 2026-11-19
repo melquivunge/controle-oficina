@@ -60,6 +60,11 @@ class PainelController extends Controller
             $dados['linhas'] = $indicadores->porUnidade($ids, $inicio, $fim, $responsavelId);
             $dados['total'] = $this->somar($dados['linhas']);
             $dados['anterior'] = $this->somar($indicadores->porUnidade($ids, $inicio->subDays($dias), $inicio, $responsavelId));
+            // Notas avulsas (19/11/2026): separadas por canal para não se misturarem com o aprovado/recebido das OS.
+            $dados['avulsas'] = \App\Models\NotaAvulsa::whereIn('unidade_id', $ids)->where('created_at', '>=', $inicio)->where('created_at', '<', $fim)
+                ->whereHas('documentos', fn ($q) => $q->where('status', 'autorizado'))
+                ->toBase()->selectRaw("canal = 'mercado_livre' as ml, count(*) as notas, sum(valor_centavos) as valor")->groupBy('ml')->get()
+                ->mapWithKeys(fn ($l) => [$l->ml ? 'mercado_livre' : 'outras' => ['notas' => (int) $l->notas, 'valor' => (int) $l->valor]])->all();
         }
 
         if (\App\Models\WhatsappConversa::atende($user) || \App\Models\WhatsappConversa::fazTriagem($user)) {

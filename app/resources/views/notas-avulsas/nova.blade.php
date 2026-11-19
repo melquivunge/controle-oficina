@@ -23,7 +23,26 @@
                     <p class="muted">Nenhum cliente encontrado.</p>
                 @endforelse
             @endif
-            <p class="hint">Cliente novo? <a href="{{ route('clientes.create') }}">Cadastre o cliente</a> com CPF ou CNPJ e o endereço completo (rua, número, bairro, cidade, UF e CEP) e volte aqui.</p>
+            @can('registrar_entrada')
+            <details class="form-panel" style="margin-top:12px" @if (request()->boolean('novo') || old('para_nota')) open @endif>
+                <summary><strong>Cliente novo? Cadastrar aqui</strong> (não precisa de veículo)</summary>
+                <form method="POST" action="{{ route('clientes.store') }}" style="margin-top:12px">@csrf
+                    <input type="hidden" name="para_nota" value="1">
+                    <p class="hint">A NF-e exige CPF ou CNPJ e o endereço completo do cliente (rua, número, bairro, cidade, UF e CEP).</p>
+                    <div class="fields">
+                        @include('partials.campo', ['nome' => 'nome', 'rotulo' => 'Nome completo', 'id' => 'nc-nome', 'obrigatorio' => true])
+                        @include('partials.campo', ['nome' => 'documento', 'rotulo' => 'CPF ou CNPJ', 'id' => 'nc-documento', 'obrigatorio' => true, 'atributos' => ['inputmode' => 'numeric']])
+                        @include('partials.campo', ['nome' => 'telefone', 'rotulo' => 'Telefone com DDD', 'id' => 'nc-telefone', 'tipo' => 'tel', 'obrigatorio' => true])
+                        @include('partials.campo', ['nome' => 'email', 'rotulo' => 'E-mail (opcional)', 'id' => 'nc-email', 'tipo' => 'email'])
+                    </div>
+                    @include('partials.endereco-campos', ['valores' => null, 'idPrefixo' => 'nc'])
+                    @error('telefone')
+                        <label class="check-linha"><input type="checkbox" name="confirmar_telefone" value="1"> É outra pessoa com o mesmo telefone: cadastrar mesmo assim</label>
+                    @enderror
+                    <div class="form-footer"><span></span><button class="button primary" type="submit">Cadastrar e continuar a nota</button></div>
+                </form>
+            </details>
+            @endcan
         @endif
     </section></section>
 

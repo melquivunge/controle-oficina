@@ -128,4 +128,21 @@ class NotaAvulsaTest extends TestCase
         FiscalDocument::create(['unidade_id' => $this->u->id, 'tipo' => 'nfe', 'valor_centavos' => 100, 'status' => 'pendente', 'provedor' => 'x',
             'solicitado_por' => $this->usuario(Papel::Gerente, $this->u)->id, 'chave_idempotencia' => str_repeat('b', 64)]);
     }
+
+    public function test_cliente_sem_veiculo_e_cadastrado_de_dentro_da_nota(): void
+    {
+        config(['oficina.integracoes' => 'simulado']);
+        $rec = $this->usuario(Papel::Recepcao, $this->u);
+        $this->entrarComo($rec)->get(route('notas-avulsas.create', ['q' => 'Fulano']))->assertOk()->assertSee('Cliente novo? Cadastrar aqui')->assertSee('para_nota', false);
+
+        $this->entrarComo($rec)->post(route('clientes.store'), ['para_nota' => 1, 'nome' => 'Carlos Mendes', 'documento' => '529.982.247-25', 'telefone' => '(98) 99123-4567',
+            'cep' => '65057-787', 'logradouro' => 'Rua Sete', 'numero' => '15', 'bairro' => 'São Raimundo', 'cidade' => 'São Luís', 'uf' => 'MA'])->assertSessionHasNoErrors()
+            ->assertRedirect(route('notas-avulsas.create', ['cliente' => Cliente::where('nome', 'Carlos Mendes')->value('id')]));
+        $c = Cliente::where('nome', 'Carlos Mendes')->sole();
+        $this->assertSame(['52998224725', 'MA', 0], [$c->documento, $c->uf, $c->veiculos()->count()]);
+        $this->entrarComo($rec)->get(route('notas-avulsas.create', ['cliente' => $c->id]))->assertOk()->assertSee('Carlos Mendes')->assertSee('Emitir NF-e');
+
+        // Sem para_nota, o cadastro comum continua indo para a ficha do cliente.
+        $this->entrarComo($rec)->post(route('clientes.store'), ['nome' => 'Outro', 'telefone' => '61988887777'])->assertRedirect(route('clientes.show', Cliente::where('nome', 'Outro')->value('id')));
+    }
 }

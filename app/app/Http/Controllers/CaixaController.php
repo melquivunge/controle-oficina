@@ -15,7 +15,8 @@ class CaixaController extends Controller
     public function index(Request $request, Financeiro $financeiro)
     {
         $user = $request->user();
-        $dados = $request->validate(['unidade' => ['nullable', 'integer'], 'data' => ['nullable', 'date_format:Y-m-d']]);
+        $dados = $request->validate(['unidade' => ['nullable', 'integer'], 'data' => ['nullable', 'date_format:Y-m-d'], 'q' => ['nullable', 'string', 'max:60']]);
+        $busca = trim((string) ($dados['q'] ?? ''));
         $unidades = Unidade::visiveisPara($user)->orderBy('nome')->get();
         if ($unidades->isEmpty()) {
             return $this->semUnidade('Caixa e fechamento');
@@ -30,7 +31,11 @@ class CaixaController extends Controller
             'dinheiroEsperado' => $financeiro->dinheiroEsperado($unidadeId, $data),
             'devolvidoDinheiro' => $financeiro->devolvidoEmDinheiro($unidadeId, $data),
             // ponytail: saldo calculado ordem a ordem (4 consultas cada); agregar em SQL se a lista passar de centenas
+            'busca' => $busca,
+            // Recebimento rápido (19/11/2026): busca por OS, placa, nome ou telefone e botão Receber na própria linha.
             'aReceber' => \App\Models\Ordem::with('veiculo', 'cliente')->where('unidade_id', $unidadeId)
+                ->when($busca !== '', fn ($q) => $q->where(fn ($q) => $q->where('numero', 'ilike', '%'.addcslashes($busca, '%_\\').'%')
+                    ->orWhereHas('cliente', fn ($c) => $c->buscar($busca)))) // buscar() já cobre telefone e placa dos carros do cliente
                 ->whereIn('status', \App\Enums\StatusOrdem::recebiveis())->whereHas('orcamentos', fn ($q) => $q->where('status', 'aprovado'))
                 ->orderBy('entrada_em')->get()->map(fn ($o) => [$o, $financeiro->resumo($o)])->filter(fn ($l) => $l[1]['saldo'] > 0)
                 ->map(fn ($l) => [$l[0], $l[1], app(\App\Services\Combinados::class)->situacao($l[0], $l[1])])->values(), // + combinado (próxima parcela e vencimento)

@@ -49,11 +49,16 @@
 
     </div>
     <div class="aba-painel" @if ($aba !== 'receber') hidden @endif>
+        <form method="GET" class="filters" role="search">
+            <input type="hidden" name="aba" value="receber"><input type="hidden" name="unidade" value="{{ $unidadeId }}">
+            @include('partials.campo', ['nome' => 'q', 'rotulo' => 'Cliente veio pagar? Busque por nome, telefone, placa ou nº da OS', 'id' => 'receber-busca', 'valorAtual' => $busca])
+            <button class="button" type="submit">Buscar</button>@if ($busca !== '') <a class="button" href="{{ request()->fullUrlWithQuery(['q' => null]) }}">Limpar</a>@endif
+        </form>
         @if ($aReceber->isEmpty())
-            <p class="muted">Nenhuma ordem com saldo a receber nesta unidade.</p>
+            <p class="muted">{{ $busca !== '' ? 'Nenhuma ordem com saldo encontrada para "'.$busca.'".' : 'Nenhuma ordem com saldo a receber nesta unidade.' }}</p>
         @else
             <div class="table-wrap"><table class="data-table">
-                <thead><tr><th>Ordem</th><th>Veículo</th><th>Cliente</th><th>Etapa</th><th>Saldo</th><th>Próxima parcela</th></tr></thead>
+                <thead><tr><th>Ordem</th><th>Veículo</th><th>Cliente</th><th>Etapa</th><th>Saldo</th><th>Próxima parcela</th><th><span class="sr-only">Receber</span></th></tr></thead>
                 <tbody>
                 @foreach ($aReceber as [$o, $r, $comb])
                     @php($prox = $comb['proxima'] ?? null)
@@ -66,7 +71,29 @@
                             @if ($prox->situacao === 'vencida')<span class="tag off">Vencida</span>@endif
                             @if ($comb['vencido'] > $prox->emAbertoCentavos())<br><small>Total vencido {{ \App\Support\Dinheiro::formatar($comb['vencido']) }}</small>@endif
                             @if ($comb['desatualizado'])<br><small>Combinado não cobre o saldo atual</small>@endif
-                            @else<span class="muted">Sem combinado</span>@endif</td></tr>
+                            @else<span class="muted">Sem combinado</span>@endif</td>
+                        <td data-label="Receber">
+                            {{-- Recebimento rápido (19/11/2026): mesmo registro da aba Pagamentos da OS (pagamentos.agora), sem sair do caixa. --}}
+                            @php($sugerido = $prox ? min($prox->emAbertoCentavos(), $r['saldo']) : $r['saldo'])
+                            <details class="receber-rapido" @if (old('_receber') == $o->id) open @endif>
+                                <summary class="button primary">Receber</summary>
+                                <form method="POST" action="{{ route('pagamentos.agora', $o) }}" enctype="multipart/form-data">@csrf
+                                    <input type="hidden" name="_receber" value="{{ $o->id }}">
+                                    @include('partials.campo', ['nome' => 'valor_agora', 'rotulo' => 'Valor recebido (R$)', 'id' => 'rr-valor-'.$o->id, 'obrigatorio' => true,
+                                        'valorAtual' => old('_receber') == $o->id ? old('valor_agora') : \App\Support\Dinheiro::paraCampo($sugerido), 'atributos' => ['inputmode' => 'decimal']])
+                                    @include('partials.campo', ['nome' => 'forma_agora', 'rotulo' => 'Forma', 'id' => 'rr-forma-'.$o->id, 'tipo' => 'select', 'obrigatorio' => true,
+                                        'valorAtual' => old('_receber') == $o->id ? old('forma_agora') : 'pix_manual',
+                                        'opcoes' => ['pix_manual' => 'Pix recebido no app do banco', 'dinheiro' => 'Dinheiro', 'cartao_externo' => 'Cartão na maquininha']])
+                                    <div class="field"><label for="rr-comp-{{ $o->id }}">Comprovante (foto ou PDF, opcional)</label>
+                                        <input id="rr-comp-{{ $o->id }}" type="file" name="comprovante" accept="image/jpeg,image/png,image/webp,application/pdf"></div>
+                                    <label class="check-linha"><input type="checkbox" name="conferido_extrato" value="1"> Pix: conferi no app do banco que o valor entrou</label>
+                                    @include('partials.campo', ['nome' => 'observacao', 'rotulo' => 'Observação (opcional)', 'id' => 'rr-obs-'.$o->id, 'atributos' => ['maxlength' => 300],
+                                        'valorAtual' => old('_receber') == $o->id ? old('observacao') : ''])
+                                    <button class="button primary" type="submit">Registrar recebimento</button>
+                                    <a class="link" href="{{ route('ordens.show', ['ordem' => $o, 'aba' => 'pagamentos']) }}">Mais opções na OS</a>
+                                </form>
+                            </details>
+                        </td></tr>
                 @endforeach
                 </tbody>
             </table></div>

@@ -85,7 +85,7 @@ class ClienteController extends Controller
         $mesmoTelefone = Cliente::ativos()->where('telefone', $dados['telefone'])->first();
         if ($mesmoTelefone && ! $request->boolean('confirmar_telefone')) {
             throw ValidationException::withMessages(['telefone' => "Este telefone já é de “{$mesmoTelefone->nome}”. Se for outra pessoa com o mesmo número, marque a confirmação."])
-                ->redirectTo(route('clientes.create'));
+                ->redirectTo($request->boolean('para_nota') ? route('notas-avulsas.create', ['novo' => 1]) : route('clientes.create'));
         }
         $cliente = DB::transaction(function () use ($dados) {
             $c = new Cliente(collect($dados)->only(['nome', 'telefone', 'email', 'observacoes', ...Endereco::CAMPOS])->all());
@@ -103,7 +103,10 @@ class ClienteController extends Controller
             return $c;
         });
 
-        return redirect()->route('clientes.show', $cliente)->with('sucesso', 'Cliente cadastrado.');
+        // Cadastro feito de dentro da nota avulsa (19/11/2026): volta para a nota com o cliente escolhido.
+        return $request->boolean('para_nota') && $request->user()->can('cobrar')
+            ? redirect()->route('notas-avulsas.create', ['cliente' => $cliente->id])->with('sucesso', 'Cliente cadastrado. Agora preencha a nota.')
+            : redirect()->route('clientes.show', $cliente)->with('sucesso', 'Cliente cadastrado.');
     }
 
     public function show(Request $request, Cliente $cliente)
