@@ -228,7 +228,7 @@ class Fiscal
             'referencia' => $avulsa ? 'Nota avulsa '.$ordem->referencia() : 'OS '.$ordem->numero,
             'nfe' => $avulsa ? self::parametrosAvulsa($ordem, $fiscal) : null,
             'observacao' => $doc->observacao, 'unidade' => $ordem->unidade->nome, 'cliente' => $ordem->cliente->nome,
-            'cliente_documento' => $ordem->cliente->documento,
+            'cliente_documento' => $ordem->cliente->documento, 'cliente_ie' => $ordem->cliente->inscricao_estadual,
             'cliente_local' => $ordem->cliente->only('logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf', 'cep'),
             'cliente_endereco' => $ordem->cliente->enderecoTexto(), 'cliente_telefone' => $ordem->cliente->telefoneFormatado(), 'cliente_email' => $ordem->cliente->email,
             'itens' => $avulsa ? $ordem->itens : Orcamento::findOrFail($doc->orcamento_id)->itens()->with('catalogoItem')->get()->where('tipo', $doc->tipo === 'nfe' ? 'produto' : 'servico')
@@ -243,7 +243,7 @@ class Fiscal
         $remessa = $n->operacao === 'remessa';
 
         return [
-            'natureza' => $remessa ? $f['nfe_remessa_natureza'] : $f['nfe_natureza'],
+            'venda' => ! $remessa, 'natureza' => $remessa ? $f['nfe_remessa_natureza'] : $f['nfe_natureza'],
             'cfop_dentro' => $remessa ? $f['nfe_remessa_cfop_dentro'] : $f['nfe_cfop_dentro'],
             'cfop_fora' => $remessa ? $f['nfe_remessa_cfop_fora'] : $f['nfe_cfop_fora'],
             'csosn' => $remessa ? $f['nfe_remessa_csosn'] : $f['nfe_csosn'],

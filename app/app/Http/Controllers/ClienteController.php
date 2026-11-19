@@ -62,7 +62,8 @@ class ClienteController extends Controller
     public function store(Request $request)
     {
         $request->merge(['telefone' => Normaliza::telefone($request->input('telefone')), 'placa' => Normaliza::placa($request->input('placa')),
-            'documento' => preg_replace('/\D/', '', (string) $request->input('documento')), 'chassi' => Normaliza::chassi($request->input('chassi'))]);
+            'documento' => preg_replace('/\D/', '', (string) $request->input('documento')), 'chassi' => Normaliza::chassi($request->input('chassi')),
+            'inscricao_estadual' => preg_replace('/\D/', '', (string) $request->input('inscricao_estadual'))]);
         $comEndereco = $request->user()->can('ver_contato_cliente') && $request->hasAny(Endereco::CAMPOS);
         if ($comEndereco) {
             $request->merge(Endereco::normalizar($request->all()));
@@ -72,6 +73,7 @@ class ClienteController extends Controller
             'telefone' => ['required', 'regex:/^\d{10,11}$/'],
             'email' => ['nullable', 'email', 'max:255'],
             'documento' => ['nullable', 'regex:/^(\d{11}|\d{14})$/'],
+            'inscricao_estadual' => ['nullable', 'regex:/^\d{2,14}$/'],
             'observacoes' => ['nullable', 'string', 'max:2000'],
             'placa' => ['nullable', 'regex:'.Normaliza::REGEX_PLACA, Rule::unique('veiculos', 'placa')],
             'marca' => ['nullable', 'string', 'max:40'], 'modelo' => ['nullable', 'string', 'max:80'],
@@ -90,6 +92,7 @@ class ClienteController extends Controller
         $cliente = DB::transaction(function () use ($dados) {
             $c = new Cliente(collect($dados)->only(['nome', 'telefone', 'email', 'observacoes', ...Endereco::CAMPOS])->all());
             $c->documento = $dados['documento'] ?: null;
+            $c->inscricao_estadual = ($dados['inscricao_estadual'] ?? null) ?: null;
             $c->save();
             Auditoria::registrar('cliente_criado', $c, depois: $c->only(['nome', 'telefone']));
             if (! empty($dados['placa'])) {
@@ -142,8 +145,9 @@ class ClienteController extends Controller
         }
         $comDocumento = $request->user()->can('ver_contato_cliente') && $request->has('documento');
         if ($comDocumento) {
-            $request->merge(['documento' => preg_replace('/\D/', '', (string) $request->input('documento'))]);
-            $request->validate(['documento' => ['nullable', 'regex:/^(\d{11}|\d{14})$/']], ['documento.regex' => 'CPF (11 dígitos) ou CNPJ (14 dígitos).']);
+            $request->merge(['documento' => preg_replace('/\D/', '', (string) $request->input('documento')), 'inscricao_estadual' => preg_replace('/\D/', '', (string) $request->input('inscricao_estadual'))]);
+            $request->validate(['documento' => ['nullable', 'regex:/^(\d{11}|\d{14})$/'], 'inscricao_estadual' => ['nullable', 'regex:/^\d{2,14}$/']],
+                ['documento.regex' => 'CPF (11 dígitos) ou CNPJ (14 dígitos).', 'inscricao_estadual.regex' => 'Inscrição estadual: só números (2 a 14).']);
         }
         $dados = $request->validate([
             'nome' => ['required', 'string', 'min:2', 'max:150'],
@@ -156,6 +160,9 @@ class ClienteController extends Controller
             $antes = $cliente->only(array_keys($dados));
             if ($comDocumento) {
                 $cliente->documento = $request->input('documento') ?: null; // fora do fillable; não vai para a auditoria em claro
+                if ($request->has('inscricao_estadual')) {
+                    $cliente->inscricao_estadual = $request->input('inscricao_estadual') ?: null;
+                }
             }
             $cliente->update($dados);
             Auditoria::registrar('cliente_alterado', $cliente, $antes, $cliente->only(array_keys($dados)));

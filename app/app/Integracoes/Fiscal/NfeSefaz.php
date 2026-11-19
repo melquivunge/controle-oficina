@@ -126,6 +126,11 @@ class NfeSefaz
         // Nota da OS: venda presencial com os códigos de venda; nota avulsa (19/11/2026) traz natureza, CFOP, CSOSN, presença, frete e pagamento próprios.
         $p = ($d['nfe'] ?? null) ?: ['natureza' => $f['nfe_natureza'], 'cfop_dentro' => $f['nfe_cfop_dentro'], 'cfop_fora' => $f['nfe_cfop_fora'], 'csosn' => $f['nfe_csosn'],
             'ind_pres' => 1, 'intermediador' => null, 'frete' => 9, 'pagamento' => '99', 'pagamento_texto' => 'Conforme ordem de servico'];
+        // Destinatário com IE (contribuinte de ICMS): indIEDest 1, operação não é a consumidor final e não leva o grupo de DIFAL (19/11/2026, rejeição 232).
+        $ieDest = preg_replace('/\D/', '', (string) ($d['cliente_ie'] ?? ''));
+        if ($ieDest !== '' && ($p['venda'] ?? true)) {
+            $p['cfop_fora'] = $f['nfe_cfop_fora_contribuinte']; // venda a contribuinte (6102, como no SGA); remessa mantém o CFOP próprio
+        }
         $chave = self::chave($d, $cnpj);
         $o = fn (array $a) => (object) $a;
         $m = new Make;
@@ -133,7 +138,7 @@ class NfeSefaz
         $m->tagide($o(['cUF' => 53, 'cNF' => substr($chave, 35, 8), 'natOp' => NfseNacional::texto($p['natureza'], 60), 'mod' => 55, 'serie' => (int) $d['serie'],
             'nNF' => $d['numero_dps'], 'dhEmi' => now('America/Sao_Paulo')->subMinute()->format('Y-m-d\TH:i:sP'), 'tpNF' => 1, 'idDest' => $interestadual ? 2 : 1,
             'cMunFG' => $f['municipio_ibge'], 'tpImp' => 1, 'tpEmis' => 1, 'cDV' => substr($chave, -1), 'tpAmb' => $this->ambiente, 'finNFe' => 1,
-            'indFinal' => 1, 'indPres' => $p['ind_pres'], 'indIntermed' => $p['ind_pres'] === 1 ? null : ($p['intermediador'] ? 1 : 0),
+            'indFinal' => $ieDest !== '' ? 0 : 1, 'indPres' => $p['ind_pres'], 'indIntermed' => $p['ind_pres'] === 1 ? null : ($p['intermediador'] ? 1 : 0),
             'procEmi' => 0, 'verProc' => 'ControleOficina1']));
         $m->tagemit($o(['xNome' => $e->razao_social ?: $e->nome_fantasia, 'xFant' => $e->nome_fantasia, 'IE' => $f['inscricao_estadual'],
             'IM' => $f['inscricao_municipal'] ?: null, 'CRT' => $f['regime'] === 'simples' ? 1 : 3, 'CNPJ' => $cnpj]));
@@ -143,7 +148,7 @@ class NfeSefaz
         $doc = preg_replace('/\D/', '', (string) ($d['cliente_documento'] ?? ''));
         if (in_array(strlen($doc), [11, 14], true)) {
             $m->tagdest($o(['xNome' => $homolog ? 'NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL' : NfseNacional::texto($d['cliente'], 60),
-                'indIEDest' => 9, strlen($doc) === 14 ? 'CNPJ' : 'CPF' => $doc, 'email' => $d['cliente_email'] ?: null]));
+                'indIEDest' => $ieDest !== '' ? 1 : 9, 'IE' => $ieDest !== '' ? $ieDest : null, strlen($doc) === 14 ? 'CNPJ' : 'CPF' => $doc, 'email' => $d['cliente_email'] ?: null]));
             $l = $d['cliente_local'];
             $fora = strtoupper($l['uf']) !== 'DF';
             [$cMun, $xMun] = $fora ? Municipios::buscar($l['uf'], (string) $l['cidade']) : [$f['municipio_ibge'], 'Brasilia'];
@@ -167,7 +172,7 @@ class NfeSefaz
                 'vDesc' => $desc > 0 ? number_format($desc / 100, 2, '.', '') : null, 'indTot' => 1]));
             $m->tagimposto($o(['item' => $n]));
             $m->tagICMSSN($o(['item' => $n, 'orig' => 0, 'CSOSN' => $p['csosn']]));
-            if ($interestadual) { // como 3 das 4 notas do sistema antigo: DIFAL zerado (ponytail: contador confirma; uma nota para a BA destacou o valor)
+            if ($interestadual && $ieDest === '') { // como 3 das 4 notas do sistema antigo: DIFAL zerado (ponytail: contador confirma; uma nota para a BA destacou o valor)
                 $m->tagICMSUFDest($o(['item' => $n, 'vBCUFDest' => 0, 'vBCFCPUFDest' => 0, 'pFCPUFDest' => 0, 'pICMSUFDest' => 0, 'pICMSInter' => 12, 'pICMSInterPart' => 100, 'vFCPUFDest' => 0, 'vICMSUFDest' => 0, 'vICMSUFRemet' => 0]));
             }
             $m->tagPIS($o(['item' => $n, 'CST' => '49', 'vBC' => 0, 'pPIS' => 0, 'vPIS' => 0]));

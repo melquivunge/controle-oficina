@@ -32,6 +32,8 @@
                     <div class="fields">
                         @include('partials.campo', ['nome' => 'nome', 'rotulo' => 'Nome completo', 'id' => 'nc-nome', 'obrigatorio' => true])
                         @include('partials.campo', ['nome' => 'documento', 'rotulo' => 'CPF ou CNPJ', 'id' => 'nc-documento', 'obrigatorio' => true, 'atributos' => ['inputmode' => 'numeric']])
+                        @include('partials.campo', ['nome' => 'inscricao_estadual', 'rotulo' => 'Inscrição estadual (empresa contribuinte de ICMS)', 'id' => 'nc-ie', 'atributos' => ['inputmode' => 'numeric'],
+                            'ajuda' => 'Loja/empresa com IE: obrigatória, senão a Sefaz recusa (232). Pessoa física: deixe em branco.'])
                         @include('partials.campo', ['nome' => 'telefone', 'rotulo' => 'Telefone com DDD', 'id' => 'nc-telefone', 'tipo' => 'tel', 'obrigatorio' => true])
                         @include('partials.campo', ['nome' => 'email', 'rotulo' => 'E-mail (opcional)', 'id' => 'nc-email', 'tipo' => 'email'])
                     </div>

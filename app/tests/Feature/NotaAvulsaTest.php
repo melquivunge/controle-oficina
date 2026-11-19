@@ -145,4 +145,29 @@ class NotaAvulsaTest extends TestCase
         // Sem para_nota, o cadastro comum continua indo para a ficha do cliente.
         $this->entrarComo($rec)->post(route('clientes.store'), ['nome' => 'Outro', 'telefone' => '61988887777'])->assertRedirect(route('clientes.show', Cliente::where('nome', 'Outro')->value('id')));
     }
+
+    /** Rejeição 232 em produção (19/11/2026, NA-00001): cliente empresa contribuinte em AL exige a IE dele na nota. */
+    public function test_cliente_contribuinte_leva_ie_sem_difal_e_venda_vira_6102(): void
+    {
+        Empresa::atual()->forceFill(['fiscal' => ['inscricao_estadual' => '0854766700119']])->save();
+        $al = ['logradouro' => 'Avenida Doutor André Papini Góis', 'numero' => '26', 'complemento' => '', 'bairro' => 'Cidade Universitária', 'cidade' => 'Maceió', 'uf' => 'AL', 'cep' => '57073130'];
+        $remessa = $this->dadosXml(new NotaAvulsa(['operacao' => 'remessa', 'canal' => 'internet', 'frete' => 9, 'pagamento' => '90']), DadosFiscais::atuais(), $al, 20000);
+        $remessa['cliente_documento'] = '27156664000109';
+        $xml = $this->assinar($remessa + ['cliente_ie' => '247272965']); // XSD oficial
+        foreach (['<indIEDest>1</indIEDest>', '<IE>247272965</IE>', '<indFinal>0</indFinal>', '<CFOP>6949</CFOP>', '<CNPJ>27156664000109</CNPJ>', '<tPag>90</tPag>'] as $t) {
+            $this->assertStringContainsString($t, $xml, $t);
+        }
+        $this->assertStringNotContainsString('ICMSUFDest', $xml);
+
+        $venda = $this->dadosXml(new NotaAvulsa(['operacao' => 'venda', 'canal' => 'internet', 'frete' => 9, 'pagamento' => '17']), DadosFiscais::atuais(), $al) + ['cliente_ie' => '247272965'];
+        $this->assertStringContainsString('<CFOP>6102</CFOP>', (new NfeSefaz(1))->xml($venda));
+        // Sem IE continua não contribuinte (como antes).
+        $this->assertStringContainsString('<indIEDest>9</indIEDest>', (new NfeSefaz(1))->xml(array_diff_key($venda, ['cliente_ie' => 1])));
+
+        // Cadastro guarda a IE (só números).
+        config(['oficina.integracoes' => 'simulado']);
+        $this->entrarComo($this->usuario(Papel::Recepcao, $this->u))->post(route('clientes.store'), ['para_nota' => 1, 'nome' => 'T R C TENORIO LTDA', 'documento' => '27.156.664/0001-09',
+            'inscricao_estadual' => '24.727.296-5', 'telefone' => '82999998888'])->assertSessionHasNoErrors();
+        $this->assertSame('247272965', Cliente::firstWhere('documento', '27156664000109')->inscricao_estadual);
+    }
 }

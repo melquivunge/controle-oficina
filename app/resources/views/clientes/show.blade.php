@@ -84,6 +84,7 @@
                     @include('partials.campo', ['nome' => 'email', 'rotulo' => 'E-mail (opcional)', 'tipo' => 'email', 'valorAtual' => $cliente->email])
                     @can('ver_contato_cliente')
                         @include('partials.campo', ['nome' => 'documento', 'rotulo' => 'CPF ou CNPJ (obrigatório para emitir nota)', 'valorAtual' => $cliente->documento, 'atributos' => ['inputmode' => 'numeric']])
+                        @include('partials.campo', ['nome' => 'inscricao_estadual', 'rotulo' => 'Inscrição estadual (só se o cliente for empresa contribuinte de ICMS)', 'valorAtual' => $cliente->inscricao_estadual, 'atributos' => ['inputmode' => 'numeric']])
                         <details class="endereco-cliente" @if(\App\Support\Endereco::preenchido($cliente) || $errors->hasAny(\App\Support\Endereco::CAMPOS)) open @endif>
                             <summary>Endereço (opcional)</summary>
                             @include('partials.endereco-campos', ['valores' => $cliente, 'idPrefixo' => 'cliente'])
