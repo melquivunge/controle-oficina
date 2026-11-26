@@ -19,7 +19,9 @@
             <p class="fiscal-doc__texto fiscal-doc__texto--erro">Não foi possível emitir agora: {{ $d->mensagem }}</p>
         @elseif ($d->status === 'rejeitado')
             <p class="fiscal-doc__texto fiscal-doc__texto--erro">Motivo da rejeição: {{ $d->mensagem ?: 'não informado pelo emissor' }}</p>
-            {{-- 26/11/2026: 232 = a SEFAZ achou o CNPJ como contribuinte de ICMS e a ficha não tem IE; pede a IE aqui, depois "Tentar de novo". --}}
+            {{-- 26/11/2026: E0160 recusado às 10h25 e aceito à tarde com a mesma DPS (instabilidade da Sefin ao consultar o Simples). --}}
+            @if (str_starts_with((string) $d->mensagem, 'E0160'))<p class="hint">Se a empresa está no Simples Nacional, isso costuma ser instabilidade do sistema do governo: espere alguns minutos e toque em "Tentar de novo".</p>@endif
+            {{-- 26/11/2026: 232 =a SEFAZ achou o CNPJ como contribuinte de ICMS e a ficha não tem IE; pede a IE aqui, depois "Tentar de novo". --}}
             @php($clienteDoc = isset($nota) ? $nota->cliente : $ordem->cliente)
             @if (str_starts_with((string) $d->mensagem, '232') && $clienteDoc && ! $clienteDoc->inscricao_estadual && ! $docs->where('tipo', $d->tipo)->whereIn('status', ['pendente', 'processando', 'autorizado'])->count())
                 @include('partials.cliente-dados-nota', ['cliente' => $clienteDoc, 'falta' => 'A SEFAZ informa que este CNPJ é contribuinte de ICMS: preencha a inscrição estadual do cliente e depois toque em "Tentar de novo".'])

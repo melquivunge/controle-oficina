@@ -212,7 +212,10 @@ class NotaAvulsaTest extends TestCase
         $doc->forceFill(['status' => 'rejeitado', 'mensagem' => '232 Rejeicao: IE do destinatario nao informada'])->save();
         $tela = route('notas-avulsas.show', $n);
 
-        $this->entrarComo($rec)->get($tela)->assertOk()->assertSee('contribuinte de ICMS')->assertSee('Tentar de novo');
+        $this->entrarComo($rec)->get($tela)->assertOk()->assertDontSee('instabilidade do sistema do governo')->assertSee('contribuinte de ICMS')->assertSee('Tentar de novo');
+        $doc->forceFill(['mensagem' => 'E0160 No mês de competência da NFS-e, a opção de situação perante o Simples Nacional...'])->save();
+        $this->entrarComo($rec)->get($tela)->assertSee('instabilidade do sistema do governo')->assertDontSee('contribuinte de ICMS');
+        $doc->forceFill(['mensagem' => '232 Rejeicao: IE do destinatario nao informada'])->save();
         $this->entrarComo($rec)->from($tela)->put(route('clientes.dados-nota', $cli), ['documento' => '34308439000106', 'inscricao_estadual' => '87.654.321',
             'cep' => '20760011', 'logradouro' => 'Rua Capitão Sampaio', 'numero' => '117', 'bairro' => 'Del Castilho', 'cidade' => 'Rio de Janeiro', 'uf' => 'RJ'])
             ->assertSessionHasNoErrors()->assertRedirect($tela.'#fiscal');
