@@ -197,4 +197,31 @@ class NotaAvulsaTest extends TestCase
         $this->entrarComo($rec)->get(route('ordens.show', [$o->fresh(), 'aba' => 'documentos']))->assertOk()
             ->assertSee('Completar dados do cliente para a nota')->assertSee('cadastre o CPF ou CNPJ');
     }
+
+    /** Rejeição 232 em produção (26/11/2026, PRONTO RODAS): a ficha tinha CNPJ e endereço, mas não a IE; a tela da nota pede a IE junto da rejeição. */
+    public function test_rejeicao_232_pede_ie_na_tela_da_nota(): void
+    {
+        config(['oficina.integracoes' => 'simulado']);
+        $rec = $this->usuario(Papel::Recepcao, $this->u);
+        $cli = Cliente::create(['nome' => 'Pronto Rodas', 'telefone' => '21991234567', 'documento' => '34308439000106', 'logradouro' => 'Rua Capitão Sampaio', 'numero' => '117',
+            'bairro' => 'Del Castilho', 'cidade' => 'Rio de Janeiro', 'uf' => 'RJ', 'cep' => '20760011']);
+        $this->entrarComo($rec)->post(route('notas-avulsas.store'), ['cliente_id' => $cli->id, 'unidade_id' => $this->u->id, 'operacao' => 'venda', 'canal' => 'internet',
+            'frete' => 9, 'pagamento' => '17', 'itens' => [['descricao' => 'Bordas', 'quantidade' => '1', 'preco' => '200', 'ncm' => '87087090']]])->assertSessionHasNoErrors();
+        $n = NotaAvulsa::sole();
+        $doc = FiscalDocument::sole();
+        $doc->forceFill(['status' => 'rejeitado', 'mensagem' => '232 Rejeicao: IE do destinatario nao informada'])->save();
+        $tela = route('notas-avulsas.show', $n);
+
+        $this->entrarComo($rec)->get($tela)->assertOk()->assertSee('contribuinte de ICMS')->assertSee('Tentar de novo');
+        $this->entrarComo($rec)->from($tela)->put(route('clientes.dados-nota', $cli), ['documento' => '34308439000106', 'inscricao_estadual' => '87.654.321',
+            'cep' => '20760011', 'logradouro' => 'Rua Capitão Sampaio', 'numero' => '117', 'bairro' => 'Del Castilho', 'cidade' => 'Rio de Janeiro', 'uf' => 'RJ'])
+            ->assertSessionHasNoErrors()->assertRedirect($tela.'#fiscal');
+        $this->assertSame('87654321', preg_replace('/\D/', '', (string) $cli->fresh()->inscricao_estadual));
+        $this->entrarComo($rec)->get($tela)->assertDontSee('contribuinte de ICMS')->assertSee('Tentar de novo');
+
+        // Depois de autorizada, a rejeitada antiga não oferece "Tentar de novo" (o servidor já recusava).
+        $this->entrarComo($rec)->post(route('notas-avulsas.reprocessar', [$n, $doc]))->assertSessionHasNoErrors();
+        $this->assertSame(1, FiscalDocument::where('status', 'autorizado')->count());
+        $this->entrarComo($rec)->get($tela)->assertDontSee('Tentar de novo');
+    }
 }

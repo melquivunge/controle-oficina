@@ -19,6 +19,11 @@
             <p class="fiscal-doc__texto fiscal-doc__texto--erro">Não foi possível emitir agora: {{ $d->mensagem }}</p>
         @elseif ($d->status === 'rejeitado')
             <p class="fiscal-doc__texto fiscal-doc__texto--erro">Motivo da rejeição: {{ $d->mensagem ?: 'não informado pelo emissor' }}</p>
+            {{-- 26/11/2026: 232 = a SEFAZ achou o CNPJ como contribuinte de ICMS e a ficha não tem IE; pede a IE aqui, depois "Tentar de novo". --}}
+            @php($clienteDoc = isset($nota) ? $nota->cliente : $ordem->cliente)
+            @if (str_starts_with((string) $d->mensagem, '232') && $clienteDoc && ! $clienteDoc->inscricao_estadual && ! $docs->where('tipo', $d->tipo)->whereIn('status', ['pendente', 'processando', 'autorizado'])->count())
+                @include('partials.cliente-dados-nota', ['cliente' => $clienteDoc, 'falta' => 'A SEFAZ informa que este CNPJ é contribuinte de ICMS: preencha a inscrição estadual do cliente e depois toque em "Tentar de novo".'])
+            @endif
         @elseif ($d->status === 'autorizado')
             <p class="fiscal-doc__texto">Autorizado em {{ \App\Support\Fuso::exibir($d->autorizado_em) }}{{ $d->protocolo && $d->protocolo !== $d->chave_acesso ? ' · protocolo '.$d->protocolo : '' }}.@if ($d->ambiente === 2) <strong>Homologação: sem validade fiscal.</strong>@endif</p>
             @if ($d->chave_acesso)<p class="hint">Chave de acesso: <span class="mono">{{ $d->chave_acesso }}</span></p>@endif
@@ -31,7 +36,7 @@
             @if (! $d->arquivo && $d->xml && $d->tipo === 'nfse' && $d->status === 'autorizado')<a class="button" href="{{ $rotaFiscal('baixar', $d, ['pdf' => 1]) }}">Baixar PDF</a>@endif
             @if ($d->xml)<a class="button" href="{{ $rotaFiscal('baixar', $d, ['xml' => 1]) }}">Baixar XML</a>@endif
             @can('cobrar')
-                @if ($d->status === 'rejeitado' || ($d->status === 'pendente' && $d->mensagem))
+                @if (($d->status === 'rejeitado' && ! $docs->where('tipo', $d->tipo)->whereIn('status', ['pendente', 'processando', 'autorizado'])->count()) || ($d->status === 'pendente' && $d->mensagem))
                     <form method="POST" action="{{ $rotaFiscal('reprocessar', $d) }}">@csrf<button class="button" type="submit">Tentar de novo</button></form>
                 @endif
                 @if ($d->status === 'pendente')
