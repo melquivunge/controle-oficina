@@ -68,6 +68,16 @@ class NfeSefaz
             return ['status' => 'rejeitado', 'numero' => null, 'protocolo' => null, 'mensagem' => $falta, 'documento' => null];
         }
         [$tools, $cert] = $this->tools();
+        $ieAchada = null;
+        $docDest = preg_replace('/\D/', '', (string) $dados['cliente_documento']);
+        if (strlen($docDest) === 14 && preg_replace('/\D/', '', (string) ($dados['cliente_ie'] ?? '')) === '') {
+            // Cliente CNPJ sem IE: busca no cadastro da SEFAZ da UF do cliente (27/11/2026, rejeição 232); se falhar, segue como antes.
+            try {
+                $ieAchada = self::ieHabilitada($tools->sefazCadastro(strtoupper((string) $dados['cliente_local']['uf']), $docDest));
+            } catch (\Throwable) {
+            }
+            $dados['cliente_ie'] = $ieAchada;
+        }
         $xml = $tools->signNFe($this->xml($dados));
         $resp = $tools->sefazEnviaLote([$xml], (string) $dados['numero_dps'], 1);
         $st = (new Standardize)->toStd($resp);
@@ -88,7 +98,7 @@ class NfeSefaz
         if ($cStat !== '100') {
             $motivo = (string) ($st->protNFe->infProt->xMotivo ?? $st->xMotivo ?? 'Rejeitada');
 
-            return ['status' => 'rejeitado', 'numero' => null, 'protocolo' => null, 'mensagem' => mb_substr($cStat.' '.$motivo, 0, 500), 'documento' => null];
+            return ['status' => 'rejeitado', 'numero' => null, 'protocolo' => null, 'mensagem' => mb_substr($cStat.' '.$motivo, 0, 500), 'documento' => null, 'cliente_ie' => $ieAchada];
         }
         $autorizado = Complements::toAuthorize($xml, $resp);
         preg_match('/<nProt>(\d+)<\/nProt>/', $autorizado, $p);
@@ -99,7 +109,22 @@ class NfeSefaz
         }
 
         return ['status' => 'autorizado', 'numero' => (string) $dados['numero_dps'], 'protocolo' => $p[1] ?? null, 'chave_acesso' => self::chave($dados, $this->cnpj()),
-            'mensagem' => null, 'xml' => $autorizado, 'documento' => $pdf, 'extensao' => 'pdf'];
+            'mensagem' => null, 'xml' => $autorizado, 'documento' => $pdf, 'extensao' => 'pdf', 'cliente_ie' => $ieAchada];
+    }
+
+    /** IE da resposta da consulta cadastro (CadConsultaCadastro4): só quando há exatamente uma inscrição habilitada (cSit 1). */
+    public static function ieHabilitada(string $resposta): ?string
+    {
+        $st = (new Standardize)->toStd($resposta);
+        $cad = $st->infCons->infCad ?? [];
+        $ies = [];
+        foreach (is_array($cad) ? $cad : [$cad] as $i) {
+            if ((string) ($i->cSit ?? '') === '1' && preg_match('/^\d{2,14}$/', (string) ($i->IE ?? ''))) {
+                $ies[(string) $i->IE] = true;
+            }
+        }
+
+        return count($ies) === 1 ? (string) array_key_first($ies) : null;
     }
 
     public function cancelar(string $chave, string $motivo, string $protocolo): void

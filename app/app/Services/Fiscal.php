@@ -264,6 +264,12 @@ class Fiscal
         if (! empty($r['xml'])) {
             Storage::disk('local')->put($base.'.xml', $r['xml']);
         }
+        $ie = preg_replace('/\D/', '', (string) ($r['cliente_ie'] ?? ''));
+        if ($ie !== '' && ! $ordem->cliente->inscricao_estadual) { // achada na SEFAZ: fica na ficha para as próximas notas
+            $ordem->cliente->inscricao_estadual = $ie;
+            $ordem->cliente->save();
+            Auditoria::registrar('cliente_alterado', $ordem->cliente, depois: ['inscricao_estadual' => 'informada pela SEFAZ'], unidadeId: $doc->unidade_id, atorTipo: 'sistema');
+        }
         $doc->update(['status' => $r['status'], 'numero' => $r['numero'] ?? $doc->numero, 'protocolo' => $r['protocolo'] ?? $doc->protocolo,
             'chave_acesso' => $r['chave_acesso'] ?? $doc->chave_acesso, 'xml' => ! empty($r['xml']) ? $base.'.xml' : $doc->xml,
             'mensagem' => $r['mensagem'], 'arquivo' => $arquivo ?? $doc->arquivo, 'autorizado_em' => $r['status'] === 'autorizado' ? now() : null]);

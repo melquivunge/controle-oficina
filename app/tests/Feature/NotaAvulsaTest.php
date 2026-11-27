@@ -227,4 +227,32 @@ class NotaAvulsaTest extends TestCase
         $this->assertSame(1, FiscalDocument::where('status', 'autorizado')->count());
         $this->entrarComo($rec)->get($tela)->assertDontSee('Tentar de novo');
     }
+
+    /** 27/11/2026: quem emite não sabe a IE; o sistema busca no cadastro da SEFAZ (só uma habilitada) e grava na ficha do cliente. */
+    public function test_ie_do_cliente_vem_da_consulta_cadastro_da_sefaz(): void
+    {
+        $resp = fn (string $cad) => '<retConsCad xmlns="http://www.portalfiscal.inf.br/nfe" versao="2.00"><infCons><verAplic>SP</verAplic><cStat>111</cStat>'
+            .'<xMotivo>Consulta cadastro com uma ocorrência</xMotivo><UF>SP</UF><CNPJ>43945292000148</CNPJ><dhCons>2026-11-27T10:00:00-03:00</dhCons><cUF>35</cUF>'.$cad.'</infCons></retConsCad>';
+        $cad = fn (string $ie, int $sit) => "<infCad><IE>{$ie}</IE><CNPJ>43945292000148</CNPJ><UF>SP</UF><cSit>{$sit}</cSit><xNome>GORILAS</xNome></infCad>";
+        $this->assertSame('133245485114', NfeSefaz::ieHabilitada($resp($cad('133245485114', 1))));
+        $this->assertSame('133245485114', NfeSefaz::ieHabilitada($resp($cad('111111111111', 0).$cad('133245485114', 1))));
+        $this->assertNull(NfeSefaz::ieHabilitada($resp($cad('133245485114', 0))));
+        $this->assertNull(NfeSefaz::ieHabilitada($resp($cad('111111111111', 1).$cad('133245485114', 1))), 'duas habilitadas: não adivinha');
+        $this->assertNull(NfeSefaz::ieHabilitada($resp('')));
+
+        config(['oficina.integracoes' => 'simulado']);
+        $this->app->bind(\App\Integracoes\Fiscal\EmissorFiscal::class, fn () => new class extends \App\Integracoes\Fiscal\SimuladorFiscal
+        {
+            public function emitir(string $chave, array $dados): array
+            {
+                return parent::emitir($chave, $dados) + ['cliente_ie' => '133245485114'];
+            }
+        });
+        $cli = Cliente::create(['nome' => 'Gorilas Custom', 'telefone' => '11991234567', 'documento' => '43945292000148', 'logradouro' => 'Rua Antonio Ayrosa', 'numero' => '647',
+            'bairro' => 'Vila dos Remedios', 'cidade' => 'São Paulo', 'uf' => 'SP', 'cep' => '05103000']);
+        $this->entrarComo($this->usuario(Papel::Recepcao, $this->u))->post(route('notas-avulsas.store'), ['cliente_id' => $cli->id, 'unidade_id' => $this->u->id, 'operacao' => 'venda',
+            'canal' => 'presencial', 'frete' => 9, 'pagamento' => '17', 'itens' => [['descricao' => 'Bordas', 'quantidade' => '1', 'preco' => '100', 'ncm' => '87087090']]])->assertSessionHasNoErrors();
+        $this->assertSame('133245485114', $cli->fresh()->inscricao_estadual);
+        $this->assertDatabaseHas('audit_events', ['acao' => 'cliente_alterado', 'ator_tipo' => 'sistema']);
+    }
 }
